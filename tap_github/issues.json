@@ -1,0 +1,11 @@
+{
+    "type": "object",
+    "properties": {
+	"id": {"type": "integer"},
+	"updated_at": {
+            "type": "string",
+            "format": "date-time"
+	}
+    },
+    "required": ["id"]
+}

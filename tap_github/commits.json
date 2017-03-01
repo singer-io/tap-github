@@ -1,0 +1,99 @@
+{
+    "type": "object",
+    "properties": {
+	"sha": {
+            "type": "string",
+            "description": "The git commit hash"
+	},
+	"url": {"type": "string"},
+	"parents": {
+            "type": "array",
+            "items": {
+		"type": "object",
+		"properties": {
+                    "sha": {
+			"type": "string",
+			"description": "The git hash of the parent commit"
+                    },
+                    "url": {
+			"type": "string",
+			"description": "The URL to the parent commit"
+                    },
+                    "html_url": {
+			"type": "string",
+			"description": "The HTML URL to the parent commit"
+                    }
+		}
+            }
+	},
+	"html_url": {
+            "type": "string",
+            "description": "The HTML URL to the commit"
+	},
+	"comments_url": {
+            "type": "string",
+            "description": "The URL to the commit's comments page"
+	},
+	"commit": {
+            "type": "object",
+            "properties": {
+		"url": {
+                    "type": "string",
+                    "description": "The URL to the commit"
+		},
+		"tree": {
+                    "type": "object",
+                    "properties": {
+			"sha": {"type": "string"},
+			"url": {"type": "string"}
+                    }
+		},
+		"author": {
+                    "type": "object",
+                    "properties": {
+			"date": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "The date the author committed the change"
+			},
+			"name": {
+                            "type": "string",
+                            "description": "The author's name"
+			},
+			"email": {
+                            "type": "string",
+                            "description": "The author's email"
+			}
+                    }
+		},
+		"message": {
+                    "type": "string",
+                    "description": "The commit message"
+		},
+		"committer": {
+                    "type": "object",
+                    "properties": {
+			"date": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "The date the committer committed the change"
+			},
+			"name": {
+                            "type": "string",
+                            "description": "The committer's name"
+			},
+			"email": {
+                            "type": "string",
+                            "description": "The committer's email"
+			}
+                    }
+		},
+		"comment_count": {
+                    "type": "integer",
+                    "description": "The number of comments on the commit"
+		}
+            }
+	}
+    },
+    "additionalProperties": false
+}
