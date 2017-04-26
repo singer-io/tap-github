@@ -3,17 +3,21 @@ import requests
 import singer
 import json
 import os
+import singer.stats
 
 session = requests.Session()
 logger = singer.get_logger()
 
 
-def authed_get(url):
-    return session.request(method='get', url=url)
+def authed_get(source, url):
+    with singer.stats.Timer(source=source) as stats:
+        resp = session.request(method='get', url=url)
+        stats.http_status_code = resp.status_code
+        return resp
 
-def authed_get_all_pages(url):
+def authed_get_all_pages(source, url):
     while True:
-        r = authed_get(url)
+        r = authed_get(source, url)
         yield r
         if 'next' in r.links:
             url = r.links['next']['url']
@@ -42,16 +46,18 @@ def get_all_commits(repo_path, state):
 
     latest_commit_time = None
 
-    for response in authed_get_all_pages('https://api.github.com/repos/{}/commits{}'.format(repo_path, query_string)):
-        commits = response.json()
-        
-        for commit in commits:
-            commit.pop('author', None)
-            commit.pop('committer', None)
-            
-        singer.write_records('commits', commits)
-        if not latest_commit_time:
-            latest_commit_time = commits[0]['commit']['committer']['date']
+    with singer.stats.Counter(source='commits') as stats:
+        for response in authed_get_all_pages('commits', 'https://api.github.com/repos/{}/commits{}'.format(repo_path, query_string)):
+            commits = response.json()
+
+            for commit in commits:
+                stats.add(record_count=1)
+                commit.pop('author', None)
+                commit.pop('committer', None)
+
+            singer.write_records('commits', commits)
+            if not latest_commit_time:
+                latest_commit_time = commits[0]['commit']['committer']['date']
 
     state['commits'] = latest_commit_time
     return state
@@ -62,12 +68,14 @@ def get_all_issues(repo_path, state):
     else:
         query_string = ''
 
-    last_issue_time = None
-    for response in authed_get_all_pages('https://api.github.com/repos/{}/issues?sort=updated&direction=asc{}'.format(repo_path, query_string)):
-        issues = response.json()
-        if len(issues) > 0:
-            last_issue_time = issues[-1]['updated_at']
-        singer.write_records('issues', issues)
+    last_issue_time = None        
+    with singer.stats.Counter(source='issues') as stats:        
+        for response in authed_get_all_pages('issues', 'https://api.github.com/repos/{}/issues?sort=updated&direction=asc{}'.format(repo_path, query_string)):
+            issues = response.json()
+            stats.add(record_count=len(issues))
+            if len(issues) > 0:
+                last_issue_time = issues[-1]['updated_at']
+            singer.write_records('issues', issues)
 
     state['issues'] = last_issue_time
     return state
