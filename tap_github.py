@@ -9,16 +9,16 @@ session = requests.Session()
 logger = singer.get_logger()
 
 
-def authed_get(source, url):
+def authed_get(source, url, headers={}):
     with singer.stats.Timer(source=source) as stats:
-        session.headers.update({'Accept': 'application/vnd.github.v3.star+json'})
+        session.headers.update(headers)
         resp = session.request(method='get', url=url)
         stats.http_status_code = resp.status_code
         return resp
 
-def authed_get_all_pages(source, url):
+def authed_get_all_pages(source, url, headers={}):
     while True:
-        r = authed_get(source, url)
+        r = authed_get(source, url, headers)
         yield r
         if 'next' in r.links:
             url = r.links['next']['url']
@@ -90,9 +90,10 @@ def get_all_stargazers(repo_path, state):
     else:
         query_string = ''
 
+    stargazers_headers = {'Accept': 'application/vnd.github.v3.star+json'}
     last_stargazer_time = None
     with singer.stats.Counter(source='stargazers') as stats:
-        for response in authed_get_all_pages('stargazers', 'https://api.github.com/repos/{}/stargazers?sort=updated&direction=asc{}'.format(repo_path, query_string)):
+        for response in authed_get_all_pages('stargazers', 'https://api.github.com/repos/{}/stargazers?sort=updated&direction=asc{}'.format(repo_path, query_string), stargazers_headers):
             stargazers = response.json()
             stats.add(record_count=len(stargazers))
             if len(stargazers) > 0:
