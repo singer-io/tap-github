@@ -11,6 +11,7 @@ logger = singer.get_logger()
 
 def authed_get(source, url):
     with singer.stats.Timer(source=source) as stats:
+        session.headers.update({'Accept': 'application/vnd.github.v3.star+json'})
         resp = session.request(method='get', url=url)
         stats.http_status_code = resp.status_code
         return resp
@@ -35,6 +36,9 @@ def load_schemas():
 
     with open(get_abs_path('tap_github/issues.json')) as file:
         schemas['issues'] = json.load(file)
+
+    with open(get_abs_path('tap_github/stargazers.json')) as file:
+        schemas['stargazers'] = json.load(file)
 
     return schemas
 
@@ -68,8 +72,8 @@ def get_all_issues(repo_path, state):
     else:
         query_string = ''
 
-    last_issue_time = None        
-    with singer.stats.Counter(source='issues') as stats:        
+    last_issue_time = None
+    with singer.stats.Counter(source='issues') as stats:
         for response in authed_get_all_pages('issues', 'https://api.github.com/repos/{}/issues?sort=updated&direction=asc{}'.format(repo_path, query_string)):
             issues = response.json()
             stats.add(record_count=len(issues))
@@ -80,11 +84,29 @@ def get_all_issues(repo_path, state):
     state['issues'] = last_issue_time
     return state
 
+def get_all_stargazers(repo_path, state):
+    if 'stargazers' in state and state['stargazers'] is not None:
+        query_string = '&since={}'.format(state['stargazers'])
+    else:
+        query_string = ''
+
+    last_stargazer_time = None
+    with singer.stats.Counter(source='stargazers') as stats:
+        for response in authed_get_all_pages('stargazers', 'https://api.github.com/repos/{}/stargazers?sort=updated&direction=asc{}'.format(repo_path, query_string)):
+            stargazers = response.json()
+            stats.add(record_count=len(stargazers))
+            if len(stargazers) > 0:
+                last_stargazer_time = stargazers[-1]['starred_at']
+            singer.write_records('stargazers', stargazers)
+
+    state['stargazers'] = last_stargazer_time
+    return state
+
 def do_sync(config, state):
     access_token = config['access_token']
     repo_path = config['repository']
     schemas = load_schemas()
-    
+
     session.headers.update({'authorization': 'token ' + access_token})
 
     if state:
@@ -92,11 +114,13 @@ def do_sync(config, state):
     else:
         logger.info('Replicating all commits from %s', repo_path)
 
-        
+
     singer.write_schema('commits', schemas['commits'], 'sha')
     singer.write_schema('issues', schemas['issues'], 'id')
+    singer.write_schema('stargazers', schemas['stargazers'], 'id')
     state = get_all_commits(repo_path, state)
     state = get_all_issues(repo_path, state)
+    state = get_all_stargazers(repo_path, state)
     singer.write_state(state)
 
 
@@ -130,6 +154,6 @@ def main():
                 state = json.loads(line.strip())
 
     do_sync(config, state)
-    
+
 if __name__ == '__main__':
     main()
