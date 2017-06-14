@@ -3,17 +3,17 @@ import requests
 import singer
 import json
 import os
-import singer.stats
+import singer.metrics as metrics
 
 session = requests.Session()
 logger = singer.get_logger()
 
 
 def authed_get(source, url, headers={}):
-    with singer.stats.Timer(source=source) as stats:
+    with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
         resp = session.request(method='get', url=url)
-        stats.http_status_code = resp.status_code
+        timer.tags[metrics.Tag.http_status_code] = resp.status_code
         return resp
 
 def authed_get_all_pages(source, url, headers={}):
@@ -50,12 +50,12 @@ def get_all_commits(repo_path, state):
 
     latest_commit_time = None
 
-    with singer.stats.Counter(source='commits') as stats:
+    with metrics.record_counter('commits') as counter:
         for response in authed_get_all_pages('commits', 'https://api.github.com/repos/{}/commits{}'.format(repo_path, query_string)):
             commits = response.json()
 
             for commit in commits:
-                stats.add(record_count=1)
+                counter.increment()
                 commit.pop('author', None)
                 commit.pop('committer', None)
 
@@ -73,10 +73,10 @@ def get_all_issues(repo_path, state):
         query_string = ''
 
     last_issue_time = None
-    with singer.stats.Counter(source='issues') as stats:
+    with metrics.record_counter('issues') as counter:
         for response in authed_get_all_pages('issues', 'https://api.github.com/repos/{}/issues?sort=updated&direction=asc{}'.format(repo_path, query_string)):
             issues = response.json()
-            stats.add(record_count=len(issues))
+            counter.increment(len(issues))
             if len(issues) > 0:
                 last_issue_time = issues[-1]['updated_at']
             singer.write_records('issues', issues)
@@ -92,10 +92,10 @@ def get_all_stargazers(repo_path, state):
 
     stargazers_headers = {'Accept': 'application/vnd.github.v3.star+json'}
     last_stargazer_time = None
-    with singer.stats.Counter(source='stargazers') as stats:
+    with metrics.record_counter('stargazers') as counter:
         for response in authed_get_all_pages('stargazers', 'https://api.github.com/repos/{}/stargazers?sort=updated&direction=asc{}'.format(repo_path, query_string), stargazers_headers):
             stargazers = response.json()
-            stats.add(record_count=len(stargazers))
+            counter.increment(len(stargazers))
             if len(stargazers) > 0:
                 last_stargazer_time = stargazers[-1]['starred_at']
             singer.write_records('stargazers', stargazers)
