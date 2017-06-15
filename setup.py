@@ -19,7 +19,8 @@ setup(name='tap-github',
       package_data = {
           'tap_github': [
               'commits.json',
-              'issues.json'
+              'issues.json',
+              'stargazers.json'
               ]
           }
 )
