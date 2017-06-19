@@ -19,7 +19,7 @@ This tap:
    We recommend using a virtualenv:
 
     ```bash
-    > virtualenv -p python 3 venv
+    > virtualenv -p python3 venv
     > source venv/bin/activate
     > pip install tap-github
     ```
