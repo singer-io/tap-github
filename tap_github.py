@@ -101,6 +101,7 @@ def get_all_stargazers(repo_path, state):
 
             for stargazer in stargazers:
                 stargazer['starred_repo'] = repo_path
+                stargazer['user_id'] = stargazer['user']['id']
 
             singer.write_records('stargazers', stargazers)
 
@@ -122,7 +123,7 @@ def do_sync(config, state):
 
     singer.write_schema('commits', schemas['commits'], 'sha')
     singer.write_schema('issues', schemas['issues'], 'id')
-    singer.write_schema('stargazers', schemas['stargazers'], ['id','starred_repo'])
+    singer.write_schema('stargazers', schemas['stargazers'], ['user_id','starred_repo'])
     state = get_all_commits(repo_path, state)
     state = get_all_issues(repo_path, state)
     state = get_all_stargazers(repo_path, state)
