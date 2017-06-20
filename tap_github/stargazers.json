@@ -1,11 +1,20 @@
 {
     "type": "object",
     "properties": {
-	"id": {"type": "integer"},
-	"starred_at": {
+        "user": {
+          "type": ["null", "object"],
+          "properties": {
+            "id": {
+                "type": "integer"
+            }
+          }
+        },
+        "starred_at": {
             "type": "string",
             "format": "date-time"
-	}
-    },
-    "required": ["id"]
+        },
+        "starred_repo": {
+            "type": "string"
+        }
+    }
 }
