@@ -9,6 +9,9 @@
             }
           }
         },
+        "user_id": {
+            "type": "integer"
+        },
         "starred_at": {
             "type": "string",
             "format": "date-time"
