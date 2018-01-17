@@ -142,24 +142,28 @@ def main():
     args = parser.parse_args()
 
     with open(args.config) as config_file:
-        config = json.load(config_file)
+        configList = json.load(config_file)
 
-    missing_keys = []
-    for key in ['access_token', 'repository']:
-        if key not in config:
-            missing_keys += [key]
+    if not isinstance(configList, list):
+      configList = [configList]
 
-    if len(missing_keys) > 0:
-        logger.fatal("Missing required configuration keys: {}".format(missing_keys))
-        exit(1)
+    for config in configList:
+      missing_keys = []
+      for key in ['access_token', 'repository']:
+          if key not in config:
+              missing_keys += [key]
 
-    state = {}
-    if args.state:
-        with open(args.state, 'r') as file:
-            for line in file:
-                state = json.loads(line.strip())
+      if len(missing_keys) > 0:
+          logger.fatal("Missing required configuration keys: {}".format(missing_keys))
+          exit(1)
 
-    do_sync(config, state)
+      state = {}
+      if args.state:
+          with open(args.state, 'r') as file:
+              for line in file:
+                  state = json.loads(line.strip())
+
+      do_sync(config, state)
 
 if __name__ == '__main__':
     main()
