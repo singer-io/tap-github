@@ -31,16 +31,55 @@ def get_abs_path(path):
 def load_schemas():
     schemas = {}
 
-    with open(get_abs_path('tap_github/commits.json')) as file:
-        schemas['commits'] = json.load(file)
-
-    with open(get_abs_path('tap_github/issues.json')) as file:
-        schemas['issues'] = json.load(file)
-
-    with open(get_abs_path('tap_github/stargazers.json')) as file:
-        schemas['stargazers'] = json.load(file)
+    for filename in os.listdir(get_abs_path('tap_github')):
+        path = get_abs_path('tap_github') + '/' + filename
+        file_raw = filename.replace('.json', '')
+        schemas[file_raw] = json.load(open(path))
 
     return schemas
+
+def get_all_pull_requests(repo_path, state):
+
+    if 'files' in state and state['files'] is not None:
+        query_string = '?since={}'.format(state['files'])
+    else:
+        query_string = ''
+
+    latest_files_time = None
+
+    with metrics.record_counter('files') as counter:
+        for response in authed_get_all_pages('files', 'https://api.github.com/repos/{}/pulls{}'.format(repo_path, query_string)):
+            files = response.json()
+
+            singer.write_records('files', files)
+
+
+    state['files'] = latest_files_time
+    return state
+
+def get_all_assignees(repo_path, state):
+
+    with metrics.record_counter('assignees') as counter:
+        for response in authed_get_all_pages('assignees', 'https://api.github.com/repos/{}/assignees'.format(repo_path)):
+            assignees = response.json()
+
+            singer.write_records('assignees', assignees)
+
+
+    return state
+
+def get_all_collaborators(repo_path, state):
+
+    with metrics.record_counter('collaborators') as counter:
+        for response in authed_get_all_pages('collaborators', 'https://api.github.com/repos/{}/collaborators'.format(repo_path)):
+            collaborators = response.json()
+
+            singer.write_records('collaborators', collaborators)
+
+
+
+    return state
+
 
 def get_all_commits(repo_path, state):
     if 'commits' in state and state['commits'] is not None:
@@ -123,9 +162,15 @@ def do_sync(config, state):
 
     singer.write_schema('commits', schemas['commits'], 'sha')
     singer.write_schema('issues', schemas['issues'], 'id')
+    singer.write_schema('assignees', schemas['assignees'], 'id')
+    singer.write_schema('collaborators', schemas['collaborators'], 'id')
+    singer.write_schema('files', schemas['files'], 'sha')
     singer.write_schema('stargazers', schemas['stargazers'], ['user_id','starred_repo'])
     state = get_all_commits(repo_path, state)
     state = get_all_issues(repo_path, state)
+    state = get_all_assignees(repo_path, state)
+    state = get_all_pull_requests(repo_path, state)
+    state = get_all_collaborators(repo_path, state)
     state = get_all_stargazers(repo_path, state)
     singer.write_state(state)
 
