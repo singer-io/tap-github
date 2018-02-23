@@ -48,8 +48,15 @@ def get_all_pull_requests(repo_path, state):
     latest_files_time = None
 
     with metrics.record_counter('files') as counter:
+        review_response = None
         for response in authed_get_all_pages('files', 'https://api.github.com/repos/{}/pulls{}'.format(repo_path, query_string)):
             files = response.json()
+            for file in files:
+                pr_number = file.get('number')
+                for review_response in authed_get_all_pages('reviews', 'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)):
+                    reviews = review_response.json()
+                    singer.write_records('reviews', reviews)
+ 
 
             singer.write_records('files', files)
 
@@ -165,6 +172,7 @@ def do_sync(config, state):
     singer.write_schema('assignees', schemas['assignees'], 'id')
     singer.write_schema('collaborators', schemas['collaborators'], 'id')
     singer.write_schema('files', schemas['files'], 'sha')
+    singer.write_schema('reviews', schemas['reviews'], 'id')
     singer.write_schema('stargazers', schemas['stargazers'], ['user_id','starred_repo'])
     state = get_all_commits(repo_path, state)
     state = get_all_issues(repo_path, state)
