@@ -40,27 +40,17 @@ def load_schemas():
 
 def get_all_pull_requests(repo_path, state):
 
-    if 'files' in state and state['files'] is not None:
-        query_string = '?since={}'.format(state['files'])
-    else:
-        query_string = ''
-
-    latest_files_time = None
-
     review_response = None
-    for response in authed_get_all_pages('files', 'https://api.github.com/repos/{}/pulls{}'.format(repo_path, query_string)):
+    for response in authed_get_all_pages('files', 'https://api.github.com/repos/{}/pulls?state=all'.format(repo_path)):
         files = response.json()
         for file in files:
             pr_number = file.get('number')
             for review_response in authed_get_all_pages('reviews', 'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)):
                 reviews = review_response.json()
                 singer.write_records('reviews', reviews)
-        if not latest_files_time:
-            latest_files_time = files[0]['created_at']
         singer.write_records('files', files)
 
 
-    state['files'] = latest_files_time
     return state
 
 def get_all_assignees(repo_path, state):
