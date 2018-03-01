@@ -47,18 +47,17 @@ def get_all_pull_requests(repo_path, state):
 
     latest_files_time = None
 
-    with metrics.record_counter('files') as counter:
-        review_response = None
-        for response in authed_get_all_pages('files', 'https://api.github.com/repos/{}/pulls{}'.format(repo_path, query_string)):
-            files = response.json()
-            for file in files:
-                pr_number = file.get('number')
-                for review_response in authed_get_all_pages('reviews', 'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)):
-                    reviews = review_response.json()
-                    singer.write_records('reviews', reviews)
- 
-
-            singer.write_records('files', files)
+    review_response = None
+    for response in authed_get_all_pages('files', 'https://api.github.com/repos/{}/pulls{}'.format(repo_path, query_string)):
+        files = response.json()
+        for file in files:
+            pr_number = file.get('number')
+            for review_response in authed_get_all_pages('reviews', 'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)):
+                reviews = review_response.json()
+                singer.write_records('reviews', reviews)
+        if not latest_files_time:
+            latest_files_time = files[0]['created_at']
+        singer.write_records('files', files)
 
 
     state['files'] = latest_files_time
@@ -66,24 +65,19 @@ def get_all_pull_requests(repo_path, state):
 
 def get_all_assignees(repo_path, state):
 
-    with metrics.record_counter('assignees') as counter:
-        for response in authed_get_all_pages('assignees', 'https://api.github.com/repos/{}/assignees'.format(repo_path)):
-            assignees = response.json()
+    for response in authed_get_all_pages('assignees', 'https://api.github.com/repos/{}/assignees'.format(repo_path)):
+        assignees = response.json()
 
-            singer.write_records('assignees', assignees)
-
+        singer.write_records('assignees', assignees)
 
     return state
 
 def get_all_collaborators(repo_path, state):
 
-    with metrics.record_counter('collaborators') as counter:
-        for response in authed_get_all_pages('collaborators', 'https://api.github.com/repos/{}/collaborators'.format(repo_path)):
-            collaborators = response.json()
+    for response in authed_get_all_pages('collaborators', 'https://api.github.com/repos/{}/collaborators'.format(repo_path)):
+        collaborators = response.json()
 
-            singer.write_records('collaborators', collaborators)
-
-
+        singer.write_records('collaborators', collaborators)
 
     return state
 
