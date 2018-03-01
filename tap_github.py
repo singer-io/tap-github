@@ -33,8 +33,8 @@ def load_schemas():
     for filename in os.listdir(get_abs_path('tap_github')):
         path = get_abs_path('tap_github') + '/' + filename
         file_raw = filename.replace('.json', '')
-        with open(path) as json_data:
-            schemas[file_raw] = json.load(json_data)
+        with open(path) as file:
+            schemas[file_raw] = json.load(file)
 
     return schemas
 

@@ -4,6 +4,17 @@
     "id": {
       "type": "integer"
     },
+    "user": {
+      "type": "object",
+      "properties": {
+        "login": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        }
+    }
+    },
     "additionalProperties": false
   }
 }
