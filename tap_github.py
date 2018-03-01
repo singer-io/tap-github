@@ -1,13 +1,12 @@
 import argparse
+import os
+import json
 import requests
 import singer
-import json
-import os
 import singer.metrics as metrics
 
 session = requests.Session()
 logger = singer.get_logger()
-
 
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
@@ -34,7 +33,8 @@ def load_schemas():
     for filename in os.listdir(get_abs_path('tap_github')):
         path = get_abs_path('tap_github') + '/' + filename
         file_raw = filename.replace('.json', '')
-        schemas[file_raw] = json.load(open(path))
+        with open(path) as json_data:
+            schemas[file_raw] = json.load(json_data)
 
     return schemas
 
@@ -160,14 +160,13 @@ def do_sync(config, state):
     else:
         logger.info('Replicating all commits from %s', repo_path)
 
-
     singer.write_schema('commits', schemas['commits'], 'sha')
     singer.write_schema('issues', schemas['issues'], 'id')
     singer.write_schema('assignees', schemas['assignees'], 'id')
     singer.write_schema('collaborators', schemas['collaborators'], 'id')
     singer.write_schema('files', schemas['files'], 'sha')
     singer.write_schema('reviews', schemas['reviews'], 'id')
-    singer.write_schema('stargazers', schemas['stargazers'], ['user_id','starred_repo'])
+    singer.write_schema('stargazers', schemas['stargazers'], ['user_id', 'starred_repo'])
     state = get_all_commits(repo_path, state)
     state = get_all_issues(repo_path, state)
     state = get_all_assignees(repo_path, state)
