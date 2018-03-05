@@ -1,13 +1,12 @@
 import argparse
+import os
+import json
 import requests
 import singer
-import json
-import os
 import singer.metrics as metrics
 
 session = requests.Session()
 logger = singer.get_logger()
-
 
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
@@ -31,16 +30,47 @@ def get_abs_path(path):
 def load_schemas():
     schemas = {}
 
-    with open(get_abs_path('tap_github/commits.json')) as file:
-        schemas['commits'] = json.load(file)
-
-    with open(get_abs_path('tap_github/issues.json')) as file:
-        schemas['issues'] = json.load(file)
-
-    with open(get_abs_path('tap_github/stargazers.json')) as file:
-        schemas['stargazers'] = json.load(file)
+    for filename in os.listdir(get_abs_path('tap_github')):
+        path = get_abs_path('tap_github') + '/' + filename
+        file_raw = filename.replace('.json', '')
+        with open(path) as file:
+            schemas[file_raw] = json.load(file)
 
     return schemas
+
+def get_all_pull_requests(repo_path, state):
+
+    review_response = None
+    for response in authed_get_all_pages('files', 'https://api.github.com/repos/{}/pulls?state=all'.format(repo_path)):
+        files = response.json()
+        for file in files:
+            pr_number = file.get('number')
+            for review_response in authed_get_all_pages('reviews', 'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)):
+                reviews = review_response.json()
+                singer.write_records('reviews', reviews)
+        singer.write_records('files', files)
+
+
+    return state
+
+def get_all_assignees(repo_path, state):
+
+    for response in authed_get_all_pages('assignees', 'https://api.github.com/repos/{}/assignees'.format(repo_path)):
+        assignees = response.json()
+
+        singer.write_records('assignees', assignees)
+
+    return state
+
+def get_all_collaborators(repo_path, state):
+
+    for response in authed_get_all_pages('collaborators', 'https://api.github.com/repos/{}/collaborators'.format(repo_path)):
+        collaborators = response.json()
+
+        singer.write_records('collaborators', collaborators)
+
+    return state
+
 
 def get_all_commits(repo_path, state):
     if 'commits' in state and state['commits'] is not None:
@@ -120,12 +150,18 @@ def do_sync(config, state):
     else:
         logger.info('Replicating all commits from %s', repo_path)
 
-
     singer.write_schema('commits', schemas['commits'], 'sha')
     singer.write_schema('issues', schemas['issues'], 'id')
-    singer.write_schema('stargazers', schemas['stargazers'], ['user_id','starred_repo'])
+    singer.write_schema('assignees', schemas['assignees'], 'id')
+    singer.write_schema('collaborators', schemas['collaborators'], 'id')
+    singer.write_schema('files', schemas['files'], 'sha')
+    singer.write_schema('reviews', schemas['reviews'], 'id')
+    singer.write_schema('stargazers', schemas['stargazers'], ['user_id', 'starred_repo'])
     state = get_all_commits(repo_path, state)
     state = get_all_issues(repo_path, state)
+    state = get_all_assignees(repo_path, state)
+    state = get_all_pull_requests(repo_path, state)
+    state = get_all_collaborators(repo_path, state)
     state = get_all_stargazers(repo_path, state)
     singer.write_state(state)
 
