@@ -7,8 +7,12 @@ spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
 This tap:
 - Pulls raw data from the [GitHub REST API](https://developer.github.com/v3/)
 - Extracts the following resources from GitHub for a single repository:
-  - [Commits](https://developer.github.com/v3/repos/commits/)
+  - [Assignees](https://developer.github.com/v3/issues/assignees/#list-assignees)
+  - [Collaborators](https://developer.github.com/v3/repos/collaborators/#list-collaborators)
+  - [Commits](https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository)
   - [Issues](https://developer.github.com/v3/issues/#list-issues-for-a-repository)
+  - [Reviews](https://developer.github.com/v3/pulls/reviews/#list-reviews-on-a-pull-request)
+  - [Stargazers](https://developer.github.com/v3/activity/starring/#list-stargazers)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
 
