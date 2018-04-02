@@ -4,6 +4,7 @@
     "properties": {
         "user": {
             "type": ["null", "object"],
+	    "additionalProperties": false,
             "properties": {
 		"id": {
                     "type": ["null", "integer"]

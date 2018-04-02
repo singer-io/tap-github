@@ -13,7 +13,7 @@
             "type": ["null", "array"],
             "items": {
 		"type": ["null", "object"],
-		"additionalProperties": false,		
+		"additionalProperties": false,
 		"properties": {
                     "sha": {
 			"type": ["null", "string"],
@@ -40,6 +40,7 @@
 	},
 	"commit": {
             "type": ["null", "object"],
+	    "additionalProperties": false,
             "properties": {
 		"url": {
                     "type": ["null", "string"],
@@ -47,13 +48,19 @@
 		},
 		"tree": {
                     "type": ["null", "object"],
+		    "additionalProperties": false,
                     "properties": {
-			"sha": {"type": "string"},
-			"url": {"type": "string"}
+			"sha": {
+			    "type": ["null", "string"]
+			},
+			"url": {
+			    "type": ["null", "string"]
+			}
                     }
 		},
 		"author": {
                     "type": ["null", "object"],
+		    "additionalProperties": false,
                     "properties": {
 			"date": {
                             "type": ["null", "string"],
@@ -76,6 +83,7 @@
 		},
 		"committer": {
                     "type": ["null", "object"],
+		    "additionalProperties": false,
                     "properties": {
 			"date": {
                             "type": ["null", "string"],
