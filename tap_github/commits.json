@@ -13,6 +13,7 @@
             "type": ["null", "array"],
             "items": {
 		"type": ["null", "object"],
+		"additionalProperties": false,		
 		"properties": {
                     "sha": {
 			"type": ["null", "string"],
