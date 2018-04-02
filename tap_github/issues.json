@@ -1,11 +1,13 @@
 {
-    "type": "object",
+    "type": ["null", "object"],
+    "additionalProperties": false,
     "properties": {
-	"id": {"type": "integer"},
+	"id": {
+	    "type": ["null", "integer"]
+	},
 	"updated_at": {
-            "type": "string",
+            "type": ["null", "string"],
             "format": "date-time"
 	}
-    },
-    "required": ["id"]
+    }
 }

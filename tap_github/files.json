@@ -1,13 +1,13 @@
 {
-  "type": "object",
-  "properties": {
-    "sha": {
-      "type": "string",
-      "description": "The git commit hash"
-    },
-    "url": {
-      "type": "string"
-    },
-    "additionalProperties": false
-  }
+    "type": ["null", "object"],
+    "additionalProperties": false,
+    "properties": {
+	"sha": {
+	    "type": ["null", "string"],
+	    "description": "The git commit hash"
+	},
+	"url": {
+	    "type": ["null", "string"]
+	}
+    }
 }

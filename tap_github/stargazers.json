@@ -1,23 +1,24 @@
 {
-    "type": "object",
+    "type": ["null", "object"],
+    "additionalProperties": false,
     "properties": {
         "user": {
-          "type": ["null", "object"],
-          "properties": {
-            "id": {
-                "type": "integer"
+            "type": ["null", "object"],
+            "properties": {
+		"id": {
+                    "type": ["null", "integer"]
+		}
             }
-          }
         },
         "user_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "starred_at": {
-            "type": "string",
+            "type": ["null", "string"],
             "format": "date-time"
         },
         "starred_repo": {
-            "type": "string"
+            "type": ["null", "string"]
         }
     }
 }
