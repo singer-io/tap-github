@@ -69,11 +69,11 @@ def populate_metadata(schema, metadata, breadcrumb, key_properties):
     # otherwise, mark as available unless a key property, then automatic
     else:
         prop_name = breadcrumb[-1]
-        inclusion = 'available' if prop_name in key_properties else 'automatic'
+        inclusion = 'automatic' if prop_name in key_properties else 'available'
         values = {'inclusion': inclusion}
         write_metadata(metadata, values, breadcrumb)
 
-def do_discover():
+def get_catalog():
     raw_schemas = load_schemas()
     streams = []
 
@@ -93,8 +93,10 @@ def do_discover():
         }
         streams.append(catalog_entry)
 
-    catalog = {'streams': streams}
+    return {'streams': streams}
 
+def do_discover():
+    catalog = get_catalog()
     # dump catalog
     print(json.dumps(catalog, indent=2))
 
@@ -103,7 +105,7 @@ def get_all_pull_requests(stream, config, state):
     https://developer.github.com/v3/pulls/#list-pull-requests
     '''
     repo_path = config['repository']
-    with metrics.record_counter('stargazers') as counter:
+    with metrics.record_counter('pull_requests') as counter:
         for response in authed_get_all_pages('files', 'https://api.github.com/repos/{}/pulls?state=all'.format(repo_path)):
             pull_requests = response.json()
             extraction_time = singer.utils.now()
@@ -119,7 +121,7 @@ def get_all_assignees(stream, config, state):
     https://developer.github.com/v3/issues/assignees/#list-assignees
     '''
     repo_path = config['repository']
-    with metrics.record_counter('stargazers') as counter:
+    with metrics.record_counter('assignees') as counter:
         for response in authed_get_all_pages('assignees', 'https://api.github.com/repos/{}/assignees'.format(repo_path)):
             assignees = response.json()
             extraction_time = singer.utils.now()
@@ -135,7 +137,7 @@ def get_all_collaborators(stream, config, state):
     https://developer.github.com/v3/repos/collaborators/#list-collaborators
     '''
     repo_path = config['repository']
-    with metrics.record_counter('stargazers') as counter:
+    with metrics.record_counter('collaborators') as counter:
         for response in authed_get_all_pages('collaborators', 'https://api.github.com/repos/{}/collaborators'.format(repo_path)):
             collaborators = response.json()
             extraction_time = singer.utils.now()
@@ -277,7 +279,8 @@ def main():
     if args.discover:
         do_discover()
     else:
-        do_sync(args.config, args.state, args.properties)
+        catalog = args.properties if args.properties else get_catalog()
+        do_sync(args.config, args.state, catalog)
 
 if __name__ == '__main__':
     main()
