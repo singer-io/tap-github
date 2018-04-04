@@ -69,7 +69,9 @@ def populate_metadata(schema, metadata, breadcrumb, key_properties):
     # otherwise, mark as available unless a key property, then automatic
     else:
         prop_name = breadcrumb[-1]
-        inclusion = 'automatic' if prop_name in key_properties else 'available'
+        inclusion = 'automatic'
+        # for field selection
+        #inclusion = 'automatic' if prop_name in key_properties else 'available'
         values = {'inclusion': inclusion}
         write_metadata(metadata, values, breadcrumb)
 
@@ -246,29 +248,25 @@ SYNC_FUNCTIONS = {
 
 def do_sync(config, state, catalog):
     access_token = config['access_token']
-    repo_path = config['repository']
     session.headers.update({'authorization': 'token ' + access_token})
 
-    # todo, uncomment call to get_selected_streams
-    # for now, just adding all to selected streams
-    selected_streams = []#get_selected_streams(catalog)
+    # get selected streams
+    selected_stream_ids = get_selected_streams(catalog)
 
-    stream_dict = {}
+    # loop over streams
     for catalog_entry in catalog['streams']:
         stream_id = catalog_entry['tap_stream_id']
         stream_schema = catalog_entry['schema']
 
-        #uncomment for field selection
-        #if stream_id in selected_streams:
-
-        singer.write_schema(
-            stream_id,
-            catalog_entry['schema'],
-            catalog_entry['key_properties']
-        )
-
-        sync_func = SYNC_FUNCTIONS[stream_id]
-        sync_func(stream_schema, config, state)
+        # if stream is selected, write schema and sync
+        if stream_id in selected_stream_ids:
+            singer.write_schema(
+                stream_id,
+                catalog_entry['schema'],
+                catalog_entry['key_properties']
+            )
+            sync_func = SYNC_FUNCTIONS[stream_id]
+            sync_func(stream_schema, config, state)
 
     singer.write_state(state)
 
