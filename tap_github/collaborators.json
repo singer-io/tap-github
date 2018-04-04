@@ -7,6 +7,12 @@
 	},
 	"id": {
 	    "type": ["null", "integer"]
+	},
+	"url": {
+	    "type": ["null", "string"]
+	},
+	"type": {
+	    "type": ["null", "string"]
 	}
     }
 }

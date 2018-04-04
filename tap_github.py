@@ -8,6 +8,17 @@ import singer.metrics as metrics
 session = requests.Session()
 logger = singer.get_logger()
 
+REQUIRED_CONFIG_KEYS = ['access_token', 'repository']
+
+KEY_PROPERTIES = {
+    'commits': ['sha'],
+    'issues': ['id'],
+    'assignees': ['id'],
+    'collaborators': ['id'],
+    'pull_requests':['id'],
+    'stargazers': ['user_id', 'starred_repo']
+}
+
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
@@ -38,65 +49,133 @@ def load_schemas():
 
     return schemas
 
-def get_all_pull_requests(repo_path, state):
 
-    review_response = None
-    for response in authed_get_all_pages('files', 'https://api.github.com/repos/{}/pulls?state=all'.format(repo_path)):
-        files = response.json()
-        for file in files:
-            pr_number = file.get('number')
-            for review_response in authed_get_all_pages('reviews', 'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)):
-                reviews = review_response.json()
-                singer.write_records('reviews', reviews)
-        singer.write_records('files', files)
+def write_metadata(metadata, values, breadcrumb):
+    metadata.append(
+        {
+            'metadata': values,
+            'breadcrumb': breadcrumb
+        }
+    )
 
+def populate_metadata(schema, metadata, breadcrumb, key_properties):
+
+    # if object, recursively populate object's 'properties'
+    if 'object' in schema['type']:
+        for prop_name, prop_schema in schema['properties'].items():
+            prop_breadcrumb = breadcrumb + ['properties', prop_name]
+            populate_metadata(prop_schema, metadata, prop_breadcrumb, key_properties)
+
+    # otherwise, mark as available unless a key property, then automatic
+    else:
+        prop_name = breadcrumb[-1]
+        inclusion = 'available' if prop_name in key_properties else 'automatic'
+        values = {'inclusion': inclusion}
+        write_metadata(metadata, values, breadcrumb)
+
+def do_discover():
+    raw_schemas = load_schemas()
+    streams = []
+
+    for schema_name, schema in raw_schemas.items():
+
+        # get metadata for each field
+        metadata = []
+        populate_metadata(schema, metadata, [], KEY_PROPERTIES[schema_name])
+
+        # create and add catalog entry
+        catalog_entry = {
+            'stream': schema_name,
+            'tap_stream_id': schema_name,
+            'schema': schema,
+            'metadata' : metadata,
+            'key_properties': KEY_PROPERTIES[schema_name],
+        }
+        streams.append(catalog_entry)
+
+    catalog = {'streams': streams}
+
+    # dump catalog
+    print(json.dumps(catalog, indent=2))
+
+def get_all_pull_requests(stream, config, state):
+    '''
+    https://developer.github.com/v3/pulls/#list-pull-requests
+    '''
+    repo_path = config['repository']
+    with metrics.record_counter('stargazers') as counter:
+        for response in authed_get_all_pages('files', 'https://api.github.com/repos/{}/pulls?state=all'.format(repo_path)):
+            pull_requests = response.json()
+            extraction_time = singer.utils.now()
+            for pr in pull_requests:
+                rec = singer.transform(pr, stream)
+                singer.write_record('pull_requests', rec, time_extracted=extraction_time)
+                counter.increment()
 
     return state
 
-def get_all_assignees(repo_path, state):
-
-    for response in authed_get_all_pages('assignees', 'https://api.github.com/repos/{}/assignees'.format(repo_path)):
-        assignees = response.json()
-
-        singer.write_records('assignees', assignees)
-
-    return state
-
-def get_all_collaborators(repo_path, state):
-
-    for response in authed_get_all_pages('collaborators', 'https://api.github.com/repos/{}/collaborators'.format(repo_path)):
-        collaborators = response.json()
-
-        singer.write_records('collaborators', collaborators)
+def get_all_assignees(stream, config, state):
+    '''
+    https://developer.github.com/v3/issues/assignees/#list-assignees
+    '''
+    repo_path = config['repository']
+    with metrics.record_counter('stargazers') as counter:
+        for response in authed_get_all_pages('assignees', 'https://api.github.com/repos/{}/assignees'.format(repo_path)):
+            assignees = response.json()
+            extraction_time = singer.utils.now()
+            for assignee in assignees:
+                rec = singer.transform(assignee, stream)
+                singer.write_record('assignees', rec, time_extracted=extraction_time)
+                counter.increment()
 
     return state
 
+def get_all_collaborators(stream, config, state):
+    '''
+    https://developer.github.com/v3/repos/collaborators/#list-collaborators
+    '''
+    repo_path = config['repository']
+    with metrics.record_counter('stargazers') as counter:
+        for response in authed_get_all_pages('collaborators', 'https://api.github.com/repos/{}/collaborators'.format(repo_path)):
+            collaborators = response.json()
+            extraction_time = singer.utils.now()
+            for collaborator in collaborators:
+                rec = singer.transform(collaborator, stream)
+                singer.write_record('collaborators', rec, time_extracted=extraction_time)
+                counter.increment()
 
-def get_all_commits(repo_path, state):
+    return state
+
+def get_all_commits(stream, config,  state):
+    '''
+    https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
+    '''
+    repo_path = config['repository']
     if 'commits' in state and state['commits'] is not None:
         query_string = '?since={}'.format(state['commits'])
+        logger.info('Replicating commits since %s from %s', state['commits'], repo_path)
     else:
         query_string = ''
+        logger.info('Replicating all commits from %s', repo_path)
 
     latest_commit_time = None
 
     with metrics.record_counter('commits') as counter:
         for response in authed_get_all_pages('commits', 'https://api.github.com/repos/{}/commits{}'.format(repo_path, query_string)):
             commits = response.json()
-
+            extraction_time = singer.utils.now()
             for commit in commits:
+                rec = singer.transform(commit, stream)
+                singer.write_record('commits', rec, time_extracted=extraction_time)
                 counter.increment()
-                commit.pop('author', None)
-                commit.pop('committer', None)
 
-            singer.write_records('commits', commits)
-            if not latest_commit_time:
-                latest_commit_time = commits[0]['commit']['committer']['date']
-
-    state['commits'] = latest_commit_time
     return state
 
-def get_all_issues(repo_path, state):
+def get_all_issues(stream, config,  state):
+    '''
+    https://developer.github.com/v3/issues/#list-issues-for-a-repository
+    '''
+    repo_path = config['repository']
     if 'issues' in state and state['issues'] is not None:
         query_string = '&since={}'.format(state['issues'])
     else:
@@ -106,15 +185,18 @@ def get_all_issues(repo_path, state):
     with metrics.record_counter('issues') as counter:
         for response in authed_get_all_pages('issues', 'https://api.github.com/repos/{}/issues?sort=updated&direction=asc{}'.format(repo_path, query_string)):
             issues = response.json()
-            counter.increment(len(issues))
-            if len(issues) > 0:
-                last_issue_time = issues[-1]['updated_at']
-            singer.write_records('issues', issues)
-
-    state['issues'] = last_issue_time
+            extraction_time = singer.utils.now()
+            for issue in issues:
+                rec = singer.transform(issue, stream)
+                singer.write_record('issues', rec, time_extracted=extraction_time)
+                counter.increment()
     return state
 
-def get_all_stargazers(repo_path, state):
+def get_all_stargazers(stream, config, state):
+    '''
+    https://developer.github.com/v3/activity/starring/#list-stargazers
+    '''
+    repo_path = config['repository']
     if 'stargazers' in state and state['stargazers'] is not None:
         query_string = '&since={}'.format(state['stargazers'])
     else:
@@ -125,77 +207,77 @@ def get_all_stargazers(repo_path, state):
     with metrics.record_counter('stargazers') as counter:
         for response in authed_get_all_pages('stargazers', 'https://api.github.com/repos/{}/stargazers?sort=updated&direction=asc{}'.format(repo_path, query_string), stargazers_headers):
             stargazers = response.json()
-            counter.increment(len(stargazers))
-            if len(stargazers) > 0:
-                last_stargazer_time = stargazers[-1]['starred_at']
-
+            extraction_time = singer.utils.now()
             for stargazer in stargazers:
-                stargazer['starred_repo'] = repo_path
-                stargazer['user_id'] = stargazer['user']['id']
+                rec = singer.transform(stargazer, stream)
+                rec['user_id'] = rec['user']['id']
+                singer.write_record('stargazers', rec, time_extracted=extraction_time)
+                counter.increment()
 
-            singer.write_records('stargazers', stargazers)
-
-    state['stargazers'] = last_stargazer_time
     return state
 
-def do_sync(config, state):
+def get_selected_streams(catalog):
+    '''
+    Gets selected streams.  Uses metadata, looking for an empty
+    breadcrumb and mdata with a 'selected' entry
+    '''
+    selected_streams = []
+    for stream in catalog['streams']:
+        stream_metadata = stream['metadata']
+        for entry in stream_metadata:
+            # stream metadata will have empty breadcrumb
+            if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
+                selected_streams.append(stream['tap_stream_id'])
+
+    return selected_streams
+
+
+
+SYNC_FUNCTIONS = {
+    'commits': get_all_commits,
+    'issues': get_all_issues,
+    'assignees': get_all_assignees,
+    'collaborators': get_all_collaborators,
+    'pull_requests': get_all_pull_requests,
+    'stargazers': get_all_stargazers
+}
+
+def do_sync(config, state, catalog):
     access_token = config['access_token']
     repo_path = config['repository']
-    schemas = load_schemas()
-
     session.headers.update({'authorization': 'token ' + access_token})
 
-    if state:
-        logger.info('Replicating commits since %s from %s', state, repo_path)
-    else:
-        logger.info('Replicating all commits from %s', repo_path)
+    # todo, uncomment call to get_selected_streams
+    # for now, just adding all to selected streams
+    selected_streams = []#get_selected_streams(catalog)
 
-    singer.write_schema('commits', schemas['commits'], 'sha')
-    singer.write_schema('issues', schemas['issues'], 'id')
-    singer.write_schema('assignees', schemas['assignees'], 'id')
-    singer.write_schema('collaborators', schemas['collaborators'], 'id')
-    singer.write_schema('files', schemas['files'], 'sha')
-    singer.write_schema('reviews', schemas['reviews'], 'id')
-    singer.write_schema('stargazers', schemas['stargazers'], ['user_id', 'starred_repo'])
-    state = get_all_commits(repo_path, state)
-    state = get_all_issues(repo_path, state)
-    state = get_all_assignees(repo_path, state)
-    state = get_all_pull_requests(repo_path, state)
-    state = get_all_collaborators(repo_path, state)
-    state = get_all_stargazers(repo_path, state)
+    stream_dict = {}
+    for catalog_entry in catalog['streams']:
+        stream_id = catalog_entry['tap_stream_id']
+        stream_schema = catalog_entry['schema']
+
+        #uncomment for field selection
+        #if stream_id in selected_streams:
+
+        singer.write_schema(
+            stream_id,
+            catalog_entry['schema'],
+            catalog_entry['key_properties']
+        )
+
+        sync_func = SYNC_FUNCTIONS[stream_id]
+        sync_func(stream_schema, config, state)
+
     singer.write_state(state)
 
-
+@singer.utils.handle_top_exception(logger)
 def main():
+    args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        '-c', '--config', help='Config file', required=True)
-    parser.add_argument(
-        '-s', '--state', help='State file')
-
-    args = parser.parse_args()
-
-    with open(args.config) as config_file:
-        config = json.load(config_file)
-
-    missing_keys = []
-    for key in ['access_token', 'repository']:
-        if key not in config:
-            missing_keys += [key]
-
-    if len(missing_keys) > 0:
-        logger.fatal("Missing required configuration keys: {}".format(missing_keys))
-        exit(1)
-
-    state = {}
-    if args.state:
-        with open(args.state, 'r') as file:
-            for line in file:
-                state = json.loads(line.strip())
-
-    do_sync(config, state)
+    if args.discover:
+        do_discover()
+    else:
+        do_sync(args.config, args.state, args.properties)
 
 if __name__ == '__main__':
     main()

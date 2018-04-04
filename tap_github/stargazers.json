@@ -11,15 +11,12 @@
 		}
             }
         },
-        "user_id": {
-            "type": ["null", "integer"]
-        },
         "starred_at": {
             "type": ["null", "string"],
             "format": "date-time"
         },
-        "starred_repo": {
-            "type": ["null", "string"]
-        }
+	"user_id": {
+            "type": ["null", "integer"]
+	}
     }
 }

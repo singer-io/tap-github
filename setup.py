@@ -9,7 +9,7 @@ setup(name='tap-github',
       url='http://singer.io',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_github'],
-      install_requires=['singer-python==1.7.0',
+      install_requires=['singer-python==5.0.13',
                         'requests==2.13.0'],
       entry_points='''
           [console_scripts]
