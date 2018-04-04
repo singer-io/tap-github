@@ -16,7 +16,7 @@ KEY_PROPERTIES = {
     'assignees': ['id'],
     'collaborators': ['id'],
     'pull_requests':['id'],
-    'stargazers': ['user_id', 'starred_repo']
+    'stargazers': ['user_id']
 }
 
 def authed_get(source, url, headers={}):
