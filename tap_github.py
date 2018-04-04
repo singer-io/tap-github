@@ -106,7 +106,7 @@ def get_all_pull_requests(stream, config, state):
     '''
     repo_path = config['repository']
     with metrics.record_counter('pull_requests') as counter:
-        for response in authed_get_all_pages('files', 'https://api.github.com/repos/{}/pulls?state=all'.format(repo_path)):
+        for response in authed_get_all_pages('pull_requests', 'https://api.github.com/repos/{}/pulls?state=all'.format(repo_path)):
             pull_requests = response.json()
             extraction_time = singer.utils.now()
             for pr in pull_requests:
