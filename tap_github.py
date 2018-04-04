@@ -157,10 +157,8 @@ def get_all_commits(stream, config,  state):
     repo_path = config['repository']
     if 'commits' in state and state['commits'] is not None:
         query_string = '?since={}'.format(state['commits'])
-        logger.info('Replicating commits since %s from %s', state['commits'], repo_path)
     else:
         query_string = ''
-        logger.info('Replicating all commits from %s', repo_path)
 
     latest_commit_time = None
 
