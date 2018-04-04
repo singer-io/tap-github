@@ -1,0 +1,32 @@
+{
+    "type": ["null", "object"],
+    "additionalProperties": false,
+    "properties": {
+	"id": {
+	    "type": ["null", "string"]
+	},
+	"url": {
+	    "type": ["null", "string"]
+	},
+	"number": {
+	    "type": ["null", "integer"]
+	},
+	"state": {
+	    "type": ["null", "string"]
+	},
+	"title": {
+	    "type": ["null", "string"]
+	},
+	"body": {
+	    "type": ["null", "string"]
+	},
+	"created_at": {
+            "type": ["null", "string"],
+            "format": "date-time"
+	},
+	"updated_at": {
+            "type": ["null", "string"],
+            "format": "date-time"
+	}
+    }
+}
