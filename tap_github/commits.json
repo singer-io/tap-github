@@ -1,95 +1,107 @@
 {
-    "type": "object",
+    "type": ["null", "object"],
+    "additionalProperties": false,
     "properties": {
 	"sha": {
-            "type": "string",
+            "type": ["null", "string"],
             "description": "The git commit hash"
 	},
-	"url": {"type": "string"},
+	"url": {
+	    "type": ["null", "string"]
+	},
 	"parents": {
-            "type": "array",
+            "type": ["null", "array"],
             "items": {
-		"type": "object",
+		"type": ["null", "object"],
+		"additionalProperties": false,
 		"properties": {
                     "sha": {
-			"type": "string",
+			"type": ["null", "string"],
 			"description": "The git hash of the parent commit"
                     },
                     "url": {
-			"type": "string",
+			"type": ["null", "string"],
 			"description": "The URL to the parent commit"
                     },
                     "html_url": {
-			"type": "string",
+			"type": ["null", "string"],
 			"description": "The HTML URL to the parent commit"
                     }
 		}
             }
 	},
 	"html_url": {
-            "type": "string",
+            "type": ["null", "string"],
             "description": "The HTML URL to the commit"
 	},
 	"comments_url": {
-            "type": "string",
+            "type": ["null", "string"],
             "description": "The URL to the commit's comments page"
 	},
 	"commit": {
-            "type": "object",
+            "type": ["null", "object"],
+	    "additionalProperties": false,
             "properties": {
 		"url": {
-                    "type": "string",
+                    "type": ["null", "string"],
                     "description": "The URL to the commit"
 		},
 		"tree": {
-                    "type": "object",
+                    "type": ["null", "object"],
+		    "additionalProperties": false,
                     "properties": {
-			"sha": {"type": "string"},
-			"url": {"type": "string"}
+			"sha": {
+			    "type": ["null", "string"]
+			},
+			"url": {
+			    "type": ["null", "string"]
+			}
                     }
 		},
 		"author": {
-                    "type": "object",
+                    "type": ["null", "object"],
+		    "additionalProperties": false,
                     "properties": {
 			"date": {
-                            "type": "string",
+                            "type": ["null", "string"],
                             "format": "date-time",
                             "description": "The date the author committed the change"
 			},
 			"name": {
-                            "type": "string",
+                            "type": ["null", "string"],
                             "description": "The author's name"
 			},
 			"email": {
-                            "type": "string",
+                            "type": ["null", "string"],
                             "description": "The author's email"
 			}
                     }
 		},
 		"message": {
-                    "type": "string",
+                    "type": ["null", "string"],
                     "description": "The commit message"
 		},
 		"committer": {
-                    "type": "object",
+                    "type": ["null", "object"],
+		    "additionalProperties": false,
                     "properties": {
 			"date": {
-                            "type": "string",
+                            "type": ["null", "string"],
                             "format": "date-time",
                             "description": "The date the committer committed the change"
 			},
 			"name": {
-                            "type": "string",
+                            "type": ["null", "string"],
                             "description": "The committer's name"
 			},
 			"email": {
-                            "type": "string",
+                            "type": ["null", "string"],
                             "description": "The committer's email"
 			}
                     }
 		},
 		"comment_count": {
-                    "type": "integer",
+                    "type": ["null", "integer"],
                     "description": "The number of comments on the commit"
 		}
             }

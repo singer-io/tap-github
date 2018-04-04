@@ -1,8 +1,18 @@
 {
-    "type": "object",
+    "type": ["null", "object"],
+    "additionalProperties": false,
     "properties": {
-    "login": {"type": "string"},
-	"id": {"type": "integer"}
-    },
-    "required": ["id"]
+	"login": {
+	    "type": ["null", "string"]
+	},
+	"id": {
+	    "type": ["null", "integer"]
+	},
+	"url": {
+	    "type": ["null", "string"]
+	},
+	"type": {
+	    "type": ["null", "string"]
+	}
+    }
 }
