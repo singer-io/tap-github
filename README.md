@@ -53,7 +53,7 @@ This tap:
     ```
 5. In the properties.json file, select the streams to sync
   
-    Each 'stream' in the properties.json file has a "schema" entry.  To select a stream to sync, add `"selected": true` to that stream's "schema" entry.  For example, to sync the pull_requests stream:
+    Each stream in the properties.json file has a "schema" entry.  To select a stream to sync, add `"selected": true` to that stream's "schema" entry.  For example, to sync the pull_requests stream:
     ```
     ...
     "tap_stream_id": "pull_requests",
