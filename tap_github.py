@@ -220,16 +220,20 @@ def get_all_stargazers(stream, config, state):
 
 def get_selected_streams(catalog):
     '''
-    Gets selected streams.  Uses metadata, looking for an empty
+    Gets selected streams.  Checks schema's 'selected'
+    first -- and then checks metadata, looking for an empty
     breadcrumb and mdata with a 'selected' entry
     '''
     selected_streams = []
     for stream in catalog['streams']:
         stream_metadata = stream['metadata']
-        for entry in stream_metadata:
-            # stream metadata will have empty breadcrumb
-            if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
-                selected_streams.append(stream['tap_stream_id'])
+        if stream['schema'].get('selected', False):
+            selected_streams.append(stream['tap_stream_id'])
+        else:
+            for entry in stream_metadata:
+                # stream metadata will have empty breadcrumb
+                if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
+                    selected_streams.append(stream['tap_stream_id'])
 
     return selected_streams
 
