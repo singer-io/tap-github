@@ -75,7 +75,7 @@ This tap:
     `tap-github` can be run with:
 
     ```bash
-    tap-github --config config.json --properties properties.json [--state state.json]
+    tap-github --config config.json --properties properties.json
     ```
 
 ---
