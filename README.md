@@ -46,25 +46,36 @@ This tap:
     {"access_token": "your-access-token",
      "repository": "singer-io/tap-github"}
     ```
-
-4. [Optional] Create the initial state file
-
-    You can provide JSON file that contains a date for the "commit" and
-    "issues" endpoints to force the application to only fetch commits and
-    issues newer than those dates. If you omit the file it will fetch all
-    commits and issues.
-
-    ```json
-    {"commits": "2017-01-17T20:32:05Z",
-     "issues":  "2017-01-17T20:32:05Z"}
+4. Run the tap in discovery mode to get properties.json file
+    
+    ```bash
+    tap-github --config config.json --discover > properties.json
+    ```
+5. In the properties.json file, select the streams to sync
+  
+    Each stream in the properties.json file has a "schema" entry.  To select a stream to sync, add `"selected": true` to that stream's "schema" entry.  For example, to sync the pull_requests stream:
+    ```
+    ...
+    "tap_stream_id": "pull_requests",
+    "schema": {
+      "selected": true,
+      "properties": {
+        "updated_at": {
+          "format": "date-time",
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+    ...
     ```
 
-5. Run the application
+6. Run the application
 
     `tap-github` can be run with:
 
     ```bash
-    tap-github --config config.json [--state state.json]
+    tap-github --config config.json --properties properties.json
     ```
 
 ---
