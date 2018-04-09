@@ -80,5 +80,5 @@ This tap:
 
 ---
 
-Copyright &copy; 2018  Stitch
+Copyright &copy; 2018 Stitch
 
