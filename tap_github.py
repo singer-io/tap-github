@@ -123,27 +123,30 @@ def get_all_pull_requests(schemas, config, state):
     '''
     repo_path = config['repository']
     with metrics.record_counter('pull_requests') as counter:
-        for response in authed_get_all_pages(
-                'pull_requests',
-                'https://api.github.com/repos/{}/pulls?state=all'.format(repo_path)
-        ):
-            pull_requests = response.json()
-            extraction_time = singer.utils.now()
-            for pr in pull_requests:
-                pr_num = pr.get('number')
+        with metrics.record_counter('reviews') as reviews_counter:
+            for response in authed_get_all_pages(
+                    'pull_requests',
+                    'https://api.github.com/repos/{}/pulls?state=all'.format(repo_path)
+            ):
+                pull_requests = response.json()
+                extraction_time = singer.utils.now()
+                for pr in pull_requests:
+                    pr_num = pr.get('number')
 
-                # transform and write pull_request record
-                rec = singer.transform(pr, schemas['pull_requests'])
-                singer.write_record('pull_requests', rec, time_extracted=extraction_time)
-                counter.increment()
+                    # transform and write pull_request record
+                    rec = singer.transform(pr, schemas['pull_requests'])
+                    singer.write_record('pull_requests', rec, time_extracted=extraction_time)
+                    counter.increment()
 
-                # sync reviews if that schema is present (only there if selected)
-                if schemas.get('reviews'):
-                    sync_reviews_for_pr(pr_num, schemas['reviews'], config, state)
+                    # sync reviews if that schema is present (only there if selected)
+                    if schemas.get('reviews'):
+                        for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], config, state):
+                            singer.write_record('reviews', review_rec, time_extracted=extraction_time)
+                            reviews_counter.increment()
 
     return state
 
-def sync_reviews_for_pr(pr_number, schema, config, state):
+def get_reviews_for_pr(pr_number, schema, config, state):
     repo_path = config['repository']
     for response in authed_get_all_pages(
             'reviews',
@@ -153,7 +156,8 @@ def sync_reviews_for_pr(pr_number, schema, config, state):
         extraction_time = singer.utils.now()
         for review in reviews:
             rec = singer.transform(review, schema)
-            singer.write_record('reviews', reviews, time_extracted=extraction_time)
+            yield rec
+
 
         return state
 
