@@ -77,6 +77,10 @@ def populate_metadata(schema, metadata, breadcrumb, key_properties):
 
     # if object, recursively populate object's 'properties'
     if 'object' in schema['type']:
+        if breadcrumb:
+            inclusion = 'automatic'
+            values = {'inclusion': inclusion}
+            write_metadata(metadata, values, breadcrumb)
         for prop_name, prop_schema in schema['properties'].items():
             prop_breadcrumb = breadcrumb + ['properties', prop_name]
             populate_metadata(prop_schema, metadata, prop_breadcrumb, key_properties)
