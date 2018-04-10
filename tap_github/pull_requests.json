@@ -20,6 +20,26 @@
 	"body": {
 	    "type": ["null", "string"]
 	},
+	"user": {
+            "type": ["null", "object"],
+    "additionalProperties": false,
+            "properties": {
+		"login": {
+	                    "type": ["null", "string"]
+		},
+		"id": {
+	                    "type": ["null", "integer"]
+		}
+            }
+    },
+	"merged_at": {
+            "type": ["null", "string"],
+            "format": "date-time"
+	},
+	"closed_at": {
+            "type": ["null", "string"],
+            "format": "date-time"
+	},
 	"created_at": {
             "type": ["null", "string"],
             "format": "date-time"
