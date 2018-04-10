@@ -16,7 +16,8 @@ KEY_PROPERTIES = {
     'assignees': ['id'],
     'collaborators': ['id'],
     'pull_requests':['id'],
-    'stargazers': ['user_id']
+    'stargazers': ['user_id'],
+    'reviews': ['id']
 }
 
 def authed_get(source, url, headers={}):
@@ -48,6 +49,20 @@ def load_schemas():
             schemas[file_raw] = json.load(file)
 
     return schemas
+
+class DependencyException(Exception):
+    pass
+
+def validate_dependencies(selected_stream_ids):
+    errs = []
+    msg_tmpl = ("Unable to extract {0} data. "
+                "To receive {0} data, you also need to select {1}.")
+
+    if 'reviews' in selected_stream_ids and 'pull_requests' not in selected_stream_ids:
+        errs.append(msg_tmpl.format('reviews','pull_requests'))
+
+    if errs:
+        raise DependencyException(" ".join(errs))
 
 
 def write_metadata(metadata, values, breadcrumb):
@@ -102,55 +117,89 @@ def do_discover():
     # dump catalog
     print(json.dumps(catalog, indent=2))
 
-def get_all_pull_requests(stream, config, state):
+def get_all_pull_requests(schemas, config, state):
     '''
     https://developer.github.com/v3/pulls/#list-pull-requests
     '''
     repo_path = config['repository']
     with metrics.record_counter('pull_requests') as counter:
-        for response in authed_get_all_pages('pull_requests', 'https://api.github.com/repos/{}/pulls?state=all'.format(repo_path)):
+        for response in authed_get_all_pages(
+                'pull_requests',
+                'https://api.github.com/repos/{}/pulls?state=all'.format(repo_path)
+        ):
             pull_requests = response.json()
             extraction_time = singer.utils.now()
             for pr in pull_requests:
-                rec = singer.transform(pr, stream)
-                singer.write_record('pull_requests', rec, time_extracted=extraction_time)
-                counter.increment()
+                pr_num = pr.get('number')
+
+                # transform and write pull_request record
+                with singer.Transformer() as bumble_bee:
+                    rec = bumble_bee.transform(pr, schemas['pull_requests'])
+                    singer.write_record('pull_requests', rec, time_extracted=extraction_time)
+                    counter.increment()
+
+                # sync reviews if that schema is present (only there if selected)
+                if schemas.get('reviews'):
+                    sync_reviews_for_pr(pr_num, schemas['reviews'], config, state)
 
     return state
 
-def get_all_assignees(stream, config, state):
+def sync_reviews_for_pr(pr_number, schema, config, state):
+    repo_path = config['repository']
+    for response in authed_get_all_pages(
+            'reviews',
+            'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)
+    ):
+        reviews = response.json()
+        extraction_time = singer.utils.now()
+        for review in reviews: 
+            with singer.Transformer() as bumble_bee:
+                rec = bumble_bee.transform(review, schema)
+                singer.write_record('reviews', reviews, time_extracted=extraction_time)
+
+        return state
+
+def get_all_assignees(schema, config, state):
     '''
     https://developer.github.com/v3/issues/assignees/#list-assignees
     '''
     repo_path = config['repository']
     with metrics.record_counter('assignees') as counter:
-        for response in authed_get_all_pages('assignees', 'https://api.github.com/repos/{}/assignees'.format(repo_path)):
+        for response in authed_get_all_pages(
+                'assignees',
+                'https://api.github.com/repos/{}/assignees'.format(repo_path)
+        ):
             assignees = response.json()
             extraction_time = singer.utils.now()
             for assignee in assignees:
-                rec = singer.transform(assignee, stream)
-                singer.write_record('assignees', rec, time_extracted=extraction_time)
-                counter.increment()
+                with singer.Transformer() as bumble_bee:
+                    rec = bumble_bee.transform(assignee, schema)
+                    singer.write_record('assignees', rec, time_extracted=extraction_time)
+                    counter.increment()
 
     return state
 
-def get_all_collaborators(stream, config, state):
+def get_all_collaborators(schema, config, state):
     '''
     https://developer.github.com/v3/repos/collaborators/#list-collaborators
     '''
     repo_path = config['repository']
     with metrics.record_counter('collaborators') as counter:
-        for response in authed_get_all_pages('collaborators', 'https://api.github.com/repos/{}/collaborators'.format(repo_path)):
+        for response in authed_get_all_pages(
+                'collaborators',
+                'https://api.github.com/repos/{}/collaborators'.format(repo_path)
+        ):
             collaborators = response.json()
             extraction_time = singer.utils.now()
             for collaborator in collaborators:
-                rec = singer.transform(collaborator, stream)
-                singer.write_record('collaborators', rec, time_extracted=extraction_time)
-                counter.increment()
+                with singer.Transformer() as bumble_bee:
+                    rec = bumble_bee.transform(collaborator, schema)
+                    singer.write_record('collaborators', rec, time_extracted=extraction_time)
+                    counter.increment()
 
     return state
 
-def get_all_commits(stream, config,  state):
+def get_all_commits(schema, config,  state):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
@@ -163,17 +212,21 @@ def get_all_commits(stream, config,  state):
     latest_commit_time = None
 
     with metrics.record_counter('commits') as counter:
-        for response in authed_get_all_pages('commits', 'https://api.github.com/repos/{}/commits{}'.format(repo_path, query_string)):
+        for response in authed_get_all_pages(
+                'commits',
+                'https://api.github.com/repos/{}/commits{}'.format(repo_path, query_string)
+        ):
             commits = response.json()
             extraction_time = singer.utils.now()
             for commit in commits:
-                rec = singer.transform(commit, stream)
-                singer.write_record('commits', rec, time_extracted=extraction_time)
-                counter.increment()
+                with singer.Transformer() as bumble_bee:
+                    rec = bumble_bee.transform(commit, schema)
+                    singer.write_record('commits', rec, time_extracted=extraction_time)
+                    counter.increment()
 
     return state
 
-def get_all_issues(stream, config,  state):
+def get_all_issues(schema, config,  state):
     '''
     https://developer.github.com/v3/issues/#list-issues-for-a-repository
     '''
@@ -185,16 +238,20 @@ def get_all_issues(stream, config,  state):
 
     last_issue_time = None
     with metrics.record_counter('issues') as counter:
-        for response in authed_get_all_pages('issues', 'https://api.github.com/repos/{}/issues?sort=updated&direction=asc{}'.format(repo_path, query_string)):
+        for response in authed_get_all_pages(
+                'issues',
+                'https://api.github.com/repos/{}/issues?sort=updated&direction=asc{}'.format(repo_path, query_string)
+        ):
             issues = response.json()
             extraction_time = singer.utils.now()
             for issue in issues:
-                rec = singer.transform(issue, stream)
-                singer.write_record('issues', rec, time_extracted=extraction_time)
-                counter.increment()
+                with singer.Transformer() as bumble_bee:
+                    rec = bumble_bee.transform(issue, schema)
+                    singer.write_record('issues', rec, time_extracted=extraction_time)
+                    counter.increment()
     return state
 
-def get_all_stargazers(stream, config, state):
+def get_all_stargazers(schema, config, state):
     '''
     https://developer.github.com/v3/activity/starring/#list-stargazers
     '''
@@ -207,14 +264,18 @@ def get_all_stargazers(stream, config, state):
     stargazers_headers = {'Accept': 'application/vnd.github.v3.star+json'}
     last_stargazer_time = None
     with metrics.record_counter('stargazers') as counter:
-        for response in authed_get_all_pages('stargazers', 'https://api.github.com/repos/{}/stargazers?sort=updated&direction=asc{}'.format(repo_path, query_string), stargazers_headers):
+        for response in authed_get_all_pages(
+                'stargazers',
+                'https://api.github.com/repos/{}/stargazers?sort=updated&direction=asc{}'.format(repo_path, query_string), stargazers_headers
+        ):
             stargazers = response.json()
             extraction_time = singer.utils.now()
             for stargazer in stargazers:
-                rec = singer.transform(stargazer, stream)
-                rec['user_id'] = rec['user']['id']
-                singer.write_record('stargazers', rec, time_extracted=extraction_time)
-                counter.increment()
+                with singer.Transformer() as bumble_bee:
+                    rec = bumble_bee.transform(stargazer, schema)
+                    rec['user_id'] = rec['user']['id']
+                    singer.write_record('stargazers', rec, time_extracted=extraction_time)
+                    counter.increment()
 
     return state
 
@@ -237,7 +298,11 @@ def get_selected_streams(catalog):
 
     return selected_streams
 
-
+def get_stream_from_catalog(stream_id, catalog):
+    for stream in catalog['streams']:
+        if stream['tap_stream_id'] == stream_id:
+            return stream
+    return None
 
 SYNC_FUNCTIONS = {
     'commits': get_all_commits,
@@ -248,29 +313,54 @@ SYNC_FUNCTIONS = {
     'stargazers': get_all_stargazers
 }
 
+SUB_STREAMS = {
+    'pull_requests': ['reviews']
+}
+
 def do_sync(config, state, catalog):
     access_token = config['access_token']
     session.headers.update({'authorization': 'token ' + access_token})
 
-    # get selected streams
+    # get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
+    validate_dependencies(selected_stream_ids)
 
-    # loop over streams
-    for catalog_entry in catalog['streams']:
-        stream_id = catalog_entry['tap_stream_id']
-        stream_schema = catalog_entry['schema']
+    for stream in catalog['streams']:
+        stream_id = stream['tap_stream_id']
+        stream_schema = stream['schema']
+
+        # if it is a "sub_stream", it will be sync'd by its parent
+        if not SYNC_FUNCTIONS.get(stream_id):
+            continue
 
         # if stream is selected, write schema and sync
         if stream_id in selected_stream_ids:
-            singer.write_schema(
-                stream_id,
-                catalog_entry['schema'],
-                catalog_entry['key_properties']
-            )
-            sync_func = SYNC_FUNCTIONS[stream_id]
-            sync_func(stream_schema, config, state)
+            singer.write_schema(stream_id, stream_schema,stream['key_properties'])
 
-    singer.write_state(state)
+            # get sync function and any sub streams
+            sync_func = SYNC_FUNCTIONS[stream_id]
+            sub_stream_ids = SUB_STREAMS.get(stream_id, None)
+
+            # sync stream
+            if not sub_stream_ids:
+                sync_func(stream_schema, config, state)
+
+            # handle streams with sub streams
+            else:
+                stream_schemas = {stream_id: stream_schema}
+
+                # get and write selected sub stream schemas
+                for sub_stream_id in sub_stream_ids:
+                    if sub_stream_id in selected_stream_ids:
+                        sub_stream = get_stream_from_catalog(sub_stream_id, catalog)
+                        stream_schemas[sub_stream_id] = sub_stream['schema']
+                        singer.write_schema(sub_stream_id, sub_stream['schema'],
+                                            sub_stream['key_properties'])
+
+                # sync stream and it's sub streams
+                sync_func(stream_schemas, config, state)
+
+            singer.write_state(state)
 
 @singer.utils.handle_top_exception(logger)
 def main():
