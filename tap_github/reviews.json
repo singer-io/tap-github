@@ -16,6 +16,21 @@
 		    "type": ["null", "integer"]
 		}
 	    }
+	},
+	"body": {
+	    "type": ["null", "string"]
+	},
+	"state": {
+	    "type": ["null", "string"]
+	},
+	"commit_id": {
+	    "type": ["null", "string"]
+	},
+	"html_url": {
+	    "type": ["null", "string"]
+	},
+	"pull_request_url": {
+	    "type": ["null", "string"]
 	}
     }
 }
