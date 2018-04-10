@@ -1,0 +1,21 @@
+{
+    "type": ["null", "object"],
+    "additionalProperties": false,
+    "properties": {
+	"id": {
+	    "type": ["null", "integer"]
+	},
+	"user": {
+	    "type": ["null", "object"],
+	    "additionalProperties": false,
+	    "properties": {
+		"login": {
+		    "type": ["null", "string"]
+		},
+		"id": {
+		    "type": ["null", "integer"]
+		}
+	    }
+	}
+    }
+}
