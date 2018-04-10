@@ -14,3 +14,20 @@
 
 ## 0.4.1
   * Check schema's 'selected' property as well as metadata during table selection
+
+## 0.5.0
+  * Adds support for "sub-streams" (streams dependent on other streams)
+  * Adds reviews stream
+  * [#14](https://github.com/singer-io/tap-github/pull/14)
+
+## 0.5.1
+  * Reverts change to transformer to avoid excess logging
+  * [#16](https://github.com/singer-io/tap-github/pull/16)
+
+## 0.5.2
+  * Fix record counting for reviews stream
+  * [#17](https://github.com/singer-io/tap-github/pull/17)
+
+## 0.5.3
+  * Adds more fields to reviews stream
+  * [#18](https://github.com/singer-io/tap-github/pull/18)
