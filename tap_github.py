@@ -133,10 +133,9 @@ def get_all_pull_requests(schemas, config, state):
                 pr_num = pr.get('number')
 
                 # transform and write pull_request record
-                with singer.Transformer() as bumble_bee:
-                    rec = bumble_bee.transform(pr, schemas['pull_requests'])
-                    singer.write_record('pull_requests', rec, time_extracted=extraction_time)
-                    counter.increment()
+                rec = singer.transform(pr, schemas['pull_requests'])
+                singer.write_record('pull_requests', rec, time_extracted=extraction_time)
+                counter.increment()
 
                 # sync reviews if that schema is present (only there if selected)
                 if schemas.get('reviews'):
@@ -152,10 +151,9 @@ def sync_reviews_for_pr(pr_number, schema, config, state):
     ):
         reviews = response.json()
         extraction_time = singer.utils.now()
-        for review in reviews: 
-            with singer.Transformer() as bumble_bee:
-                rec = bumble_bee.transform(review, schema)
-                singer.write_record('reviews', reviews, time_extracted=extraction_time)
+        for review in reviews:
+            rec = singer.transform(review, schema)
+            singer.write_record('reviews', reviews, time_extracted=extraction_time)
 
         return state
 
@@ -172,10 +170,9 @@ def get_all_assignees(schema, config, state):
             assignees = response.json()
             extraction_time = singer.utils.now()
             for assignee in assignees:
-                with singer.Transformer() as bumble_bee:
-                    rec = bumble_bee.transform(assignee, schema)
-                    singer.write_record('assignees', rec, time_extracted=extraction_time)
-                    counter.increment()
+                rec = singer.transform(assignee, schema)
+                singer.write_record('assignees', rec, time_extracted=extraction_time)
+                counter.increment()
 
     return state
 
@@ -192,10 +189,9 @@ def get_all_collaborators(schema, config, state):
             collaborators = response.json()
             extraction_time = singer.utils.now()
             for collaborator in collaborators:
-                with singer.Transformer() as bumble_bee:
-                    rec = bumble_bee.transform(collaborator, schema)
-                    singer.write_record('collaborators', rec, time_extracted=extraction_time)
-                    counter.increment()
+                rec = singer.transform(collaborator, schema)
+                singer.write_record('collaborators', rec, time_extracted=extraction_time)
+                counter.increment()
 
     return state
 
@@ -219,10 +215,9 @@ def get_all_commits(schema, config,  state):
             commits = response.json()
             extraction_time = singer.utils.now()
             for commit in commits:
-                with singer.Transformer() as bumble_bee:
-                    rec = bumble_bee.transform(commit, schema)
-                    singer.write_record('commits', rec, time_extracted=extraction_time)
-                    counter.increment()
+                rec = singer.transform(commit, schema)
+                singer.write_record('commits', rec, time_extracted=extraction_time)
+                counter.increment()
 
     return state
 
@@ -245,10 +240,9 @@ def get_all_issues(schema, config,  state):
             issues = response.json()
             extraction_time = singer.utils.now()
             for issue in issues:
-                with singer.Transformer() as bumble_bee:
-                    rec = bumble_bee.transform(issue, schema)
-                    singer.write_record('issues', rec, time_extracted=extraction_time)
-                    counter.increment()
+                rec = singer.transform(issue, schema)
+                singer.write_record('issues', rec, time_extracted=extraction_time)
+                counter.increment()
     return state
 
 def get_all_stargazers(schema, config, state):
@@ -271,11 +265,10 @@ def get_all_stargazers(schema, config, state):
             stargazers = response.json()
             extraction_time = singer.utils.now()
             for stargazer in stargazers:
-                with singer.Transformer() as bumble_bee:
-                    rec = bumble_bee.transform(stargazer, schema)
-                    rec['user_id'] = rec['user']['id']
-                    singer.write_record('stargazers', rec, time_extracted=extraction_time)
-                    counter.increment()
+                rec = singer.transform(stargazer, schema)
+                rec['user_id'] = rec['user']['id']
+                singer.write_record('stargazers', rec, time_extracted=extraction_time)
+                counter.increment()
 
     return state
 
