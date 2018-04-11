@@ -1,7 +1,27 @@
 # Changelog
 
-## 0.3.0
-  * Adds support for retrieving pull requests, assignees and collaborars [#8](https://github.com/singer-io/tap-github/pull/8)
+## 0.5.4
+  * Bumps version of singer-python to 5.0.14 to fix datetime strftime issues documented in [#69](https://github.com/singer-io/singer-python/pull/69)
+
+## 0.5.3
+  * Adds more fields to reviews stream
+  * [#18](https://github.com/singer-io/tap-github/pull/18)
+
+## 0.5.2
+  * Fix record counting for reviews stream
+  * [#17](https://github.com/singer-io/tap-github/pull/17)
+
+## 0.5.1
+  * Reverts change to transformer to avoid excess logging
+  * [#16](https://github.com/singer-io/tap-github/pull/16)
+
+## 0.5.0
+  * Adds support for "sub-streams" (streams dependent on other streams)
+  * Adds reviews stream
+  * [#14](https://github.com/singer-io/tap-github/pull/14)
+
+## 0.4.1
+  * Check schema's 'selected' property as well as metadata during table selection
 
 ## 0.4.0
   * Removes 'reviews' and 'files' streams
@@ -12,22 +32,5 @@
   * Removed incremental replication from a few streams due to bugs, should be added later
   * [#9](https://github.com/singer-io/tap-github/pull/9)
 
-## 0.4.1
-  * Check schema's 'selected' property as well as metadata during table selection
-
-## 0.5.0
-  * Adds support for "sub-streams" (streams dependent on other streams)
-  * Adds reviews stream
-  * [#14](https://github.com/singer-io/tap-github/pull/14)
-
-## 0.5.1
-  * Reverts change to transformer to avoid excess logging
-  * [#16](https://github.com/singer-io/tap-github/pull/16)
-
-## 0.5.2
-  * Fix record counting for reviews stream
-  * [#17](https://github.com/singer-io/tap-github/pull/17)
-
-## 0.5.3
-  * Adds more fields to reviews stream
-  * [#18](https://github.com/singer-io/tap-github/pull/18)
+## 0.3.0
+  * Adds support for retrieving pull requests, assignees and collaborars [#8](https://github.com/singer-io/tap-github/pull/8)
