@@ -104,6 +104,9 @@ def get_catalog():
         metadata = []
         populate_metadata(schema, metadata, [], KEY_PROPERTIES[schema_name])
 
+        # Inclusion metadata (everything is automatic) is done here.
+        # We can set the replication-method here if we want
+
         # create and add catalog entry
         catalog_entry = {
             'stream': schema_name,
@@ -140,12 +143,14 @@ def get_all_pull_requests(schemas, config, state):
                     # transform and write pull_request record
                     rec = singer.transform(pr, schemas['pull_requests'])
                     singer.write_record('pull_requests', rec, time_extracted=extraction_time)
+                    singer.write_bookmark(state, 'pull_requests', 'since', singer.utils.strftime(extraction_time))
                     counter.increment()
 
                     # sync reviews if that schema is present (only there if selected)
                     if schemas.get('reviews'):
                         for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], config, state):
                             singer.write_record('reviews', review_rec, time_extracted=extraction_time)
+                            singer.write_bookmark(state, 'reviews', 'since', singer.utils.strftime(extraction_time))
                             reviews_counter.increment()
 
     return state
@@ -180,6 +185,7 @@ def get_all_assignees(schema, config, state):
             for assignee in assignees:
                 rec = singer.transform(assignee, schema)
                 singer.write_record('assignees', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, 'assignees', 'since', singer.utils.strftime(extraction_time))
                 counter.increment()
 
     return state
@@ -199,6 +205,7 @@ def get_all_collaborators(schema, config, state):
             for collaborator in collaborators:
                 rec = singer.transform(collaborator, schema)
                 singer.write_record('collaborators', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, 'collaborator', 'since', singer.utils.strftime(extraction_time))
                 counter.increment()
 
     return state
@@ -225,6 +232,7 @@ def get_all_commits(schema, config,  state):
             for commit in commits:
                 rec = singer.transform(commit, schema)
                 singer.write_record('commits', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, 'commits', 'since', singer.utils.strftime(extraction_time))
                 counter.increment()
 
     return state
@@ -250,6 +258,7 @@ def get_all_issues(schema, config,  state):
             for issue in issues:
                 rec = singer.transform(issue, schema)
                 singer.write_record('issues', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, 'issues', 'since', singer.utils.strftime(extraction_time))
                 counter.increment()
     return state
 
@@ -276,6 +285,7 @@ def get_all_stargazers(schema, config, state):
                 rec = singer.transform(stargazer, schema)
                 rec['user_id'] = rec['user']['id']
                 singer.write_record('stargazers', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, 'stargazers', 'since', singer.utils.strftime(extraction_time))
                 counter.increment()
 
     return state
@@ -344,7 +354,7 @@ def do_sync(config, state, catalog):
 
             # sync stream
             if not sub_stream_ids:
-                sync_func(stream_schema, config, state)
+                state = sync_func(stream_schema, config, state)
 
             # handle streams with sub streams
             else:
@@ -359,7 +369,7 @@ def do_sync(config, state, catalog):
                                             sub_stream['key_properties'])
 
                 # sync stream and it's sub streams
-                sync_func(stream_schemas, config, state)
+                state = sync_func(stream_schemas, config, state)
 
             singer.write_state(state)
 
