@@ -3,6 +3,7 @@ import os
 import json
 import requests
 import singer
+import singer.bookmarks as bookmarks
 import singer.metrics as metrics
 
 session = requests.Session()
@@ -215,8 +216,8 @@ def get_all_commits(schema, config,  state):
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
     repo_path = config['repository']
-    if 'commits' in state and state['commits'] is not None:
-        query_string = '?since={}'.format(state['commits'])
+    if bookmarks.get_bookmark(state, "commits", 'since'):
+        query_string = '?since={}'.format(bookmarks.get_bookmark(state, "commits", 'since'))
     else:
         query_string = ''
 
@@ -242,8 +243,9 @@ def get_all_issues(schema, config,  state):
     https://developer.github.com/v3/issues/#list-issues-for-a-repository
     '''
     repo_path = config['repository']
-    if 'issues' in state and state['issues'] is not None:
-        query_string = '&since={}'.format(state['issues'])
+
+    if bookmarks.get_bookmark(state, "issues", 'since'):
+        query_string = '&since={}'.format(bookmarks.get_bookmark(state, "issues", 'since'))
     else:
         query_string = ''
 
@@ -267,8 +269,8 @@ def get_all_stargazers(schema, config, state):
     https://developer.github.com/v3/activity/starring/#list-stargazers
     '''
     repo_path = config['repository']
-    if 'stargazers' in state and state['stargazers'] is not None:
-        query_string = '&since={}'.format(state['stargazers'])
+    if bookmarks.get_bookmark(state, "stargazers", 'since'):
+        query_string = '&since={}'.format(bookmarks.get_bookmark(state, "stargazers", 'since'))
     else:
         query_string = ''
 
