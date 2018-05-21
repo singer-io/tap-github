@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0
+  * Writes appropriate metadata to allow for selection of fields
+  * Adds bookmarking and incremental replication to Commits and Issues streams [#22](https://github.com/singer-io/tap-github/pull/22)
+
 ## 0.5.4
   * Bumps version of singer-python to 5.0.14 to fix datetime strftime issues documented in [#69](https://github.com/singer-io/singer-python/pull/69)
 
