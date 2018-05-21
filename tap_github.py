@@ -6,6 +6,8 @@ import singer
 import singer.bookmarks as bookmarks
 import singer.metrics as metrics
 
+from singer import metadata
+
 session = requests.Session()
 logger = singer.get_logger()
 
@@ -74,26 +76,18 @@ def write_metadata(metadata, values, breadcrumb):
         }
     )
 
-def populate_metadata(schema, metadata, breadcrumb, key_properties):
+def populate_metadata(schema_name, schema):
+    mdata = metadata.new()
+    #mdata = metadata.write(mdata, (), 'forced-replication-method', KEY_PROPERTIES[schema_name])
+    mdata = metadata.write(mdata, (), 'table-key-properties', KEY_PROPERTIES[schema_name])
 
-    # if object, recursively populate object's 'properties'
-    if 'object' in schema['type']:
-        if breadcrumb:
-            inclusion = 'automatic'
-            values = {'inclusion': inclusion}
-            write_metadata(metadata, values, breadcrumb)
-        for prop_name, prop_schema in schema['properties'].items():
-            prop_breadcrumb = breadcrumb + ['properties', prop_name]
-            populate_metadata(prop_schema, metadata, prop_breadcrumb, key_properties)
+    for field_name in schema['properties'].keys():
+        if field_name in KEY_PROPERTIES[schema_name]:
+            mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'automatic')
+        else:
+            mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'available')
 
-    # otherwise, mark as available unless a key property, then automatic
-    else:
-        prop_name = breadcrumb[-1]
-        inclusion = 'automatic'
-        # for field selection
-        #inclusion = 'automatic' if prop_name in key_properties else 'available'
-        values = {'inclusion': inclusion}
-        write_metadata(metadata, values, breadcrumb)
+    return mdata
 
 def get_catalog():
     raw_schemas = load_schemas()
@@ -102,18 +96,14 @@ def get_catalog():
     for schema_name, schema in raw_schemas.items():
 
         # get metadata for each field
-        metadata = []
-        populate_metadata(schema, metadata, [], KEY_PROPERTIES[schema_name])
-
-        # Inclusion metadata (everything is automatic) is done here.
-        # We can set the replication-method here if we want
+        mdata = populate_metadata(schema_name, schema)
 
         # create and add catalog entry
         catalog_entry = {
             'stream': schema_name,
             'tap_stream_id': schema_name,
             'schema': schema,
-            'metadata' : metadata,
+            'metadata' : metadata.to_list(mdata),
             'key_properties': KEY_PROPERTIES[schema_name],
         }
         streams.append(catalog_entry)
@@ -125,7 +115,7 @@ def do_discover():
     # dump catalog
     print(json.dumps(catalog, indent=2))
 
-def get_all_pull_requests(schemas, config, state):
+def get_all_pull_requests(schemas, config, state, mdata):
     '''
     https://developer.github.com/v3/pulls/#list-pull-requests
     '''
@@ -142,21 +132,22 @@ def get_all_pull_requests(schemas, config, state):
                     pr_num = pr.get('number')
 
                     # transform and write pull_request record
-                    rec = singer.transform(pr, schemas['pull_requests'])
+                    with singer.Transformer() as transformer:
+                        rec = transformer.transform(pr, schemas['pull_requests'], metadata=metadata.to_map(mdata))
                     singer.write_record('pull_requests', rec, time_extracted=extraction_time)
                     singer.write_bookmark(state, 'pull_requests', 'since', singer.utils.strftime(extraction_time))
                     counter.increment()
 
                     # sync reviews if that schema is present (only there if selected)
                     if schemas.get('reviews'):
-                        for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], config, state):
+                        for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], config, state, mdata):
                             singer.write_record('reviews', review_rec, time_extracted=extraction_time)
                             singer.write_bookmark(state, 'reviews', 'since', singer.utils.strftime(extraction_time))
                             reviews_counter.increment()
 
     return state
 
-def get_reviews_for_pr(pr_number, schema, config, state):
+def get_reviews_for_pr(pr_number, schema, config, state, mdata):
     repo_path = config['repository']
     for response in authed_get_all_pages(
             'reviews',
@@ -165,13 +156,14 @@ def get_reviews_for_pr(pr_number, schema, config, state):
         reviews = response.json()
         extraction_time = singer.utils.now()
         for review in reviews:
-            rec = singer.transform(review, schema)
+            with singer.Transformer() as transformer:
+                rec = transformer.transform(review, schema, metadata=metadata.to_map(mdata))
             yield rec
 
 
         return state
 
-def get_all_assignees(schema, config, state):
+def get_all_assignees(schema, config, state, mdata):
     '''
     https://developer.github.com/v3/issues/assignees/#list-assignees
     '''
@@ -184,14 +176,15 @@ def get_all_assignees(schema, config, state):
             assignees = response.json()
             extraction_time = singer.utils.now()
             for assignee in assignees:
-                rec = singer.transform(assignee, schema)
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(assignee, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('assignees', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, 'assignees', 'since', singer.utils.strftime(extraction_time))
                 counter.increment()
 
     return state
 
-def get_all_collaborators(schema, config, state):
+def get_all_collaborators(schema, config, state, mdata):
     '''
     https://developer.github.com/v3/repos/collaborators/#list-collaborators
     '''
@@ -204,14 +197,15 @@ def get_all_collaborators(schema, config, state):
             collaborators = response.json()
             extraction_time = singer.utils.now()
             for collaborator in collaborators:
-                rec = singer.transform(collaborator, schema)
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('collaborators', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, 'collaborator', 'since', singer.utils.strftime(extraction_time))
                 counter.increment()
 
     return state
 
-def get_all_commits(schema, config,  state):
+def get_all_commits(schema, config,  state, mdata):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
@@ -231,14 +225,15 @@ def get_all_commits(schema, config,  state):
             commits = response.json()
             extraction_time = singer.utils.now()
             for commit in commits:
-                rec = singer.transform(commit, schema)
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('commits', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, 'commits', 'since', singer.utils.strftime(extraction_time))
                 counter.increment()
 
     return state
 
-def get_all_issues(schema, config,  state):
+def get_all_issues(schema, config,  state, mdata):
     '''
     https://developer.github.com/v3/issues/#list-issues-for-a-repository
     '''
@@ -258,13 +253,14 @@ def get_all_issues(schema, config,  state):
             issues = response.json()
             extraction_time = singer.utils.now()
             for issue in issues:
-                rec = singer.transform(issue, schema)
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(issue, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('issues', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, 'issues', 'since', singer.utils.strftime(extraction_time))
                 counter.increment()
     return state
 
-def get_all_stargazers(schema, config, state):
+def get_all_stargazers(schema, config, state, mdata):
     '''
     https://developer.github.com/v3/activity/starring/#list-stargazers
     '''
@@ -284,7 +280,8 @@ def get_all_stargazers(schema, config, state):
             stargazers = response.json()
             extraction_time = singer.utils.now()
             for stargazer in stargazers:
-                rec = singer.transform(stargazer, schema)
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(stargazer, schema, metadata=metadata.to_map(mdata))
                 rec['user_id'] = rec['user']['id']
                 singer.write_record('stargazers', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, 'stargazers', 'since', singer.utils.strftime(extraction_time))
@@ -341,6 +338,7 @@ def do_sync(config, state, catalog):
     for stream in catalog['streams']:
         stream_id = stream['tap_stream_id']
         stream_schema = stream['schema']
+        mdata = stream['metadata']
 
         # if it is a "sub_stream", it will be sync'd by its parent
         if not SYNC_FUNCTIONS.get(stream_id):
@@ -356,7 +354,7 @@ def do_sync(config, state, catalog):
 
             # sync stream
             if not sub_stream_ids:
-                state = sync_func(stream_schema, config, state)
+                state = sync_func(stream_schema, config, state, mdata)
 
             # handle streams with sub streams
             else:
@@ -371,7 +369,7 @@ def do_sync(config, state, catalog):
                                             sub_stream['key_properties'])
 
                 # sync stream and it's sub streams
-                state = sync_func(stream_schemas, config, state)
+                state = sync_func(stream_schemas, config, state, mdata)
 
             singer.write_state(state)
 
