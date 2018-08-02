@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.1
+  * Checks responses for an auth error (401) and throws exception [#26](https://github.com/singer-io/tap-github/pull/26)
+
 ## 1.0.0
   * Writes appropriate metadata to allow for selection of fields
   * Adds bookmarking and incremental replication to Commits and Issues streams [#22](https://github.com/singer-io/tap-github/pull/22)
