@@ -23,10 +23,16 @@ KEY_PROPERTIES = {
     'reviews': ['id']
 }
 
+class AuthException(Exception):
+    pass
+
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
         resp = session.request(method='get', url=url)
+        if resp.status_code == 401:
+            raise AuthException(resp.text)
+
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         return resp
 
