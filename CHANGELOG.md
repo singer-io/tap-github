@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.2
+  * Checks responses for an not found error (404) and throws exception
+
 ## 1.0.1
   * Checks responses for an auth error (401) and throws exception [#26](https://github.com/singer-io/tap-github/pull/26)
 
