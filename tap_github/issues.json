@@ -2,24 +2,24 @@
     "type": ["null", "object"],
     "additionalProperties": false,
     "properties": {
-    "id": {
-        "type": ["null", "integer"]
-    },
-    "labels": {
-        "type": ["null", "object"],
-        "additionalProperties": false,
-        "properties": {
-            "name": {
-                "type": ["null", "string"]
-            },
-            "id": {
-                "type": ["null", "integer"]
-            }
-        }
-    },
-    "updated_at": {
-        "type": ["null", "string"],
-        "format": "date-time"
-    }
+	"id": {
+	    "type": ["null", "integer"]
+	},
+	"labels": {
+	    "type": ["null", "object"],
+	    "additionalProperties": false,
+	    "properties": {
+		"name": {
+		    "type": ["null", "string"]
+		},
+		"id": {
+		    "type": ["null", "integer"]
+		}
+	    }
+	},
+	"updated_at": {
+	    "type": ["null", "string"],
+	    "format": "date-time"
+	}
     }
 }
