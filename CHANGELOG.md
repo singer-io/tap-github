@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.4
+  * Updates the issues schema [#29](https://github.com/singer-io/tap-github/pull/29)
+
 ## 1.0.3
   * Adds additional schema to the issues JSON schema [#28](https://github.com/singer-io/tap-github/pull/28)
 
