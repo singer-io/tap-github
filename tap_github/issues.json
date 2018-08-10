@@ -6,7 +6,7 @@
 	    "type": ["null", "integer"]
 	},
 	"labels": {
-	    "type": ["null", "object"],
+	    "type": ["null", "object", "string"],
 	    "additionalProperties": false,
 	    "properties": {
 		"name": {
