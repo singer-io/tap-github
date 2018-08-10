@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.3
+  * Adds additional schema to the issues JSON schema [#28](https://github.com/singer-io/tap-github/pull/28)
+
 ## 1.0.2
   * Checks responses for an not found error (404) and throws exception
 
