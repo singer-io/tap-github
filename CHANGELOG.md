@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.5
+  * More updates to the issues schema
+
 ## 1.0.4
   * Updates the issues schema [#29](https://github.com/singer-io/tap-github/pull/29)
 
