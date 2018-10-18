@@ -20,7 +20,8 @@ KEY_PROPERTIES = {
     'collaborators': ['id'],
     'pull_requests':['id'],
     'stargazers': ['user_id'],
-    'reviews': ['id']
+    'reviews': ['id'],
+    'comments': ['id']
 }
 
 class AuthException(Exception):
@@ -74,6 +75,9 @@ def validate_dependencies(selected_stream_ids):
 
     if 'reviews' in selected_stream_ids and 'pull_requests' not in selected_stream_ids:
         errs.append(msg_tmpl.format('reviews','pull_requests'))
+
+    if 'comments' in selected_stream_ids and 'pull_requests' not in selected_stream_ids:
+        errs.append(msg_tmpl.format('comments','pull_requests'))
 
     if errs:
         raise DependencyException(" ".join(errs))
@@ -156,6 +160,13 @@ def get_all_pull_requests(schemas, config, state, mdata):
                             singer.write_bookmark(state, 'reviews', 'since', singer.utils.strftime(extraction_time))
                             reviews_counter.increment()
 
+                    # sync comments if that schema is present (only there if selected)
+                    if schemas.get('comments'):
+                        for comment_rec in get_comments_for_pr(pr_num, schemas['comments'], config, state, mdata):
+                            singer.write_record('comments', comment_rec, time_extracted=extraction_time)
+                            singer.write_bookmark(state, 'comments', 'since', singer.utils.strftime(extraction_time))
+                            # comments_counter.increment()
+
     return state
 
 def get_reviews_for_pr(pr_number, schema, config, state, mdata):
@@ -169,6 +180,22 @@ def get_reviews_for_pr(pr_number, schema, config, state, mdata):
         for review in reviews:
             with singer.Transformer() as transformer:
                 rec = transformer.transform(review, schema, metadata=metadata.to_map(mdata))
+            yield rec
+
+
+        return state
+
+def get_comments_for_pr(pr_number, schema, config, state, mdata):
+    repo_path = config['repository']
+    for response in authed_get_all_pages(
+            'comments',
+            'https://api.github.com/repos/{}/pulls/{}/comments'.format(repo_path,pr_number)
+    ):
+        comments = response.json()
+        extraction_time = singer.utils.now()
+        for comment in comments:
+            with singer.Transformer() as transformer:
+                rec = transformer.transform(comment, schema, metadata=metadata.to_map(mdata))
             yield rec
 
 
@@ -335,7 +362,8 @@ SYNC_FUNCTIONS = {
 }
 
 SUB_STREAMS = {
-    'pull_requests': ['reviews']
+    'pull_requests': ['reviews'],
+    'pull_requests': ['comments']
 }
 
 def do_sync(config, state, catalog):
