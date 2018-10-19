@@ -165,7 +165,6 @@ def get_all_pull_requests(schemas, config, state, mdata):
                         for comment_rec in get_comments_for_pr(pr_num, schemas['comments'], config, state, mdata):
                             singer.write_record('comments', comment_rec, time_extracted=extraction_time)
                             singer.write_bookmark(state, 'comments', 'since', singer.utils.strftime(extraction_time))
-                            # comments_counter.increment()
 
     return state
 
