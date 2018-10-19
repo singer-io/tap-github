@@ -13,6 +13,7 @@ This tap:
   - [Issues](https://developer.github.com/v3/issues/#list-issues-for-a-repository)
   - [Pull Requests](https://developer.github.com/v3/pulls/#list-pull-requests)
   - [Reviews](https://developer.github.com/v3/pulls/reviews/#list-reviews-on-a-pull-request)
+  - [Comments](https://developer.github.com/v3/pulls/comments/)
   - [Stargazers](https://developer.github.com/v3/activity/starring/#list-stargazers)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
