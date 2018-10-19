@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.1
+  * Rename the comments stream to review_comments [#31](https://github.com/singer-io/tap-github/pull/31)
+
 ## 1.1.0
   * Added the comments stream [#30](https://github.com/singer-io/tap-github/pull/30)
 
