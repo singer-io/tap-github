@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.0
+  * Added the comments stream [#30](https://github.com/singer-io/tap-github/pull/30)
+
 ## 1.0.5
   * More updates to the issues schema
 
