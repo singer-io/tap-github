@@ -13,7 +13,7 @@ This tap:
   - [Issues](https://developer.github.com/v3/issues/#list-issues-for-a-repository)
   - [Pull Requests](https://developer.github.com/v3/pulls/#list-pull-requests)
   - [Reviews](https://developer.github.com/v3/pulls/reviews/#list-reviews-on-a-pull-request)
-  - [Comments](https://developer.github.com/v3/pulls/comments/)
+  - [Review Comments](https://developer.github.com/v3/pulls/comments/)
   - [Stargazers](https://developer.github.com/v3/activity/starring/#list-stargazers)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
@@ -49,12 +49,12 @@ This tap:
      "repository": "singer-io/tap-github"}
     ```
 4. Run the tap in discovery mode to get properties.json file
-    
+
     ```bash
     tap-github --config config.json --discover > properties.json
     ```
 5. In the properties.json file, select the streams to sync
-  
+
     Each stream in the properties.json file has a "schema" entry.  To select a stream to sync, add `"selected": true` to that stream's "schema" entry.  For example, to sync the pull_requests stream:
     ```
     ...
@@ -83,4 +83,3 @@ This tap:
 ---
 
 Copyright &copy; 2018 Stitch
-
