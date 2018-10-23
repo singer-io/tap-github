@@ -12,6 +12,7 @@ This tap:
   - [Commits](https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository)
   - [Issues](https://developer.github.com/v3/issues/#list-issues-for-a-repository)
   - [Pull Requests](https://developer.github.com/v3/pulls/#list-pull-requests)
+  - [Comments](https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository)
   - [Reviews](https://developer.github.com/v3/pulls/reviews/#list-reviews-on-a-pull-request)
   - [Review Comments](https://developer.github.com/v3/pulls/comments/)
   - [Stargazers](https://developer.github.com/v3/activity/starring/#list-stargazers)
