@@ -130,11 +130,10 @@ def do_discover():
     # dump catalog
     print(json.dumps(catalog, indent=2))
 
-def get_all_pull_requests(schemas, config, state, mdata):
+def get_all_pull_requests(schemas, repo_path, state, mdata):
     '''
     https://developer.github.com/v3/pulls/#list-pull-requests
     '''
-    repo_path = config['repository']
     with metrics.record_counter('pull_requests') as counter:
         with metrics.record_counter('reviews') as reviews_counter:
             for response in authed_get_all_pages(
@@ -155,21 +154,20 @@ def get_all_pull_requests(schemas, config, state, mdata):
 
                     # sync reviews if that schema is present (only there if selected)
                     if schemas.get('reviews'):
-                        for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], config, state, mdata):
+                        for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], repo_path, state, mdata):
                             singer.write_record('reviews', review_rec, time_extracted=extraction_time)
                             singer.write_bookmark(state, 'reviews', 'since', singer.utils.strftime(extraction_time))
                             reviews_counter.increment()
 
                     # sync review comments if that schema is present (only there if selected)
                     if schemas.get('review_comments'):
-                        for review_comment_rec in get_review_comments_for_pr(pr_num, schemas['review_comments'], config, state, mdata):
+                        for review_comment_rec in get_review_comments_for_pr(pr_num, schemas['review_comments'], repo_path, state, mdata):
                             singer.write_record('review_comments', review_comment_rec, time_extracted=extraction_time)
                             singer.write_bookmark(state, 'review_comments', 'since', singer.utils.strftime(extraction_time))
 
     return state
 
-def get_reviews_for_pr(pr_number, schema, config, state, mdata):
-    repo_path = config['repository']
+def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata):
     for response in authed_get_all_pages(
             'reviews',
             'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)
@@ -184,8 +182,7 @@ def get_reviews_for_pr(pr_number, schema, config, state, mdata):
 
         return state
 
-def get_review_comments_for_pr(pr_number, schema, config, state, mdata):
-    repo_path = config['repository']
+def get_review_comments_for_pr(pr_number, schema, repo_path, state, mdata):
     for response in authed_get_all_pages(
             'comments',
             'https://api.github.com/repos/{}/pulls/{}/comments'.format(repo_path,pr_number)
@@ -200,11 +197,10 @@ def get_review_comments_for_pr(pr_number, schema, config, state, mdata):
 
         return state
 
-def get_all_assignees(schema, config, state, mdata):
+def get_all_assignees(schema, repo_path, state, mdata):
     '''
     https://developer.github.com/v3/issues/assignees/#list-assignees
     '''
-    repo_path = config['repository']
     with metrics.record_counter('assignees') as counter:
         for response in authed_get_all_pages(
                 'assignees',
@@ -221,11 +217,10 @@ def get_all_assignees(schema, config, state, mdata):
 
     return state
 
-def get_all_collaborators(schema, config, state, mdata):
+def get_all_collaborators(schema, repo_path, state, mdata):
     '''
     https://developer.github.com/v3/repos/collaborators/#list-collaborators
     '''
-    repo_path = config['repository']
     with metrics.record_counter('collaborators') as counter:
         for response in authed_get_all_pages(
                 'collaborators',
@@ -242,11 +237,10 @@ def get_all_collaborators(schema, config, state, mdata):
 
     return state
 
-def get_all_commits(schema, config,  state, mdata):
+def get_all_commits(schema, repo_path,  state, mdata):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
-    repo_path = config['repository']
     if bookmarks.get_bookmark(state, "commits", 'since'):
         query_string = '?since={}'.format(bookmarks.get_bookmark(state, "commits", 'since'))
     else:
@@ -270,11 +264,10 @@ def get_all_commits(schema, config,  state, mdata):
 
     return state
 
-def get_all_issues(schema, config,  state, mdata):
+def get_all_issues(schema, repo_path,  state, mdata):
     '''
     https://developer.github.com/v3/issues/#list-issues-for-a-repository
     '''
-    repo_path = config['repository']
 
     if bookmarks.get_bookmark(state, "issues", 'since'):
         query_string = '&since={}'.format(bookmarks.get_bookmark(state, "issues", 'since'))
@@ -297,11 +290,10 @@ def get_all_issues(schema, config,  state, mdata):
                 counter.increment()
     return state
 
-def get_all_stargazers(schema, config, state, mdata):
+def get_all_stargazers(schema, repo_path, state, mdata):
     '''
     https://developer.github.com/v3/activity/starring/#list-stargazers
     '''
-    repo_path = config['repository']
     if bookmarks.get_bookmark(state, "stargazers", 'since'):
         query_string = '&since={}'.format(bookmarks.get_bookmark(state, "stargazers", 'since'))
     else:
@@ -373,43 +365,47 @@ def do_sync(config, state, catalog):
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
 
-    for stream in catalog['streams']:
-        stream_id = stream['tap_stream_id']
-        stream_schema = stream['schema']
-        mdata = stream['metadata']
+    repositories = list(filter(None, config['repository'].split(' ')))
 
-        # if it is a "sub_stream", it will be sync'd by its parent
-        if not SYNC_FUNCTIONS.get(stream_id):
-            continue
+    for repo in repositories:
+        logger.info("Starting sync of repository: {}".format(repo))
+        for stream in catalog['streams']:
+            stream_id = stream['tap_stream_id']
+            stream_schema = stream['schema']
+            mdata = stream['metadata']
 
-        # if stream is selected, write schema and sync
-        if stream_id in selected_stream_ids:
-            singer.write_schema(stream_id, stream_schema,stream['key_properties'])
+            # if it is a "sub_stream", it will be sync'd by its parent
+            if not SYNC_FUNCTIONS.get(stream_id):
+                continue
 
-            # get sync function and any sub streams
-            sync_func = SYNC_FUNCTIONS[stream_id]
-            sub_stream_ids = SUB_STREAMS.get(stream_id, None)
+            # if stream is selected, write schema and sync
+            if stream_id in selected_stream_ids:
+                singer.write_schema(stream_id, stream_schema,stream['key_properties'])
 
-            # sync stream
-            if not sub_stream_ids:
-                state = sync_func(stream_schema, config, state, mdata)
+                # get sync function and any sub streams
+                sync_func = SYNC_FUNCTIONS[stream_id]
+                sub_stream_ids = SUB_STREAMS.get(stream_id, None)
 
-            # handle streams with sub streams
-            else:
-                stream_schemas = {stream_id: stream_schema}
+                # sync stream
+                if not sub_stream_ids:
+                    state = sync_func(stream_schema, repo, state, mdata)
 
-                # get and write selected sub stream schemas
-                for sub_stream_id in sub_stream_ids:
-                    if sub_stream_id in selected_stream_ids:
-                        sub_stream = get_stream_from_catalog(sub_stream_id, catalog)
-                        stream_schemas[sub_stream_id] = sub_stream['schema']
-                        singer.write_schema(sub_stream_id, sub_stream['schema'],
-                                            sub_stream['key_properties'])
+                # handle streams with sub streams
+                else:
+                    stream_schemas = {stream_id: stream_schema}
 
-                # sync stream and it's sub streams
-                state = sync_func(stream_schemas, config, state, mdata)
+                    # get and write selected sub stream schemas
+                    for sub_stream_id in sub_stream_ids:
+                        if sub_stream_id in selected_stream_ids:
+                            sub_stream = get_stream_from_catalog(sub_stream_id, catalog)
+                            stream_schemas[sub_stream_id] = sub_stream['schema']
+                            singer.write_schema(sub_stream_id, sub_stream['schema'],
+                                                sub_stream['key_properties'])
 
-            singer.write_state(state)
+                    # sync stream and it's sub streams
+                    state = sync_func(stream_schemas, repo, state, mdata)
+
+                singer.write_state(state)
 
 @singer.utils.handle_top_exception(logger)
 def main():
