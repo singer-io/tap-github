@@ -83,18 +83,19 @@ def validate_dependencies(selected_stream_ids):
         raise DependencyException(" ".join(errs))
 
 
-def write_metadata(metadata, values, breadcrumb):
+def write_metadata(metadata, repo_path, values, breadcrumb):
     metadata.append(
         {
             'metadata': values,
-            'breadcrumb': breadcrumb
+            'breadcrumb': breadcrumb,
+            'repo': repo_path
         }
     )
 
-def populate_metadata(schema_name, schema):
+def populate_metadata(schema_name, schema, repo_path):
     mdata = metadata.new()
     #mdata = metadata.write(mdata, (), 'forced-replication-method', KEY_PROPERTIES[schema_name])
-    mdata = metadata.write(mdata, (), 'table-key-properties', KEY_PROPERTIES[schema_name])
+    mdata = metadata.write(mdata, repo_path, (), 'table-key-properties', KEY_PROPERTIES[schema_name])
 
     for field_name in schema['properties'].keys():
         if field_name in KEY_PROPERTIES[schema_name]:
@@ -104,14 +105,14 @@ def populate_metadata(schema_name, schema):
 
     return mdata
 
-def get_catalog():
+def get_catalog(repo_path):
     raw_schemas = load_schemas()
     streams = []
 
     for schema_name, schema in raw_schemas.items():
 
         # get metadata for each field
-        mdata = populate_metadata(schema_name, schema)
+        mdata = populate_metadata(schema_name, schema, repo_path)
 
         # create and add catalog entry
         catalog_entry = {
@@ -125,10 +126,10 @@ def get_catalog():
 
     return {'streams': streams}
 
-def do_discover():
-    catalog = get_catalog()
+def do_discover(repo_path):
+    catalog = get_catalog(repo_path)
     # dump catalog
-    print(json.dumps(catalog, indent=2))
+    #print(json.dumps(catalog, indent=2))
 
 def get_all_pull_requests(schemas, repo_path, state, mdata):
     '''
@@ -231,7 +232,8 @@ def get_all_collaborators(schema, repo_path, state, mdata):
             for collaborator in collaborators:
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
-                singer.write_record('collaborators', rec, time_extracted=extraction_time)
+                singer.write_record('collaborators', rec, time_extracted=extraction_time, repo_path=repo_path)
+                #print("hi" + repo_path)
                 singer.write_bookmark(state, 'collaborator', 'since', singer.utils.strftime(extraction_time))
                 counter.increment()
 
@@ -412,7 +414,7 @@ def main():
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
     if args.discover:
-        do_discover()
+        do_discover(repo_path)
     else:
         catalog = args.properties if args.properties else get_catalog()
         do_sync(args.config, args.state, catalog)
