@@ -1,4 +1,5 @@
 import argparse
+import sys
 import os
 import json
 import requests
@@ -83,19 +84,18 @@ def validate_dependencies(selected_stream_ids):
         raise DependencyException(" ".join(errs))
 
 
-def write_metadata(metadata, repo_path, values, breadcrumb):
+def write_metadata(metadata, values, breadcrumb):
     metadata.append(
         {
             'metadata': values,
-            'breadcrumb': breadcrumb,
-            'repo': repo_path
+            'breadcrumb': breadcrumb
         }
     )
 
-def populate_metadata(schema_name, schema, repo_path):
+def populate_metadata(schema_name, schema):
     mdata = metadata.new()
     #mdata = metadata.write(mdata, (), 'forced-replication-method', KEY_PROPERTIES[schema_name])
-    mdata = metadata.write(mdata, repo_path, (), 'table-key-properties', KEY_PROPERTIES[schema_name])
+    mdata = metadata.write(mdata, (), 'table-key-properties', KEY_PROPERTIES[schema_name])
 
     for field_name in schema['properties'].keys():
         if field_name in KEY_PROPERTIES[schema_name]:
@@ -105,14 +105,14 @@ def populate_metadata(schema_name, schema, repo_path):
 
     return mdata
 
-def get_catalog(repo_path):
+def get_catalog():
     raw_schemas = load_schemas()
     streams = []
 
     for schema_name, schema in raw_schemas.items():
 
         # get metadata for each field
-        mdata = populate_metadata(schema_name, schema, repo_path)
+        mdata = populate_metadata(schema_name, schema)
 
         # create and add catalog entry
         catalog_entry = {
@@ -126,10 +126,10 @@ def get_catalog(repo_path):
 
     return {'streams': streams}
 
-def do_discover(repo_path):
-    catalog = get_catalog(repo_path)
+def do_discover():
+    catalog = get_catalog()
     # dump catalog
-    #print(json.dumps(catalog, indent=2))
+    print(json.dumps(catalog, indent=2))
 
 def get_all_pull_requests(schemas, repo_path, state, mdata):
     '''
@@ -145,6 +145,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
                 extraction_time = singer.utils.now()
                 for pr in pull_requests:
                     pr_num = pr.get('number')
+                    pr['repo_name'] = repo_path
 
                     # transform and write pull_request record
                     with singer.Transformer() as transformer:
@@ -176,6 +177,7 @@ def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata):
         reviews = response.json()
         extraction_time = singer.utils.now()
         for review in reviews:
+            review['repo_name'] = repo_path
             with singer.Transformer() as transformer:
                 rec = transformer.transform(review, schema, metadata=metadata.to_map(mdata))
             yield rec
@@ -191,6 +193,7 @@ def get_review_comments_for_pr(pr_number, schema, repo_path, state, mdata):
         review_comments = response.json()
         extraction_time = singer.utils.now()
         for comment in review_comments:
+            comment['repo_name'] = repo_path
             with singer.Transformer() as transformer:
                 rec = transformer.transform(comment, schema, metadata=metadata.to_map(mdata))
             yield rec
@@ -210,6 +213,7 @@ def get_all_assignees(schema, repo_path, state, mdata):
             assignees = response.json()
             extraction_time = singer.utils.now()
             for assignee in assignees:
+                assignee['repo_name'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(assignee, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('assignees', rec, time_extracted=extraction_time)
@@ -230,10 +234,10 @@ def get_all_collaborators(schema, repo_path, state, mdata):
             collaborators = response.json()
             extraction_time = singer.utils.now()
             for collaborator in collaborators:
+                collaborator['repo_name'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
-                singer.write_record('collaborators', rec, time_extracted=extraction_time, repo_path=repo_path)
-                #print("hi" + repo_path)
+                singer.write_record('collaborators', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, 'collaborator', 'since', singer.utils.strftime(extraction_time))
                 counter.increment()
 
@@ -258,6 +262,7 @@ def get_all_commits(schema, repo_path,  state, mdata):
             commits = response.json()
             extraction_time = singer.utils.now()
             for commit in commits:
+                commit['repo_name'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('commits', rec, time_extracted=extraction_time)
@@ -285,6 +290,7 @@ def get_all_issues(schema, repo_path,  state, mdata):
             issues = response.json()
             extraction_time = singer.utils.now()
             for issue in issues:
+                issue['repo_name'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(issue, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('issues', rec, time_extracted=extraction_time)
@@ -311,6 +317,7 @@ def get_all_stargazers(schema, repo_path, state, mdata):
             stargazers = response.json()
             extraction_time = singer.utils.now()
             for stargazer in stargazers:
+                stargazer['repo_name'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(stargazer, schema, metadata=metadata.to_map(mdata))
                 rec['user_id'] = rec['user']['id']
@@ -382,7 +389,7 @@ def do_sync(config, state, catalog):
 
             # if stream is selected, write schema and sync
             if stream_id in selected_stream_ids:
-                singer.write_schema(stream_id, stream_schema,stream['key_properties'])
+                singer.write_schema(stream_id, stream_schema, stream['key_properties'])
 
                 # get sync function and any sub streams
                 sync_func = SYNC_FUNCTIONS[stream_id]
@@ -414,7 +421,7 @@ def main():
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
     if args.discover:
-        do_discover(repo_path)
+        do_discover()
     else:
         catalog = args.properties if args.properties else get_catalog()
         do_sync(args.config, args.state, catalog)
