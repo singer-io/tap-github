@@ -13,6 +13,10 @@
 	},
 	"type": {
 	    "type": ["null", "string"]
+	},
+	"_sdc_repository": {
+	    "type": ["string"]
 	}
+
     }
 }

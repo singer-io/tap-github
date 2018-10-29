@@ -161,6 +161,9 @@
         "string"
       ]
     },
+    "_sdc_repository": {
+      "type": ["string"]
+    },
     "user": {
       "properties": {
         "repos_url": {
@@ -293,7 +296,6 @@
       "type": [
         "null"
       ]
-    }
   },
   "type": [
     "null",

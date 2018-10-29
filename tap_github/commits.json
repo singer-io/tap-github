@@ -104,8 +104,10 @@
                     "type": ["null", "integer"],
                     "description": "The number of comments on the commit"
 		}
-            }
-	}
-    },
+            },
+	"_sdc_repository": {
+	    "type": ["string"]
+	},
+	},
     "additionalProperties": false
 }
