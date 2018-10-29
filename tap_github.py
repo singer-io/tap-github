@@ -144,7 +144,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
                 extraction_time = singer.utils.now()
                 for pr in pull_requests:
                     pr_num = pr.get('number')
-                    pr['repo_name'] = repo_path
+                    pr['_sdc_repository'] = repo_path
 
                     # transform and write pull_request record
                     with singer.Transformer() as transformer:
@@ -176,7 +176,7 @@ def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata):
         reviews = response.json()
         extraction_time = singer.utils.now()
         for review in reviews:
-            review['repo_name'] = repo_path
+            review['_sdc_repository'] = repo_path
             with singer.Transformer() as transformer:
                 rec = transformer.transform(review, schema, metadata=metadata.to_map(mdata))
             yield rec
@@ -192,7 +192,7 @@ def get_review_comments_for_pr(pr_number, schema, repo_path, state, mdata):
         review_comments = response.json()
         extraction_time = singer.utils.now()
         for comment in review_comments:
-            comment['repo_name'] = repo_path
+            comment['_sdc_repository'] = repo_path
             with singer.Transformer() as transformer:
                 rec = transformer.transform(comment, schema, metadata=metadata.to_map(mdata))
             yield rec
@@ -212,7 +212,7 @@ def get_all_assignees(schema, repo_path, state, mdata):
             assignees = response.json()
             extraction_time = singer.utils.now()
             for assignee in assignees:
-                assignee['repo_name'] = repo_path
+                assignee['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(assignee, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('assignees', rec, time_extracted=extraction_time)
@@ -233,7 +233,7 @@ def get_all_collaborators(schema, repo_path, state, mdata):
             collaborators = response.json()
             extraction_time = singer.utils.now()
             for collaborator in collaborators:
-                collaborator['repo_name'] = repo_path
+                collaborator['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('collaborators', rec, time_extracted=extraction_time)
@@ -261,7 +261,7 @@ def get_all_commits(schema, repo_path,  state, mdata):
             commits = response.json()
             extraction_time = singer.utils.now()
             for commit in commits:
-                commit['repo_name'] = repo_path
+                commit['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('commits', rec, time_extracted=extraction_time)
@@ -289,7 +289,7 @@ def get_all_issues(schema, repo_path,  state, mdata):
             issues = response.json()
             extraction_time = singer.utils.now()
             for issue in issues:
-                issue['repo_name'] = repo_path
+                issue['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(issue, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('issues', rec, time_extracted=extraction_time)
@@ -316,7 +316,7 @@ def get_all_stargazers(schema, repo_path, state, mdata):
             stargazers = response.json()
             extraction_time = singer.utils.now()
             for stargazer in stargazers:
-                stargazer['repo_name'] = repo_path
+                stargazer['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(stargazer, schema, metadata=metadata.to_map(mdata))
                 rec['user_id'] = rec['user']['id']
