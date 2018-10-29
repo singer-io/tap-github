@@ -106,8 +106,8 @@
 		"comment_count": {
                     "type": ["null", "integer"],
                     "description": "The number of comments on the commit"
-		}
-       }
+			}
+     }
 	  }
 	},
     "additionalProperties": false
