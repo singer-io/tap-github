@@ -151,21 +151,22 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
                     with singer.Transformer() as transformer:
                         rec = transformer.transform(pr, schemas['pull_requests'], metadata=metadata.to_map(mdata))
                     singer.write_record('pull_requests', rec, time_extracted=extraction_time)
-                    singer.write_bookmark(state, 'pull_requests', 'since', singer.utils.strftime(extraction_time))
+                    singer.write_bookmark(state, repo_path, 'pull_requests', {'since': singer.utils.strftime(extraction_time)})
                     counter.increment()
 
                     # sync reviews if that schema is present (only there if selected)
                     if schemas.get('reviews'):
                         for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], repo_path, state, mdata):
                             singer.write_record('reviews', review_rec, time_extracted=extraction_time)
-                            singer.write_bookmark(state, 'reviews', 'since', singer.utils.strftime(extraction_time))
+                            singer.write_bookmark(state, repo_path, 'reviews', {'since': singer.utils.strftime(extraction_time)})
+
                             reviews_counter.increment()
 
                     # sync review comments if that schema is present (only there if selected)
                     if schemas.get('review_comments'):
                         for review_comment_rec in get_review_comments_for_pr(pr_num, schemas['review_comments'], repo_path, state, mdata):
                             singer.write_record('review_comments', review_comment_rec, time_extracted=extraction_time)
-                            singer.write_bookmark(state, 'review_comments', 'since', singer.utils.strftime(extraction_time))
+                            singer.write_bookmark(state, repo_path, 'review_comments', {'since': singer.utils.strftime(extraction_time)})
 
     return state
 
@@ -217,7 +218,7 @@ def get_all_assignees(schema, repo_path, state, mdata):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(assignee, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('assignees', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, 'assignees', 'since', singer.utils.strftime(extraction_time))
+                singer.write_bookmark(state, repo_path, 'assignees', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -234,11 +235,12 @@ def get_all_collaborators(schema, repo_path, state, mdata):
             collaborators = response.json()
             extraction_time = singer.utils.now()
             for collaborator in collaborators:
+                # pdb.set_trace()
                 collaborator['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('collaborators', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, 'collaborator', 'since', singer.utils.strftime(extraction_time))
+                singer.write_bookmark(state, repo_path, 'collaborator', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -266,7 +268,7 @@ def get_all_commits(schema, repo_path,  state, mdata):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('commits', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, 'commits', 'since', singer.utils.strftime(extraction_time))
+                singer.write_bookmark(state, repo_path, 'commits', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -294,7 +296,7 @@ def get_all_issues(schema, repo_path,  state, mdata):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(issue, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('issues', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, 'issues', 'since', singer.utils.strftime(extraction_time))
+                singer.write_bookmark(state, repo_path, 'issues', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
     return state
 
@@ -302,7 +304,6 @@ def get_all_comments(schema, repo_path, state, mdata):
     '''
     https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository
     '''
-    repo_path = config['repository']
 
     if bookmarks.get_bookmark(state, "comments", 'since'):
         query_string = '&since={}'.format(bookmarks.get_bookmark(state, "comments", 'since'))
@@ -322,7 +323,7 @@ def get_all_comments(schema, repo_path, state, mdata):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(comment, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('comments', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, 'comments', 'since', singer.utils.strftime(extraction_time))
+                singer.write_bookmark(state, repo_path, 'comments', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
     return state
 
@@ -350,7 +351,7 @@ def get_all_stargazers(schema, repo_path, state, mdata):
                     rec = transformer.transform(stargazer, schema, metadata=metadata.to_map(mdata))
                 rec['user_id'] = rec['user']['id']
                 singer.write_record('stargazers', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, 'stargazers', 'since', singer.utils.strftime(extraction_time))
+                singer.write_bookmark(state, repo_path, 'stargazers', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -427,7 +428,7 @@ def do_sync(config, state, catalog):
                 # sync stream
                 if not sub_stream_ids:
                     state = sync_func(stream_schema, repo, state, mdata)
-
+                    logger.info(state)
                 # handle streams with sub streams
                 else:
                     stream_schemas = {stream_id: stream_schema}
