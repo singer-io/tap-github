@@ -15,6 +15,7 @@ REQUIRED_CONFIG_KEYS = ['access_token', 'repository']
 
 KEY_PROPERTIES = {
     'commits': ['sha'],
+    'comments': ['id'],
     'issues': ['id'],
     'assignees': ['id'],
     'collaborators': ['id'],
@@ -297,6 +298,33 @@ def get_all_issues(schema, repo_path,  state, mdata):
                 counter.increment()
     return state
 
+def get_all_comments(schema, config, state, mdata):
+    '''
+    https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository
+    '''
+    repo_path = config['repository']
+
+    if bookmarks.get_bookmark(state, "comments", 'since'):
+        query_string = '&since={}'.format(bookmarks.get_bookmark(state, "comments", 'since'))
+    else:
+        query_string = ''
+
+    last_comment_time = None
+    with metrics.record_counter('comments') as counter:
+        for response in authed_get_all_pages(
+                'comments',
+                'https://api.github.com/repos/{}/issues/comments?sort=updated&direction=asc{}'.format(repo_path, query_string)
+        ):
+            comments = response.json()
+            extraction_time = singer.utils.now()
+            for comment in comments:
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(comment, schema, metadata=metadata.to_map(mdata))
+                singer.write_record('comments', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, 'comments', 'since', singer.utils.strftime(extraction_time))
+                counter.increment()
+    return state
+
 def get_all_stargazers(schema, repo_path, state, mdata):
     '''
     https://developer.github.com/v3/activity/starring/#list-stargazers
@@ -353,6 +381,7 @@ def get_stream_from_catalog(stream_id, catalog):
 
 SYNC_FUNCTIONS = {
     'commits': get_all_commits,
+    'comments': get_all_comments,
     'issues': get_all_issues,
     'assignees': get_all_assignees,
     'collaborators': get_all_collaborators,
