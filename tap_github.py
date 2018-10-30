@@ -298,7 +298,7 @@ def get_all_issues(schema, repo_path,  state, mdata):
                 counter.increment()
     return state
 
-def get_all_comments(schema, config, state, mdata):
+def get_all_comments(schema, repo_path, state, mdata):
     '''
     https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository
     '''
@@ -318,6 +318,7 @@ def get_all_comments(schema, config, state, mdata):
             comments = response.json()
             extraction_time = singer.utils.now()
             for comment in comments:
+                comment['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(comment, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('comments', rec, time_extracted=extraction_time)
