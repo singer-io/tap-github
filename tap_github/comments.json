@@ -92,6 +92,9 @@
     "updated_at": {
       "type": ["null", "string"],
       "format": "date-time"
+    },
+    "_sdc_repository": {
+      "type": ["string"]
     }
   }
 }
