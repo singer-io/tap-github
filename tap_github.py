@@ -127,7 +127,7 @@ def get_catalog():
     return {'streams': streams}
 
 def get_bookmark_value(state, repo_path, stream):
-    if bookmarks.get_bookmark(state, repo_path, stream)['since']:
+    if bookmarks.get_bookmark(state, repo_path, stream):
         return bookmarks.get_bookmark(state, repo_path, stream)['since']
     else:
         return bookmarks.get_bookmark(state, stream, 'since')
@@ -434,7 +434,7 @@ def do_sync(config, state, catalog):
                 # sync stream
                 if not sub_stream_ids:
                     state = sync_func(stream_schema, repo, state, mdata)
-                    logger.info(state)
+
                 # handle streams with sub streams
                 else:
                     stream_schemas = {stream_id: stream_schema}
