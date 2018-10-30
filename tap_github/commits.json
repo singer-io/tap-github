@@ -2,6 +2,9 @@
     "type": ["null", "object"],
     "additionalProperties": false,
     "properties": {
+    "_sdc_repository": {
+	    "type": ["string"]
+	},
 	"sha": {
             "type": ["null", "string"],
             "description": "The git commit hash"
@@ -103,9 +106,9 @@
 		"comment_count": {
                     "type": ["null", "integer"],
                     "description": "The number of comments on the commit"
-		}
-            }
-	}
-    },
+			}
+     }
+	  }
+	},
     "additionalProperties": false
 }
