@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.0
+  * Adds issue comments stream  [#32](https://github.com/singer-io/tap-github/pull/32)
+
 ## 1.1.1
   * Rename the comments stream to review_comments [#31](https://github.com/singer-io/tap-github/pull/31)
 
