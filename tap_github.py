@@ -31,6 +31,21 @@ class AuthException(Exception):
 class NotFoundException(Exception):
     pass
 
+def translate_state(state, catalog, repositories):
+    new_state = {'bookmarks': {}}
+    for stream in catalog['streams']:
+        stream_name = stream['tap_stream_id']
+        for repo in repositories:
+            if bookmarks.get_bookmark(state, repo, stream_name):
+                return state
+            if bookmarks.get_bookmark(state, stream_name, 'since'):
+                if not new_state['bookmarks'].get(repo):
+                    new_state['bookmarks'][repo] = {}
+                if not new_state['bookmarks'][repo].get(stream_name):
+                    new_state['bookmarks'][repo][stream_name] = {'since': bookmarks.get_bookmark(state, stream_name, 'since')}
+
+    return new_state
+
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
@@ -411,6 +426,9 @@ def do_sync(config, state, catalog):
     validate_dependencies(selected_stream_ids)
 
     repositories = list(filter(None, config['repository'].split(' ')))
+
+    state = translate_state(state, catalog, repositories)
+    singer.write_state(state)
 
     for repo in repositories:
         logger.info("Starting sync of repository: {}".format(repo))
