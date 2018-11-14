@@ -5,6 +5,7 @@ import requests
 import singer
 import singer.bookmarks as bookmarks
 import singer.metrics as metrics
+import collections
 
 from singer import metadata
 
@@ -32,17 +33,14 @@ class NotFoundException(Exception):
     pass
 
 def translate_state(state, catalog, repositories):
-    new_state = {'bookmarks': {}}
+    new_state = collections.defaultdict(dict)
     for stream in catalog['streams']:
         stream_name = stream['tap_stream_id']
         for repo in repositories:
             if bookmarks.get_bookmark(state, repo, stream_name):
                 return state
             if bookmarks.get_bookmark(state, stream_name, 'since'):
-                if not new_state['bookmarks'].get(repo):
-                    new_state['bookmarks'][repo] = {}
-                if not new_state['bookmarks'][repo].get(stream_name):
-                    new_state['bookmarks'][repo][stream_name] = {'since': bookmarks.get_bookmark(state, stream_name, 'since')}
+                new_state['bookmarks'][repo][stream_name]['since'] = bookmarks.get_bookmark(state, stream_name, 'since')
 
     return new_state
 
