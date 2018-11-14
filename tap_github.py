@@ -141,12 +141,6 @@ def get_catalog():
 
     return {'streams': streams}
 
-def get_bookmark_value(state, repo_path, stream):
-    if bookmarks.get_bookmark(state, repo_path, stream):
-        return bookmarks.get_bookmark(state, repo_path, stream)['since']
-    else:
-        return bookmarks.get_bookmark(state, stream, 'since')
-
 def do_discover():
     catalog = get_catalog()
     # dump catalog
@@ -270,8 +264,8 @@ def get_all_commits(schema, repo_path,  state, mdata):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
-    if get_bookmark_value(state, repo_path, "commits"):
-        query_string = '?since={}'.format(get_bookmark_value(state, repo_path, "commits"))
+    if bookmarks.get_bookmark(state, repo_path, "commits").get('since'):
+        query_string = '?since={}'.format(bookmarks.get_bookmark(state, repo_path, "commits").get('since'))
     else:
         query_string = ''
 
@@ -299,8 +293,8 @@ def get_all_issues(schema, repo_path,  state, mdata):
     https://developer.github.com/v3/issues/#list-issues-for-a-repository
     '''
 
-    if get_bookmark_value(state, repo_path, "issues"):
-        query_string = '&since={}'.format(get_bookmark_value(state, repo_path, "issues"))
+    if bookmarks.get_bookmark(state, repo_path, "issues").get('since'):
+        query_string = '&since={}'.format(bookmarks.get_bookmark(state, repo_path, "issues").get('since'))
     else:
         query_string = ''
 
@@ -326,8 +320,8 @@ def get_all_comments(schema, repo_path, state, mdata):
     https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository
     '''
 
-    if get_bookmark_value(state, repo_path, "comments"):
-        query_string = '&since={}'.format(get_bookmark_value(state, repo_path, "comments"))
+    if bookmarks.get_bookmark(state, repo_path, "comments").get('since'):
+        query_string = '&since={}'.format(bookmarks.get_bookmark(state, repo_path, "comments").get('since'))
     else:
         query_string = ''
 
@@ -352,8 +346,8 @@ def get_all_stargazers(schema, repo_path, state, mdata):
     '''
     https://developer.github.com/v3/activity/starring/#list-stargazers
     '''
-    if get_bookmark_value(state, repo_path, "stargazers"):
-        query_string = '&since={}'.format(get_bookmark_value(state, repo_path, "stargazers"))
+    if bookmarks.get_bookmark(state, repo_path, "stargazers").get('since'):
+        query_string = '&since={}'.format(bookmarks.get_bookmark(state, repo_path, "stargazers").get('since'))
     else:
         query_string = ''
 
