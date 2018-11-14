@@ -1,7 +1,7 @@
 # Changelog
 
 ## 1.2.1
-  * Update version of `requests` to `0.20.0` in response to CVE 2018-18074
+  * Update version of `requests` to `2.20.0` in response to CVE 2018-18074
 
 ## 1.2.0
   * Adds issue comments stream  [#32](https://github.com/singer-io/tap-github/pull/32)
