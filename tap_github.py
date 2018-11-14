@@ -33,7 +33,9 @@ class NotFoundException(Exception):
     pass
 
 def translate_state(state, catalog, repositories):
-    new_state = collections.defaultdict(dict)
+    nested_dict = lambda: collections.defaultdict(nested_dict)
+    new_state = nested_dict()
+
     for stream in catalog['streams']:
         stream_name = stream['tap_stream_id']
         for repo in repositories:
