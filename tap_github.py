@@ -74,6 +74,13 @@ def translate_state(state, catalog, repositories):
 
     return new_state
 
+
+def get_bookmark(state, repo, stream_name, bookmark_key):
+    repo_stream_dict = bookmarks.get_bookmark(state, repo, stream_name)
+    if repo_stream_dict:
+        return repo_stream_dict.get(bookmark_key)
+    return None
+
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
@@ -278,7 +285,6 @@ def get_all_collaborators(schema, repo_path, state, mdata):
             collaborators = response.json()
             extraction_time = singer.utils.now()
             for collaborator in collaborators:
-                # pdb.set_trace()
                 collaborator['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
@@ -292,8 +298,9 @@ def get_all_commits(schema, repo_path,  state, mdata):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
-    if bookmarks.get_bookmark(state, repo_path, "commits").get('since'):
-        query_string = '?since={}'.format(bookmarks.get_bookmark(state, repo_path, "commits").get('since'))
+    bookmark = get_bookmark(state, repo_path, "commits", "since")
+    if bookmark:
+        query_string = '?since={}'.format(bookmark)
     else:
         query_string = ''
 
@@ -321,8 +328,9 @@ def get_all_issues(schema, repo_path,  state, mdata):
     https://developer.github.com/v3/issues/#list-issues-for-a-repository
     '''
 
-    if bookmarks.get_bookmark(state, repo_path, "issues").get('since'):
-        query_string = '&since={}'.format(bookmarks.get_bookmark(state, repo_path, "issues").get('since'))
+    bookmark = get_bookmark(state, repo_path, "issues", "since")
+    if bookmark:
+        query_string = '&since={}'.format(bookmark)
     else:
         query_string = ''
 
@@ -348,8 +356,9 @@ def get_all_comments(schema, repo_path, state, mdata):
     https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository
     '''
 
-    if bookmarks.get_bookmark(state, repo_path, "comments").get('since'):
-        query_string = '&since={}'.format(bookmarks.get_bookmark(state, repo_path, "comments").get('since'))
+    bookmark = get_bookmark(state, repo_path, "comments", "since")
+    if bookmark:
+        query_string = '&since={}'.format(bookmark)
     else:
         query_string = ''
 
@@ -374,8 +383,9 @@ def get_all_stargazers(schema, repo_path, state, mdata):
     '''
     https://developer.github.com/v3/activity/starring/#list-stargazers
     '''
-    if bookmarks.get_bookmark(state, repo_path, "stargazers").get('since'):
-        query_string = '&since={}'.format(bookmarks.get_bookmark(state, repo_path, "stargazers").get('since'))
+    bookmark = get_bookmark(state, repo_path, "stargazers", "since")
+    if bookmark:
+        query_string = '&since={}'.format(bookmark)
     else:
         query_string = ''
 
