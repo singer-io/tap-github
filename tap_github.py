@@ -33,6 +33,34 @@ class NotFoundException(Exception):
     pass
 
 def translate_state(state, catalog, repositories):
+    '''
+    This tap used to only support a single repository, in which case the
+    state took the shape of:
+    {
+      "bookmarks": {
+        "commits": {
+          "since": "2018-11-14T13:21:20.700360Z"
+        }
+      }
+    }
+    The tap now supports multiple repos, so this function should be called
+    at the beginning of each run to ensure the state is translate to the
+    new format:
+    {
+      "bookmarks": {
+        "singer-io/tap-adwords": {
+          "commits": {
+            "since": "2018-11-14T13:21:20.700360Z"
+          }
+        }
+        "singer-io/tap-salesforce": {
+          "commits": {
+            "since": "2018-11-14T13:21:20.700360Z"
+          }
+        }
+      }
+    }
+    '''
     nested_dict = lambda: collections.defaultdict(nested_dict)
     new_state = nested_dict()
 
