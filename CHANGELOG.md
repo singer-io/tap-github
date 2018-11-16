@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.0
+  * Add functionality to accept multiple repos [#33](https://github.com/singer-io/tap-github/pull/33)
+
 ## 1.2.1
   * Update version of `requests` to `2.20.0` in response to CVE 2018-18074
 
