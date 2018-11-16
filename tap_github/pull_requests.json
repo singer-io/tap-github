@@ -1,52 +1,55 @@
 {
-    "type": ["null", "object"],
-    "additionalProperties": false,
-    "properties": {
-	"id": {
-	    "type": ["null", "string"]
-	},
-	"url": {
-	    "type": ["null", "string"]
-	},
-	"number": {
-	    "type": ["null", "integer"]
-	},
-	"state": {
-	    "type": ["null", "string"]
-	},
-	"title": {
-	    "type": ["null", "string"]
-	},
-	"body": {
-	    "type": ["null", "string"]
-	},
-	"user": {
-            "type": ["null", "object"],
-    "additionalProperties": false,
-            "properties": {
-		"login": {
-	                    "type": ["null", "string"]
-		},
-		"id": {
-	                    "type": ["null", "integer"]
-		}
-            }
+  "type": ["null", "object"],
+  "additionalProperties": false,
+  "properties": {
+    "_sdc_repository": {
+      "type": ["string"]
     },
-	"merged_at": {
-            "type": ["null", "string"],
-            "format": "date-time"
-	},
-	"closed_at": {
-            "type": ["null", "string"],
-            "format": "date-time"
-	},
-	"created_at": {
-            "type": ["null", "string"],
-            "format": "date-time"
-	},
-	"updated_at": {
-            "type": ["null", "string"],
-            "format": "date-time"
-	}
+    "id": {
+      "type": ["null", "string"]
+    },
+    "url": {
+      "type": ["null", "string"]
+    },
+    "number": {
+      "type": ["null", "integer"]
+    },
+    "state": {
+      "type": ["null", "string"]
+    },
+    "title": {
+      "type": ["null", "string"]
+    },
+    "body": {
+      "type": ["null", "string"]
+    },
+    "user": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "login": {
+          "type": ["null", "string"]
+        },
+        "id": {
+          "type": ["null", "integer"]
+        }
+      }
+    },
+    "merged_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "closed_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "created_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
     }
+  }
 }
