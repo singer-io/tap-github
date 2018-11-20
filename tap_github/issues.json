@@ -72,8 +72,10 @@
     },
     "assignee": {
       "type": [
-        "null"
-      ]
+        "null",
+        "object"
+      ],
+      "properties": {}
     },
     "updated_at": {
       "type": [
