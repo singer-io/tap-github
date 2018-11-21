@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.1
+  * Adds empty schema for issue.assignee [#37](https://github.com/singer-io/tap-github/pull/37)
+
 ## 1.3.0
   * Add functionality to accept multiple repos [#33](https://github.com/singer-io/tap-github/pull/33)
 
