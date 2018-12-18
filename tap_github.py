@@ -87,6 +87,8 @@ def authed_get(source, url, headers={}):
         resp = session.request(method='get', url=url)
         if resp.status_code == 401:
             raise AuthException(resp.text)
+        if resp.status_code == 403:
+            raise AuthException(resp.text)
         if resp.status_code == 404:
             raise NotFoundException(resp.text)
 
