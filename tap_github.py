@@ -498,9 +498,6 @@ def do_sync(config, state, catalog):
                             singer.write_schema(sub_stream_id, sub_stream['schema'],
                                                 sub_stream['key_properties'])
 
-
-
-
                     # sync stream and it's sub streams
                     state = sync_func(stream_schemas, repo, state, mdata)
 
