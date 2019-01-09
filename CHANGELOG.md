@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.3
+  * Include closed issues when we retrieve issues [#45](https://github.com/singer-io/tap-github/pull/45)
+
 ## 1.3.2
   * Checks responses for an auth error (403) and throws exception [#39](https://github.com/singer-io/tap-github/pull/39)
   * Remove `milestone` and add type to `closed_at` in `Issues` schema [#40](https://github.com/singer-io/tap-github/pull/40)
