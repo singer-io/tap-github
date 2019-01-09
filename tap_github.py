@@ -223,6 +223,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
     return state
 
 def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata):
+    print()
     for response in authed_get_all_pages(
             'reviews',
             'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)
@@ -447,8 +448,7 @@ SYNC_FUNCTIONS = {
 }
 
 SUB_STREAMS = {
-    'pull_requests': ['reviews'],
-    'pull_requests': ['review_comments']
+    'pull_requests': ['reviews', 'review_comments']
 }
 
 def do_sync(config, state, catalog):
@@ -498,6 +498,9 @@ def do_sync(config, state, catalog):
                             stream_schemas[sub_stream_id] = sub_stream['schema']
                             singer.write_schema(sub_stream_id, sub_stream['schema'],
                                                 sub_stream['key_properties'])
+
+
+
 
                     # sync stream and it's sub streams
                     state = sync_func(stream_schemas, repo, state, mdata)
