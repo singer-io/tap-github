@@ -223,7 +223,6 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
     return state
 
 def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata):
-    print()
     for response in authed_get_all_pages(
             'reviews',
             'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)
