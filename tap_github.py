@@ -340,7 +340,7 @@ def get_all_issues(schema, repo_path,  state, mdata):
     with metrics.record_counter('issues') as counter:
         for response in authed_get_all_pages(
                 'issues',
-                'https://api.github.com/repos/{}/issues?sort=updated&direction=asc{}'.format(repo_path, query_string)
+                'https://api.github.com/repos/{}/issues?state=all&sort=updated&direction=asc{}'.format(repo_path, query_string)
         ):
             issues = response.json()
             extraction_time = singer.utils.now()
