@@ -462,8 +462,7 @@ SYNC_FUNCTIONS = {
 }
 
 SUB_STREAMS = {
-    'pull_requests': ['reviews'],
-    'pull_requests': ['review_comments']
+    'pull_requests': ['reviews', 'review_comments']
 }
 
 def do_sync(config, state, catalog):
