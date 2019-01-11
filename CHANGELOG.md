@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.4
+  * Filter pull_requests stream using its updated at [#49](https://github.com/singer-io/tap-github/pull/49)
+  * Fix a bug in the setup of sub streams [#47](https://github.com/singer-io/tap-github/pull/47)
+
 ## 1.3.3
   * Include closed issues when we retrieve issues [#45](https://github.com/singer-io/tap-github/pull/45)
 
