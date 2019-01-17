@@ -185,11 +185,9 @@ def do_discover():
     print(json.dumps(catalog, indent=2))
 
 def get_all_releases(schemas, repo_path, state, mdata):
-    bookmark_value = get_bookmark(state, repo_path, "releases", "since");
-    if bookmark_value:
-        bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
-    else:
-        bookmark_time = 0
+    # Releases doesn't seem to have an `updated_at` property, yet can be edited.
+    # For this reason and since the volume of release can safely be considered low, 
+    #    bookmarks were ignored for releases.
 
     with metrics.record_counter('releases') as counter:
         for response in authed_get_all_pages(
@@ -199,14 +197,6 @@ def get_all_releases(schemas, repo_path, state, mdata):
             releases = response.json()
             extraction_time = singer.utils.now()
             for r in releases:
-
-                # skip records that haven't been updated since the last run
-                # the GitHub API doesn't currently allow a ?since param for releases
-                # once we find the first piece of old data we can return, thanks to
-                # the sorting
-                if bookmark_time and singer.utils.strptime_to_utc(r.get('updated_at')) < bookmark_time:
-                    return state
-
                 r['_sdc_repository'] = repo_path
 
                 # transform and write release record
