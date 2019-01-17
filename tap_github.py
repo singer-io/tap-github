@@ -22,6 +22,7 @@ KEY_PROPERTIES = {
     'collaborators': ['id'],
     'pull_requests':['id'],
     'stargazers': ['user_id'],
+    'releases': ['id'],
     'reviews': ['id'],
     'review_comments': ['id']
 }
@@ -182,6 +183,40 @@ def do_discover():
     catalog = get_catalog()
     # dump catalog
     print(json.dumps(catalog, indent=2))
+
+def get_all_releases(schemas, repo_path, state, mdata):
+    bookmark_value = get_bookmark(state, repo_path, "releases", "since");
+    if bookmark_value:
+        bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
+    else:
+        bookmark_time = 0
+
+    with metrics.record_counter('releases') as counter:
+        for response in authed_get_all_pages(
+                'releases',
+                'https://api.github.com/repos/{}/releases?sort=created_at&direction=desc'.format(repo_path)
+        ):
+            releases = response.json()
+            extraction_time = singer.utils.now()
+            for r in releases:
+
+                # skip records that haven't been updated since the last run
+                # the GitHub API doesn't currently allow a ?since param for releases
+                # once we find the first piece of old data we can return, thanks to
+                # the sorting
+                if bookmark_time and singer.utils.strptime_to_utc(r.get('updated_at')) < bookmark_time:
+                    return state
+
+                r['_sdc_repository'] = repo_path
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('releases', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'releases', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
 
 def get_all_pull_requests(schemas, repo_path, state, mdata):
     '''
@@ -458,6 +493,7 @@ SYNC_FUNCTIONS = {
     'assignees': get_all_assignees,
     'collaborators': get_all_collaborators,
     'pull_requests': get_all_pull_requests,
+    'releases': get_all_releases,
     'stargazers': get_all_stargazers
 }
 
