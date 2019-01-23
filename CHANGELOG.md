@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.5
+  * Add the `submitted_at` field to the `review` stream [#52](https://github.com/singer-io/tap-github/pull/52)
+
 ## 1.3.4
   * Filter pull_requests stream using its updated at [#49](https://github.com/singer-io/tap-github/pull/49)
   * Fix a bug in the setup of sub streams [#47](https://github.com/singer-io/tap-github/pull/47)
