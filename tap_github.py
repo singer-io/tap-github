@@ -194,6 +194,9 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
     else:
         bookmark_time = 0
 
+    def _state_save(ext_time):
+        singer.write_bookmark(state, repo_path, 'pull_requests', {'since': singer.utils.strftime(ext_time)})
+
     with metrics.record_counter('pull_requests') as counter:
         with metrics.record_counter('reviews') as reviews_counter:
             for response in authed_get_all_pages(
@@ -209,6 +212,8 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
                     # once we find the first piece of old data we can return, thanks to
                     # the sorting
                     if bookmark_time and singer.utils.strptime_to_utc(pr.get('updated_at')) < bookmark_time:
+                        # Save state even if we stop, so it's not reloaded again.
+                        _state_save(extraction_time)
                         return state
 
                     pr_num = pr.get('number')
@@ -218,7 +223,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
                     with singer.Transformer() as transformer:
                         rec = transformer.transform(pr, schemas['pull_requests'], metadata=metadata.to_map(mdata))
                     singer.write_record('pull_requests', rec, time_extracted=extraction_time)
-                    singer.write_bookmark(state, repo_path, 'pull_requests', {'since': singer.utils.strftime(extraction_time)})
+                    _state_save(extraction_time)
                     counter.increment()
 
                     # sync reviews if that schema is present (only there if selected)
