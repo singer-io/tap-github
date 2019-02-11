@@ -1,5 +1,9 @@
 # Changelog
 
+# 1.3.6
+  * Add a call to `raise_for_status()` to catch more errors than before [#55](https://github.com/singer-io/tap-github/pull/55)
+  * Update schemas to make some fields `date-time`s [#60](https://github.com/singer-io/tap-github/pull/60)
+
 ## 1.3.5
   * Add the `submitted_at` field to the `review` stream [#52](https://github.com/singer-io/tap-github/pull/52)
 
