@@ -98,6 +98,7 @@ def authed_get(source, url, headers={}):
 def authed_get_all_pages(source, url, headers={}):
     while True:
         r = authed_get(source, url, headers)
+        r.raise_for_status()
         yield r
         if 'next' in r.links:
             url = r.links['next']['url']
