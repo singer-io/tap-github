@@ -22,6 +22,7 @@ KEY_PROPERTIES = {
     'collaborators': ['id'],
     'pull_requests':['id'],
     'stargazers': ['user_id'],
+    'releases': ['id'],
     'reviews': ['id'],
     'review_comments': ['id']
 }
@@ -183,6 +184,30 @@ def do_discover():
     catalog = get_catalog()
     # dump catalog
     print(json.dumps(catalog, indent=2))
+
+def get_all_releases(schemas, repo_path, state, mdata):
+    # Releases doesn't seem to have an `updated_at` property, yet can be edited.
+    # For this reason and since the volume of release can safely be considered low, 
+    #    bookmarks were ignored for releases.
+
+    with metrics.record_counter('releases') as counter:
+        for response in authed_get_all_pages(
+                'releases',
+                'https://api.github.com/repos/{}/releases?sort=created_at&direction=desc'.format(repo_path)
+        ):
+            releases = response.json()
+            extraction_time = singer.utils.now()
+            for r in releases:
+                r['_sdc_repository'] = repo_path
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('releases', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'releases', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
 
 def get_all_pull_requests(schemas, repo_path, state, mdata):
     '''
@@ -459,6 +484,7 @@ SYNC_FUNCTIONS = {
     'assignees': get_all_assignees,
     'collaborators': get_all_collaborators,
     'pull_requests': get_all_pull_requests,
+    'releases': get_all_releases,
     'stargazers': get_all_stargazers
 }
 
