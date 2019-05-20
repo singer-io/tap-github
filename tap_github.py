@@ -83,15 +83,25 @@ def get_bookmark(state, repo, stream_name, bookmark_key):
     return None
 
 def authed_get(source, url, headers={}):
-    with metrics.http_request_timer(source) as timer:
-        session.headers.update(headers)
-        resp = session.request(method='get', url=url)
-        if resp.status_code == 401:
-            raise AuthException(resp.text)
-        if resp.status_code == 403:
-            raise AuthException(resp.text)
-        if resp.status_code == 404:
-            raise NotFoundException(resp.text)
+
+    for _ in range(0, 3):  # 3 attempts
+        with metrics.http_request_timer(source) as timer:
+            session.headers.update(headers)
+            resp = session.request(method='get', url=url)
+
+            # Handle github's rate limited responses
+            remaining = resp.headers.get('X-RateLimit-Remaining')
+            time_to_reset = resp.headers.get('X-RateLimit-Reset', 60)
+            if remaining is not None and remaining == 0:
+                time.sleep(time.now() - time_to_reset)
+                continue
+
+            if resp.status_code == 401:
+                raise AuthException(resp.text)
+            if resp.status_code == 403:
+                raise AuthException(resp.text)
+            if resp.status_code == 404:
+                raise NotFoundException(resp.text)
 
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         return resp
@@ -187,7 +197,7 @@ def do_discover():
 
 def get_all_releases(schemas, repo_path, state, mdata):
     # Releases doesn't seem to have an `updated_at` property, yet can be edited.
-    # For this reason and since the volume of release can safely be considered low, 
+    # For this reason and since the volume of release can safely be considered low,
     #    bookmarks were ignored for releases.
 
     with metrics.record_counter('releases') as counter:
