@@ -33,6 +33,9 @@ class AuthException(Exception):
 class NotFoundException(Exception):
     pass
 
+class HttpException(Exception):
+    pass
+
 def translate_state(state, catalog, repositories):
     '''
     This tap used to only support a single repository, in which case the
@@ -109,6 +112,8 @@ def authed_get(source, url, headers={}):
 
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         return resp
+
+    raise HttpException(resp.text)
 
 def authed_get_all_pages(source, url, headers={}):
     while True:
