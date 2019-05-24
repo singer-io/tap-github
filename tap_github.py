@@ -94,7 +94,7 @@ def authed_get(source, url, headers={}):
 
             # Handle github's rate limited responses
             remaining = resp.headers.get('X-RateLimit-Remaining')
-            time_to_reset = resp.headers.get('X-RateLimit-Reset', 60)
+            time_to_reset = resp.headers.get('X-RateLimit-Reset', time.now() + 60)
             if remaining is not None and remaining == 0:
                 time.sleep(time.now() - time_to_reset)
                 continue  # next attempt
