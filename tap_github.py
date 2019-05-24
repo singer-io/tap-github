@@ -94,7 +94,11 @@ def authed_get(source, url, headers={}):
             time_to_reset = resp.headers.get('X-RateLimit-Reset', 60)
             if remaining is not None and remaining == 0:
                 time.sleep(time.now() - time_to_reset)
-                continue
+                continue  # next attempt
+
+            # Handle github's possible failures as retries
+            if resp.status_code == 502 or resp.status_code == 503:
+                continue  # next attempt
 
             if resp.status_code == 401:
                 raise AuthException(resp.text)
