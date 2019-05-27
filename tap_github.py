@@ -6,6 +6,7 @@ import singer
 import singer.bookmarks as bookmarks
 import singer.metrics as metrics
 import collections
+import time
 
 from singer import metadata
 
@@ -86,7 +87,6 @@ def get_bookmark(state, repo, stream_name, bookmark_key):
     return None
 
 def authed_get(source, url, headers={}):
-
     for _ in range(0, 3):  # 3 attempts
         with metrics.http_request_timer(source) as timer:
             session.headers.update(headers)
@@ -94,9 +94,9 @@ def authed_get(source, url, headers={}):
 
             # Handle github's rate limited responses
             remaining = resp.headers.get('X-RateLimit-Remaining')
-            time_to_reset = resp.headers.get('X-RateLimit-Reset', time.now() + 60)
+            time_to_reset = resp.headers.get('X-RateLimit-Reset', time.time() + 60)
             if remaining is not None and remaining == 0:
-                time.sleep(time.now() - time_to_reset)
+                time.sleep(time.time() - time_to_reset)
                 continue  # next attempt
 
             # Handle github's possible failures as retries
