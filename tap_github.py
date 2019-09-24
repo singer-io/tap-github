@@ -24,7 +24,8 @@ KEY_PROPERTIES = {
     'stargazers': ['user_id'],
     'releases': ['id'],
     'reviews': ['id'],
-    'review_comments': ['id']
+    'review_comments': ['id'],
+    'tags': ['node_id']
 }
 
 class AuthException(Exception):
@@ -184,6 +185,28 @@ def do_discover():
     catalog = get_catalog()
     # dump catalog
     print(json.dumps(catalog, indent=2))
+
+def get_all_tags(schemas, repo_path, state, mdata):
+    # The volume of tags can safely be considered low
+
+    with metrics.record_counter('tags') as counter:
+        for response in authed_get_all_pages(
+                'tags',
+                'https://api.github.com/repos/{}/tags?sort=node_id&direction=desc'.format(repo_path)
+        ):
+            tags = response.json()
+            extraction_time = singer.utils.now()
+            for t in tags:
+                t['_sdc_repository'] = repo_path
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(t, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('tags', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'tags', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
 
 def get_all_releases(schemas, repo_path, state, mdata):
     # Releases doesn't seem to have an `updated_at` property, yet can be edited.
@@ -485,7 +508,8 @@ SYNC_FUNCTIONS = {
     'collaborators': get_all_collaborators,
     'pull_requests': get_all_pull_requests,
     'releases': get_all_releases,
-    'stargazers': get_all_stargazers
+    'stargazers': get_all_stargazers,
+    'tags': get_all_tags,
 }
 
 SUB_STREAMS = {

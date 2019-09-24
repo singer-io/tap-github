@@ -1,0 +1,33 @@
+{
+  "type": ["null", "object"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": ["null", "string"]
+    },
+    "zipball_url": {
+      "type": ["null", "string"]
+    },
+    "tarball_url": {
+      "type": ["null", "string"]
+    },
+    "commit": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "sha": {
+          "type": ["null", "string"]
+        },
+        "url": {
+          "type": ["null", "string"]
+        }
+      }
+    },
+    "node_id": {
+      "type": ["null", "string"]
+    },
+    "_sdc_repository": {
+      "type": ["string"]
+    }
+  }
+}
