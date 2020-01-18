@@ -1,2 +1,2 @@
 include LICENSE
-include tap_github/*.json
+include tap_rest_api/*.json

@@ -1,0 +1,23 @@
+{
+    "editor.rulers": [
+        90,
+        119
+    ],
+    "search.exclude": {
+        ".git": true
+    },
+    "python.formatting.provider": "black",
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveTimeout": 2000,
+    "python.formatting.blackArgs": [
+        "--line-length",
+        "90"
+    ],
+    "python.linting.enabled": true,
+    "python.linting.pylamaEnabled": true,
+    "python.linting.pylamaArgs": [
+        "--max-line-length",
+        "90"
+    ],
+    "python.pythonPath": "C:\\Python38\\python.exe",
+}

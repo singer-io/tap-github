@@ -1,0 +1,73 @@
+{
+  "access_token": null,
+  "url_prefix": "https://api.github.com/repos/aaronsteers/tap-rest-api/",
+  "endpoints": {
+    "collaborators": {
+      "url": "collaborators",
+      "key": "id",
+      "help": "https://developer.github.com/v3/repos/collaborators/#list-collaborators"
+    },
+    "assignees": {
+      "url": "assignees",
+      "key": "id",
+      "help": "https://developer.github.com/v3/issues/assignees/#list-assignees"
+    },
+    "stargazers": {
+      "url": "stargazers?sort=updated&direction=asc",
+      "extra_headers": {
+        "Accept": "application/vnd.github.v3.star+json"
+      },
+      // "key": "user.id",
+      "time_key": "updated_at",
+      "help": "https://developer.github.com/v3/activity/starring/#list-stargazers"
+    },
+    "releases": {
+      "url": "releases?sort=created_at&direction=desc",
+      "key": "id",
+      "help": "https://developer.github.com/v3/repos/releases/#list-releases-for-a-repository"
+    },
+    "commits": {
+      "url": "commits",
+      "key": "sha",
+      "time_key": null,
+      "time_filter_query": "since={}",
+      "help": "https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository"
+    },
+    "issues": {
+      "url": "issues",
+      "key": "id",
+      "time_key": "updated_at",
+      "time_filter_query": "since={}",
+      "help": "https://developer.github.com/v3/issues/#list-issues-for-a-repository"
+    },
+    "issue_comments": {
+      "url": "issues/comments?sort=updated&direction=asc",
+      "key": "id",
+      "time_key": "updated_at",
+      "time_filter_query": "since={}",
+      "help": "https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository"
+    },
+    "pull_requests": {
+      "url": "pulls?state=all&sort=updated&direction=desc",
+      "key": "number",
+      "time_key": "updated_at",
+      "time_key_sort": "desc",
+      "help": "https://developer.github.com/v3/pulls/#list-pull-requests"
+    },
+    "pull_request_reviews": {
+      "url": "pulls/{}/reviews",
+      "key": "id",
+      "time_key": "updated_at",
+      "parents": ["pull_requests"],
+      "help": "https://developer.github.com/v3/pulls/reviews/#list-reviews-on-a-pull-request"
+    },
+    "pull_request_comments": {
+      "url": "pulls/{}/comments",
+      "key": "id",
+      "time_key": "updated_at",
+      "time_filter_query": "since={}",
+      "parents": ["pull_requests"],
+      "help": "https://developer.github.com/v3/pulls/comments/#list-comments-on-a-pull-request"
+    }
+  }
+}
