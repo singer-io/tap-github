@@ -1,2 +1,2 @@
 include LICENSE
-include tap_rest_api/*.json
+include tap_rest_api/catalog/*.json

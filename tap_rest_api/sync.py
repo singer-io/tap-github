@@ -1,6 +1,7 @@
 import singer
 from singer import metadata
 import collections
+import requests
 import singer.metrics as metrics
 import singer.bookmarks as bookmarks
 from singer.utils import strptime_to_utc
@@ -8,9 +9,31 @@ from singer.utils import strptime_to_utc
 class DependencyException(Exception):
     pass
 
+session = requests.Session()
+logger = singer.get_logger()
 
 DOCS_URL = "https://github.com/aaronsteers/tap-rest-api"
 DEFAULT_TIME_KEY = "since"
+
+
+def get_selected_streams(catalog):
+    """
+    Gets selected streams.  Checks schema's 'selected'
+    first -- and then checks metadata, looking for an empty
+    breadcrumb and mdata with a 'selected' entry
+    """
+    selected_streams = []
+    for stream in catalog["streams"]:
+        stream_metadata = stream["metadata"]
+        if stream["schema"].get("selected", False):
+            selected_streams.append(stream["tap_stream_id"])
+        else:
+            for entry in stream_metadata:
+                # stream metadata will have empty breadcrumb
+                if not entry["breadcrumb"] and entry["metadata"].get("selected", None):
+                    selected_streams.append(stream["tap_stream_id"])
+    return selected_streams
+
 
 
 def _parse_endpoint_config(config_dict, config_key, stream_id, default=None):
@@ -25,7 +48,7 @@ def _parse_endpoint_config(config_dict, config_key, stream_id, default=None):
     return config_dict["endpoints"][stream_id].get(config_key, default)
 
 
-def _get_endpoint_url(stream_id, config, query_string="", parent_keys):
+def _get_endpoint_url(stream_id, config, query_string="", parent_keys=None):
     """
     Arguments:
     ...
@@ -191,12 +214,12 @@ def get_rest_data_child_elements(stream_id, parent_key_value, catalog, state):
     for response in authed_get_all_pages(
         stream_id, _get_endpoint_url(stream_id, config, parent_key=parent_key_value)
     ):
-        review_comments = response.json()
+        elements = response.json()
         extraction_time = singer.utils.now()
-        for comment in review_comments:
+        for element in elements:
             with singer.Transformer() as transformer:
                 rec = transformer.transform(
-                    comment, schema, metadata=metadata.to_map(mdata)
+                    element, schema, metadata=metadata.to_map(mdata)
                 )
             yield rec
         return state
@@ -228,14 +251,16 @@ def do_sync(config, state, catalog):
     session.headers.update({"authorization": "token " + access_token})
     # get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
-    _validate_dependencies(selected_stream_ids)
+    _validate_dependencies(selected_stream_ids, config)
     singer.write_state(state)
     logger.info("Starting sync from API")
     for stream in catalog["streams"]:
         stream_id = stream["tap_stream_id"]
+        if stream_id not in selected_stream_ids:
+            logger.info(f"Skipping stream '{stream_id}' because it is not selected.")
         stream_schema = _get_schema(stream_id, catalog)
         mdata = _get_metadata(stream_id, catalog)
-        if _get_endpoint_parent(stream_id):
+        if _get_endpoint_parents(stream_id, config):
             # if it is a "sub_stream", it will be sync'd by its parent
             continue
         if stream_id in selected_stream_ids:
@@ -255,14 +280,14 @@ def do_sync(config, state, catalog):
             singer.write_state(state)
 
 
-def _validate_dependencies(selected_stream_ids):
+def _validate_dependencies(selected_stream_ids, config):
     errs = []
     for stream_id in selected_stream_ids:
-        parent = _get_endpoint_parent(stream_id):
+        parent = _get_endpoint_parents(stream_id, config)
         if parent and parent not in selected_stream_ids:
-        errs.append(
-            f"Unable to extract '{stream_id}' data. "
-            f"To receive '{stream_id}' data, you also need to select '{parent}'."
-        )
+            errs.append(
+                f"Unable to extract '{stream_id}' data. "
+                f"To receive '{stream_id}' data, you also need to select '{parent}'."
+            )
     if errs:
         raise DependencyException(" ".join(errs))

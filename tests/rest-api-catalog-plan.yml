@@ -1,0 +1,26 @@
+selected_tables:
+  pull_requests:
+    selected_columns:
+    - _sdc_repository
+    - id
+    - url
+    - number
+    - state
+    - title
+    - body
+    - labels
+    - user
+    - merged_at
+    - closed_at
+    - created_at
+    - updated_at
+ignored_tables:
+  - assignees
+  - collaborators
+  - comments
+  - commits
+  - issues
+  - releases
+  - review_comments
+  - reviews
+  - stargazers

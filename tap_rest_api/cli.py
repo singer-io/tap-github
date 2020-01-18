@@ -7,8 +7,9 @@ import singer
 from . import discover
 from . import sync
 
-REQUIRED_CONFIG_KEYS = ["access_token", "rest_endpoint", "wsdl_endpoint"]
+REQUIRED_CONFIG_KEYS = ["access_token", "endpoints"]
 
+logger = singer.get_logger()
 
 @singer.utils.handle_top_exception(logger)
 def main():

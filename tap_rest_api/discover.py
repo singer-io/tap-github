@@ -1,6 +1,7 @@
 import os
 import requests
 import singer
+import json
 from singer import metadata
 import singer.metrics as metrics
 import singer.bookmarks as bookmarks
@@ -9,6 +10,22 @@ import singer.bookmarks as bookmarks
 session = requests.Session()
 logger = singer.get_logger()
 
+CATALOG_DIR = "catalog"
+
+# TODO: Remove this hardcoded list:
+
+KEY_PROPERTIES = {
+    'commits': ['sha'],
+    'comments': ['id'],
+    'issues': ['id'],
+    'assignees': ['id'],
+    'collaborators': ['id'],
+    'stargazers': ['user_id'],
+    'releases': ['id'],
+    'pull_requests':['id'],
+    'pull_request_reviews': ['id'],
+    'pull_request_comments': ['id']
+}
 
 class AuthException(Exception):
     pass
@@ -16,25 +33,6 @@ class AuthException(Exception):
 
 class NotFoundException(Exception):
     pass
-
-
-def get_selected_streams(catalog):
-    """
-    Gets selected streams.  Checks schema's 'selected'
-    first -- and then checks metadata, looking for an empty
-    breadcrumb and mdata with a 'selected' entry
-    """
-    selected_streams = []
-    for stream in catalog["streams"]:
-        stream_metadata = stream["metadata"]
-        if stream["schema"].get("selected", False):
-            selected_streams.append(stream["tap_stream_id"])
-        else:
-            for entry in stream_metadata:
-                # stream metadata will have empty breadcrumb
-                if not entry["breadcrumb"] and entry["metadata"].get("selected", None):
-                    selected_streams.append(stream["tap_stream_id"])
-    return selected_streams
 
 
 def authed_get(source, url, headers={}):
@@ -68,8 +66,8 @@ def get_abs_path(path):
 
 def load_schemas():
     schemas = {}
-    for filename in os.listdir(get_abs_path("tap_github")):
-        path = get_abs_path("tap_github") + "/" + filename
+    for filename in os.listdir(get_abs_path(CATALOG_DIR)):
+        path = get_abs_path(CATALOG_DIR) + "/" + filename
         file_raw = filename.replace(".json", "")
         with open(path) as file:
             schemas[file_raw] = json.load(file)
