@@ -1,0 +1,38 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+plugins {
+    id("base")
+}
+
+private static Iterable<String> osAdaptiveCommand(String... commands) {
+    def newCommands = []
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        newCommands = ['cmd', '/c']
+    }
+    newCommands.addAll(commands)
+    newCommands.addAll([])
+    return newCommands
+}
+
+task tapInstall(type:Exec) {
+    workingDir  = 'data/taps'
+    commandLine = osAdaptiveCommand(
+        "./install.sh"
+    )
+}
+
+task tapPlan(type:Exec) {
+    mustRunAfter(tapInstall)
+    workingDir  = 'data/taps'
+    commandLine = osAdaptiveCommand(
+        "./plan.sh"
+    )
+}
+
+task tapSync(type:Exec) {
+    mustRunAfter(tapInstall, tapPlan)
+    workingDir  = 'data/taps'
+    commandLine = osAdaptiveCommand(
+        "./sync.sh"
+    )
+}

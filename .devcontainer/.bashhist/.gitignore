@@ -1,0 +1,7 @@
+# This folder holds the history file for bash terminals used within containers.
+#
+# The only file that is committed to git is this .gitignore file.  This ensures
+# that this folder gets created during git clone, even when otherwise empty.
+
+**
+!.gitignore

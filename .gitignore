@@ -1,6 +1,9 @@
-# Custom exclusions:
+# Ignore Gradle project-specific cache directory
 
+.gradle
 **/*secret-config*
+.devcontainer/.vscode**
+**log.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

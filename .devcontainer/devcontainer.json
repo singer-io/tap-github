@@ -1,0 +1,21 @@
+// See https://aka.ms/vscode-remote/devcontainer.json for format details.
+{
+	"name": "tap-rest-api-dev",
+	"dockerComposeFile": "docker-compose.dev.yml",
+	"service": "dataops_dev",
+	"workspaceFolder": "/projects",
+	"extensions": [
+		"eamodio.gitlens", // Git, Robust VS Code GUI
+		"ms-python.python", // Python
+		"redhat.vscode-yaml", // YAML
+		"mutantdino.resourcemonitor", // CPU & RAM usage
+	],
+	"settings": {
+		"python.pythonPath": "/usr/local/bin/python",
+		"workbench.colorTheme": "Visual Studio Dark", // use a distinct theme to indicate we are in a container
+		"resmon.show.mem": true,
+		"resmon.show.cpuusage": true,
+		"resmon.show.cpufreq": false,
+		"resmon.show.battery": false,
+	}
+}

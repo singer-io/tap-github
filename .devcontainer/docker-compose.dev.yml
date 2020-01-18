@@ -1,0 +1,14 @@
+version: "3.1"
+volumes:
+  warehouse:
+services:
+  dataops_dev:
+    container_name: dataops_dev
+    build:
+      context: ..
+      args: []
+    working_dir: /projects/tap-rest-api
+    command: spark start_server --with_jupyter
+    environment: []
+    volumes:
+      - ..:/projects/tap-rest-api
