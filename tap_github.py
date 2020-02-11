@@ -34,6 +34,8 @@ KEY_PROPERTIES = {
     'project_columns': ['id'],
     'project_cards': ['id'],
     'repos': ['id'],
+    'teams': ['id'],
+    'team_members': ['id']
 }
 
 class AuthException(Exception):
@@ -193,6 +195,54 @@ def do_discover():
     catalog = get_catalog()
     # dump catalog
     print(json.dumps(catalog, indent=2))
+
+def get_all_teams(schemas, repo_path, state, mdata):
+    org = repo_path.split('/')[0]
+    with metrics.record_counter('teams') as counter:
+        for response in authed_get_all_pages(
+                'teams',
+                'https://api.github.com/orgs/{}/teams?sort=created_at&direction=desc'.format(org)
+        ):
+            teams = response.json()
+            extraction_time = singer.utils.now()
+            for r in teams:
+                r['_sdc_repository'] = repo_path
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('teams', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'teams', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+                if schemas.get('team_members'):
+                    team_slug = r['slug']
+                    for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata):
+                        singer.write_record('team_members', team_members_rec, time_extracted=extraction_time)
+                        singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
+
+    return state
+
+def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
+    org = repo_path.split('/')[0]
+    with metrics.record_counter('team_members') as counter:
+        for response in authed_get_all_pages(
+                'team_members',
+                'https://api.github.com/orgs/{}/teams/{}/members?sort=created_at&direction=desc'.format(org, team_slug)
+        ):
+            team_members = response.json()
+            extraction_time = singer.utils.now()
+            for r in team_members:
+                r['_sdc_repository'] = repo_path
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('team_members', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
 
 def get_all_events(schemas, repo_path, state, mdata):
     # Incremental sync off `created_at`
@@ -746,12 +796,14 @@ SYNC_FUNCTIONS = {
     'issue_milestones': get_all_issue_milestones,
     'issue_labels': get_all_issue_labels,
     'projects': get_all_projects,
-    'commit_comments': get_all_commit_comments
+    'commit_comments': get_all_commit_comments,
+    'teams': get_all_teams
 }
 
 SUB_STREAMS = {
     'pull_requests': ['reviews', 'review_comments'],
-    'projects': ['project_cards', 'project_columns']
+    'projects': ['project_cards', 'project_columns'],
+    'teams': ['team_members']
 }
 
 def do_sync(config, state, catalog):
