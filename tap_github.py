@@ -24,7 +24,16 @@ KEY_PROPERTIES = {
     'stargazers': ['user_id'],
     'releases': ['id'],
     'reviews': ['id'],
-    'review_comments': ['id']
+    'review_comments': ['id'],
+    'events': ['id'],
+    'issue_labels': ['id'],
+    'issue_milestones': ['id'],
+    'pull_request_reviews': ['id'],
+    'commit_comments': ['id'],
+    'projects': ['id'],
+    'project_columns': ['id'],
+    'project_cards': ['id'],
+    'repos': ['id'],
 }
 
 class AuthException(Exception):
@@ -184,6 +193,253 @@ def do_discover():
     catalog = get_catalog()
     # dump catalog
     print(json.dumps(catalog, indent=2))
+
+def get_all_events(schemas, repo_path, state, mdata):
+    # Incremental sync off `created_at`
+    # https://developer.github.com/v3/issues/events/#list-events-for-a-repository
+    # 'https://api.github.com/repos/{}/issues/events?sort=created_at&direction=desc'.format(repo_path)
+
+    bookmark_value = get_bookmark(state, repo_path, "events", "since");
+    if bookmark_value:
+        bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
+    else:
+        bookmark_time = 0
+
+    with metrics.record_counter('events') as counter:
+        for response in authed_get_all_pages(
+                'events',
+                'https://api.github.com/repos/{}/events?sort=created_at&direction=desc'.format(repo_path)
+        ):
+            events = response.json()
+            extraction_time = singer.utils.now()
+            for r in events:
+                r['_sdc_repository'] = repo_path
+
+                # skip records that haven't been updated since the last run
+                # the GitHub API doesn't currently allow a ?since param for pulls
+                # once we find the first piece of old data we can return, thanks to
+                # the sorting
+                if bookmark_time and singer.utils.strptime_to_utc(r.get('updated_at')) < bookmark_time:
+                    return state
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('events', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'events', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
+
+def get_all_issue_milestones(schemas, repo_path, state, mdata):
+    # Incremental sync off `due on` ??? confirm.
+    # https://developer.github.com/v3/issues/milestones/#list-milestones-for-a-repository
+    # 'https://api.github.com/repos/{}/milestones?sort=created_at&direction=desc'.format(repo_path)
+    bookmark_value = get_bookmark(state, repo_path, "milestones", "since");
+    if bookmark_value:
+        bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
+    else:
+        bookmark_time = 0
+
+    with metrics.record_counter('milestones') as counter:
+        for response in authed_get_all_pages(
+                'milestones',
+                'https://api.github.com/repos/{}/milestones?direction=desc'.format(repo_path)
+        ):
+            milestones = response.json()
+            extraction_time = singer.utils.now()
+            for r in milestones:
+                r['_sdc_repository'] = repo_path
+
+                # skip records that haven't been updated since the last run
+                # the GitHub API doesn't currently allow a ?since param for pulls
+                # once we find the first piece of old data we can return, thanks to
+                # the sorting
+                if bookmark_time and singer.utils.strptime_to_utc(r.get('due_on')) < bookmark_time:
+                    return state
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('milestones', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'milestones', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
+
+def get_all_issue_labels(schemas, repo_path, state, mdata):
+    # https://developer.github.com/v3/issues/labels/
+    # not sure if incremental key
+    # 'https://api.github.com/repos/{}/labels?sort=created_at&direction=desc'.format(repo_path)
+
+    with metrics.record_counter('milestones') as counter:
+        for response in authed_get_all_pages(
+                'issue_labels',
+                'https://api.github.com/repos/{}/labels'.format(repo_path)
+        ):
+            issue_labels = response.json()
+            extraction_time = singer.utils.now()
+            for r in issue_labels:
+                r['_sdc_repository'] = repo_path
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('issue_labels', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'milestones', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
+
+def get_all_commit_comments(schemas, repo_path, state, mdata):
+    # https://developer.github.com/v3/repos/comments/
+    # updated_at? incremental
+    # 'https://api.github.com/repos/{}/comments?sort=created_at&direction=desc'.format(repo_path)
+    bookmark_value = get_bookmark(state, repo_path, "commit_comments", "since");
+    if bookmark_value:
+        bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
+    else:
+        bookmark_time = 0
+
+    with metrics.record_counter('commit_comments') as counter:
+        for response in authed_get_all_pages(
+                'commit_comments',
+                'https://api.github.com/repos/{}/comments?sort=created_at&direction=desc'.format(repo_path)
+        ):
+            commit_comments = response.json()
+            extraction_time = singer.utils.now()
+            for r in commit_comments:
+                r['_sdc_repository'] = repo_path
+
+                # skip records that haven't been updated since the last run
+                # the GitHub API doesn't currently allow a ?since param for pulls
+                # once we find the first piece of old data we can return, thanks to
+                # the sorting
+                if bookmark_time and singer.utils.strptime_to_utc(r.get('updated_at')) < bookmark_time:
+                    return state
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('commit_comments', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'commit_comments', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
+
+def get_all_projects(schemas, repo_path, state, mdata):
+    bookmark_value = get_bookmark(state, repo_path, "projects", "since");
+    if bookmark_value:
+        bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
+    else:
+        bookmark_time = 0
+
+    with metrics.record_counter('projects') as counter:
+        for response in authed_get_all_pages(
+                'projects',
+                'https://api.github.com/repos/{}/projects?sort=created_at&direction=desc'.format(repo_path),
+                { 'Accept': 'application/vnd.github.inertia-preview+json' }
+        ):
+            projects = response.json()
+            extraction_time = singer.utils.now()
+            for r in projects:
+                r['_sdc_repository'] = repo_path
+
+                # skip records that haven't been updated since the last run
+                # the GitHub API doesn't currently allow a ?since param for pulls
+                # once we find the first piece of old data we can return, thanks to
+                # the sorting
+                if bookmark_time and singer.utils.strptime_to_utc(r.get('updated_at')) < bookmark_time:
+                    return state
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('projects', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'projects', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+                project_id = r.get('id')
+
+                # sync project_cards if that schema is present (only there if selected)
+                if schemas.get('project_cards'):
+                    for project_card_rec in get_all_project_cards(project_id, schemas['project_cards'], repo_path, state, mdata):
+                        singer.write_record('project_cards', project_card_rec, time_extracted=extraction_time)
+                        singer.write_bookmark(state, repo_path, 'project_cards', {'since': singer.utils.strftime(extraction_time)})
+
+                # sync project_columns if that schema is present (only there if selected)
+                if schemas.get('project_columns'):
+                    for project_column_rec in get_all_project_columns(project_id, schemas['project_columns'], repo_path, state, mdata):
+                        singer.write_record('project_columns', project_column_rec, time_extracted=extraction_time)
+                        singer.write_bookmark(state, repo_path, 'project_columns', {'since': singer.utils.strftime(extraction_time)})
+
+    return state
+
+def get_all_project_cards(project_id, schemas, repo_path, state, mdata):
+    bookmark_value = get_bookmark(state, repo_path, "project_cards", "since");
+    if bookmark_value:
+        bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
+    else:
+        bookmark_time = 0
+
+    with metrics.record_counter('project_cards') as counter:
+        for response in authed_get_all_pages(
+                'project_cards',
+                'https://api.github.com/projects/{}/columns?sort=created_at&direction=desc'.format(project_id)
+        ):
+            project_cards = response.json()
+            extraction_time = singer.utils.now()
+            for r in project_cards:
+                r['_sdc_repository'] = repo_path
+
+                # skip records that haven't been updated since the last run
+                # the GitHub API doesn't currently allow a ?since param for pulls
+                # once we find the first piece of old data we can return, thanks to
+                # the sorting
+                if bookmark_time and singer.utils.strptime_to_utc(r.get('updated_at')) < bookmark_time:
+                    return state
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('project_cards', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'project_cards', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
+
+def get_all_project_columns(project_id, schemas, repo_path, state, mdata):
+    bookmark_value = get_bookmark(state, repo_path, "project_columns", "since");
+    if bookmark_value:
+        bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
+    else:
+        bookmark_time = 0
+
+    with metrics.record_counter('project_columns') as counter:
+        for response in authed_get_all_pages(
+                'project_columns',
+                'https://api.github.com/projects/{}/columns?sort=created_at&direction=desc'.format(project_id)
+        ):
+            project_columns = response.json()
+            extraction_time = singer.utils.now()
+            for r in project_columns:
+                r['_sdc_repository'] = repo_path
+
+                # skip records that haven't been updated since the last run
+                # the GitHub API doesn't currently allow a ?since param for pulls
+                # once we find the first piece of old data we can return, thanks to
+                # the sorting
+                if bookmark_time and singer.utils.strptime_to_utc(r.get('updated_at')) < bookmark_time:
+                    return state
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('project_columns', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'project_columns', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
 
 def get_all_releases(schemas, repo_path, state, mdata):
     # Releases doesn't seem to have an `updated_at` property, yet can be edited.
@@ -485,11 +741,17 @@ SYNC_FUNCTIONS = {
     'collaborators': get_all_collaborators,
     'pull_requests': get_all_pull_requests,
     'releases': get_all_releases,
-    'stargazers': get_all_stargazers
+    'stargazers': get_all_stargazers,
+    'events': get_all_events,
+    'issue_milestones': get_all_issue_milestones,
+    'issue_labels': get_all_issue_labels,
+    'projects': get_all_projects,
+    'commit_comments': get_all_commit_comments
 }
 
 SUB_STREAMS = {
-    'pull_requests': ['reviews', 'review_comments']
+    'pull_requests': ['reviews', 'review_comments'],
+    'projects': ['project_cards', 'project_columns']
 }
 
 def do_sync(config, state, catalog):
