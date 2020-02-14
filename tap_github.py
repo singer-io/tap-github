@@ -767,13 +767,13 @@ def get_selected_streams(catalog):
     selected_streams = []
     for stream in catalog['streams']:
         stream_metadata = stream['metadata']
-        if stream['schema'].get('selected', False):
-            selected_streams.append(stream['tap_stream_id'])
-        else:
-            for entry in stream_metadata:
-                # stream metadata will have empty breadcrumb
-                if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
-                    selected_streams.append(stream['tap_stream_id'])
+        # if stream['schema'].get('selected', False):
+        selected_streams.append(stream['tap_stream_id'])
+        # else:
+        #     for entry in stream_metadata:
+        #         # stream metadata will have empty breadcrumb
+        #         if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
+        #             selected_streams.append(stream['tap_stream_id'])
 
     return selected_streams
 
@@ -788,7 +788,7 @@ SYNC_FUNCTIONS = {
     'comments': get_all_comments,
     'issues': get_all_issues,
     'assignees': get_all_assignees,
-    'collaborators': get_all_collaborators,
+    # 'collaborators': get_all_collaborators,
     'pull_requests': get_all_pull_requests,
     'releases': get_all_releases,
     'stargazers': get_all_stargazers,

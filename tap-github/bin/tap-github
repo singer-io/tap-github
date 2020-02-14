@@ -1,0 +1,12 @@
+#!/Users/andyjiang/Developer/singer/tap-github/tap-github/bin/python3
+# EASY-INSTALL-ENTRY-SCRIPT: 'tap-github','console_scripts','tap-github'
+__requires__ = 'tap-github'
+import re
+import sys
+from pkg_resources import load_entry_point
+
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
+    sys.exit(
+        load_entry_point('tap-github', 'console_scripts', 'tap-github')()
+    )
