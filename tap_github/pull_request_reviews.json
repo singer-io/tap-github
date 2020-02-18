@@ -49,7 +49,7 @@
           "gravatar_id": {
             "type": [
               "null",
-              ""
+              "string"
             ]
           },
           "url": {

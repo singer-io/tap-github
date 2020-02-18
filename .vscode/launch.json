@@ -8,7 +8,7 @@
             "type": "python",
             "request": "launch",
             "name": "Run tap",
-            "program": "/users/andyjiang/.virtualenvs/tap-github/bin/tap-github",
+            "program": "/Users/andyjiang/.virtualenvs/tap-github/bin/tap-github",
             "args": [
               "--config",
               "config.json",
@@ -21,16 +21,16 @@
         "type": "python",
         "request": "launch",
         "name": "Run tap with target",
-        "program": "/users/andyjiang/.virtualenvs/tap-github/bin/tap-github",
+        "program": "/Users/andyjiang/.virtualenvs/tap-github/bin/tap-github",
         "args": [
           "--config",
           "config.json",
           "--properties",
-          "properties.json"
+          "properties.json",
           "|",
-          "target-stitch",
+          "/Users/andyjiang/.virtualenvs/target-stitch/bin/target-stitch",
           "--config",
-          "../target-stitch/config-tap-github.json"
+          "../target-stitch/config-github.json"
         ],
         "console": "integratedTerminal"
       }

@@ -4,6 +4,12 @@
     "object"
   ],
   "properties": {
+    "_sdc_repository": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "id": {
       "type": [
         "null",
@@ -73,7 +79,7 @@
     "parent": {
       "type": [
         "null",
-        "object"
+        "string"
       ],
       "properties": [
         "null",

@@ -231,16 +231,14 @@ def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
                 'https://api.github.com/orgs/{}/teams/{}/members?sort=created_at&direction=desc'.format(org, team_slug)
         ):
             team_members = response.json()
-            extraction_time = singer.utils.now()
             for r in team_members:
                 r['_sdc_repository'] = repo_path
 
                 # transform and write release record
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                singer.write_record('team_members', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
-                counter.increment()
+                # counter.increment()
+                yield rec
 
     return state
 
@@ -249,7 +247,7 @@ def get_all_events(schemas, repo_path, state, mdata):
     # https://developer.github.com/v3/issues/events/#list-events-for-a-repository
     # 'https://api.github.com/repos/{}/issues/events?sort=created_at&direction=desc'.format(repo_path)
 
-    bookmark_value = get_bookmark(state, repo_path, "events", "since");
+    bookmark_value = get_bookmark(state, repo_path, "events", "since")
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -285,7 +283,7 @@ def get_all_issue_milestones(schemas, repo_path, state, mdata):
     # Incremental sync off `due on` ??? confirm.
     # https://developer.github.com/v3/issues/milestones/#list-milestones-for-a-repository
     # 'https://api.github.com/repos/{}/milestones?sort=created_at&direction=desc'.format(repo_path)
-    bookmark_value = get_bookmark(state, repo_path, "milestones", "since");
+    bookmark_value = get_bookmark(state, repo_path, "milestones", "since")
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -345,7 +343,7 @@ def get_all_commit_comments(schemas, repo_path, state, mdata):
     # https://developer.github.com/v3/repos/comments/
     # updated_at? incremental
     # 'https://api.github.com/repos/{}/comments?sort=created_at&direction=desc'.format(repo_path)
-    bookmark_value = get_bookmark(state, repo_path, "commit_comments", "since");
+    bookmark_value = get_bookmark(state, repo_path, "commit_comments", "since")
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -378,7 +376,7 @@ def get_all_commit_comments(schemas, repo_path, state, mdata):
     return state
 
 def get_all_projects(schemas, repo_path, state, mdata):
-    bookmark_value = get_bookmark(state, repo_path, "projects", "since");
+    bookmark_value = get_bookmark(state, repo_path, "projects", "since")
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -426,7 +424,7 @@ def get_all_projects(schemas, repo_path, state, mdata):
     return state
 
 def get_all_project_cards(project_id, schemas, repo_path, state, mdata):
-    bookmark_value = get_bookmark(state, repo_path, "project_cards", "since");
+    bookmark_value = get_bookmark(state, repo_path, "project_cards", "since")
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -438,7 +436,6 @@ def get_all_project_cards(project_id, schemas, repo_path, state, mdata):
                 'https://api.github.com/projects/{}/columns?sort=created_at&direction=desc'.format(project_id)
         ):
             project_cards = response.json()
-            extraction_time = singer.utils.now()
             for r in project_cards:
                 r['_sdc_repository'] = repo_path
 
@@ -452,14 +449,13 @@ def get_all_project_cards(project_id, schemas, repo_path, state, mdata):
                 # transform and write release record
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                singer.write_record('project_cards', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'project_cards', {'since': singer.utils.strftime(extraction_time)})
-                counter.increment()
+                # counter.increment()
+                yield rec
 
     return state
 
 def get_all_project_columns(project_id, schemas, repo_path, state, mdata):
-    bookmark_value = get_bookmark(state, repo_path, "project_columns", "since");
+    bookmark_value = get_bookmark(state, repo_path, "project_columns", "since")
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -471,7 +467,6 @@ def get_all_project_columns(project_id, schemas, repo_path, state, mdata):
                 'https://api.github.com/projects/{}/columns?sort=created_at&direction=desc'.format(project_id)
         ):
             project_columns = response.json()
-            extraction_time = singer.utils.now()
             for r in project_columns:
                 r['_sdc_repository'] = repo_path
 
@@ -485,9 +480,8 @@ def get_all_project_columns(project_id, schemas, repo_path, state, mdata):
                 # transform and write release record
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                singer.write_record('project_columns', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'project_columns', {'since': singer.utils.strftime(extraction_time)})
-                counter.increment()
+                # counter.increment()
+                yield rec
 
     return state
 
@@ -520,7 +514,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
     https://developer.github.com/v3/pulls/#list-pull-requests
     '''
 
-    bookmark_value = get_bookmark(state, repo_path, "pull_requests", "since");
+    bookmark_value = get_bookmark(state, repo_path, "pull_requests", "since")
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -767,13 +761,13 @@ def get_selected_streams(catalog):
     selected_streams = []
     for stream in catalog['streams']:
         stream_metadata = stream['metadata']
-        # if stream['schema'].get('selected', False):
-        selected_streams.append(stream['tap_stream_id'])
-        # else:
-        #     for entry in stream_metadata:
-        #         # stream metadata will have empty breadcrumb
-        #         if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
-        #             selected_streams.append(stream['tap_stream_id'])
+        if stream['schema'].get('selected', False):
+            selected_streams.append(stream['tap_stream_id'])
+        else:
+            for entry in stream_metadata:
+                # stream metadata will have empty breadcrumb
+                if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
+                    selected_streams.append(stream['tap_stream_id'])
 
     return selected_streams
 
@@ -788,7 +782,7 @@ SYNC_FUNCTIONS = {
     'comments': get_all_comments,
     'issues': get_all_issues,
     'assignees': get_all_assignees,
-    # 'collaborators': get_all_collaborators,
+    'collaborators': get_all_collaborators,
     'pull_requests': get_all_pull_requests,
     'releases': get_all_releases,
     'stargazers': get_all_stargazers,
