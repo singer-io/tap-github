@@ -1,5 +1,8 @@
 # Changelog
 
+# 1.6.0
+  * Adds a new stream for PR Commits [#67](https://github.com/singer-io/tap-github/pull/67)
+
 # 1.4.0
   * Adds a new stream for Github Reviews [#53](https://github.com/singer-io/tap-github/pull/53)
 
