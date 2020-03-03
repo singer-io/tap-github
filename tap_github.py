@@ -24,7 +24,8 @@ KEY_PROPERTIES = {
     'stargazers': ['user_id'],
     'releases': ['id'],
     'reviews': ['id'],
-    'review_comments': ['id']
+    'review_comments': ['id'],
+    'pr_commits': ['id']
 }
 
 class AuthException(Exception):
@@ -109,6 +110,21 @@ def authed_get_all_pages(source, url, headers={}):
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
+
+def generate_pr_commit_schema(commit_schema):
+    pr_commit_schema = commit_schema.copy()
+    pr_commit_schema['properties']['pr_number'] = {
+        "type":  ["null", "integer"]
+    }
+    pr_commit_schema['properties']['pr_id'] = {
+        "type": ["null", "string"]
+    }
+    pr_commit_schema['properties']['id'] = {
+        "type": ["null", "string"]
+    }
+
+    return pr_commit_schema
+
 def load_schemas():
     schemas = {}
 
@@ -118,6 +134,7 @@ def load_schemas():
         with open(path) as file:
             schemas[file_raw] = json.load(file)
 
+    schemas['pr_commits'] = generate_pr_commit_schema(schemas['commits'])
     return schemas
 
 class DependencyException(Exception):
@@ -187,7 +204,7 @@ def do_discover():
 
 def get_all_releases(schemas, repo_path, state, mdata):
     # Releases doesn't seem to have an `updated_at` property, yet can be edited.
-    # For this reason and since the volume of release can safely be considered low, 
+    # For this reason and since the volume of release can safely be considered low,
     #    bookmarks were ignored for releases.
 
     with metrics.record_counter('releases') as counter:
@@ -230,6 +247,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
                 extraction_time = singer.utils.now()
                 for pr in pull_requests:
 
+
                     # skip records that haven't been updated since the last run
                     # the GitHub API doesn't currently allow a ?since param for pulls
                     # once we find the first piece of old data we can return, thanks to
@@ -238,6 +256,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
                         return state
 
                     pr_num = pr.get('number')
+                    pr_id = pr.get('id')
                     pr['_sdc_repository'] = repo_path
 
                     # transform and write pull_request record
@@ -260,6 +279,18 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
                         for review_comment_rec in get_review_comments_for_pr(pr_num, schemas['review_comments'], repo_path, state, mdata):
                             singer.write_record('review_comments', review_comment_rec, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'review_comments', {'since': singer.utils.strftime(extraction_time)})
+
+                    if schemas.get('pr_commits'):
+                        for pr_commit in get_commits_for_pr(
+                                pr_num,
+                                pr_id,
+                                schemas['pr_commits'],
+                                repo_path,
+                                state,
+                                mdata
+                        ):
+                            singer.write_record('pr_commits', pr_commit, time_extracted=extraction_time)
+                            singer.write_bookmark(state, repo_path, 'pr_commits', {'since': singer.utils.strftime(extraction_time)})
 
     return state
 
@@ -294,6 +325,26 @@ def get_review_comments_for_pr(pr_number, schema, repo_path, state, mdata):
 
 
         return state
+
+def get_commits_for_pr(pr_number, pr_id, schema, repo_path, state, mdata):
+    for response in authed_get_all_pages(
+            'pr_commits',
+            'https://api.github.com/repos/{}/pulls/{}/commits'.format(repo_path,pr_number)
+    ):
+
+        commit_data = response.json()
+        extraction_time = singer.utils.now()
+        for commit in commit_data:
+            commit['_sdc_repository'] = repo_path
+            commit['pr_number'] = pr_number
+            commit['pr_id'] = pr_id
+            commit['id'] = '{}-{}'.format(pr_id, commit['sha'])
+            with singer.Transformer() as transformer:
+                rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
+            yield rec
+
+        return state
+
 
 def get_all_assignees(schema, repo_path, state, mdata):
     '''
@@ -489,7 +540,7 @@ SYNC_FUNCTIONS = {
 }
 
 SUB_STREAMS = {
-    'pull_requests': ['reviews', 'review_comments']
+    'pull_requests': ['reviews', 'review_comments', 'pr_commits']
 }
 
 def do_sync(config, state, catalog):
