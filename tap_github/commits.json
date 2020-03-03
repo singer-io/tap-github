@@ -33,6 +33,68 @@
         }
       }
     },
+    "files": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "object"
+        ],
+        "properties": {
+          "filename": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "additions": {
+            "type": [
+              "null",
+              "number"
+            ]
+          },
+          "deletions": {
+            "type": [
+              "null",
+              "number"
+            ]
+          },
+          "changes": {
+            "type": [
+              "null",
+              "number"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "raw_url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "blob_url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "patch": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      }
+    },
     "html_url": {
       "type": ["null", "string"],
       "description": "The HTML URL to the commit"
@@ -77,6 +139,10 @@
             "email": {
               "type": ["null", "string"],
               "description": "The author's email"
+            },
+            "login": {
+              "type": ["null", "string"],
+              "description": "The author's login"
             }
           }
         },
@@ -100,6 +166,10 @@
             "email": {
               "type": ["null", "string"],
               "description": "The committer's email"
+            },
+            "login": {
+              "type": ["null", "string"],
+              "description": "The committer's login"
             }
           }
         },
