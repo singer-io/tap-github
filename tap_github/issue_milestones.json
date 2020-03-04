@@ -8,8 +8,7 @@
         "type": [
           "null",
           "string"
-        ],
-        "format": "date-time"
+        ]
       },
       "html_url": {
         "type": [

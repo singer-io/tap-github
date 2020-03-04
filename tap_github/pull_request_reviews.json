@@ -167,8 +167,7 @@
         "type": [
           "null",
           "string"
-        ],
-        "format": "date-time"
+        ]
       },
       "_links": {
         "type": [
