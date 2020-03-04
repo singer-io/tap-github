@@ -1,0 +1,60 @@
+{
+    "type": [
+      "null",
+      "object"
+    ],
+    "properties": {
+      "url": {
+        "type": [
+          "null",
+          "string"
+        ],
+        "format": "date-time"
+      },
+      "project_url": {
+        "type": [
+          "null",
+          "string"
+        ],
+        "format": "date-time"
+      },
+      "cards_url": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "id": {
+        "type": [
+          "null",
+          "number"
+        ]
+      },
+      "node_id": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "name": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "created_at": {
+        "type": [
+          "null",
+          "string"
+        ],
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": [
+          "null",
+          "string"
+        ],
+        "format": "date-time"
+      }
+    }
+  }
