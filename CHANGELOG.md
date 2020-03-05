@@ -1,5 +1,8 @@
 # Changelog
 
+# 1.7.1
+  * Remove `"format": "date-time"` from JSON schema's for keys that are not dates [#72](https://github.com/singer-io/tap-github/pull/72)
+
 # 1.7.0
   * Adds many new streams [#70](https://github.com/singer-io/tap-github/pull/70)
 
