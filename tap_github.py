@@ -35,7 +35,8 @@ KEY_PROPERTIES = {
     'project_cards': ['id'],
     'repos': ['id'],
     'teams': ['id'],
-    'team_members': ['id']
+    'team_members': ['id'],
+    'team_memberships': ['url']
 }
 
 class AuthException(Exception):
@@ -237,9 +238,31 @@ def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
                 # transform and write release record
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                # counter.increment()
+                counter.increment()
                 yield rec
 
+                if schemas.get('team_memberships'):
+                    extraction_time = singer.utils.now()
+                    username = r['login']
+                    for team_memberships_rec in get_all_team_memberships(team_slug, username, schemas['team_memberships'], repo_path, state, mdata):
+                        singer.write_record('team_memberships', team_memberships_rec, time_extracted=extraction_time)
+
+    return state
+
+def get_all_team_memberships(team_slug, username, schemas, repo_path, state, mdata):
+    org = repo_path.split('/')[0]
+    with metrics.record_counter('team_membership') as counter:
+        for response in authed_get_all_pages(
+            'memberships',
+            'https://api.github.com/orgs/{}/teams/{}/memberships/{}'.format(org, team_slug, username)
+        ):
+            team_memberships = response.json()
+            for r in team_memberships:
+                r['_sdc_repository'] = repo_path
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                counter.increment()
+                yield rec
     return state
 
 def get_all_events(schemas, repo_path, state, mdata):
@@ -797,7 +820,7 @@ SYNC_FUNCTIONS = {
 SUB_STREAMS = {
     'pull_requests': ['reviews', 'review_comments'],
     'projects': ['project_cards', 'project_columns'],
-    'teams': ['team_members']
+    'teams': ['team_members', 'team_memberships']
 }
 
 def do_sync(config, state, catalog):
