@@ -4,19 +4,23 @@
       "object"
     ],
     "properties": {
+      "_sdc_repository": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
       "url": {
         "type": [
           "null",
           "string"
-        ],
-        "format": "date-time"
+        ]
       },
       "project_url": {
         "type": [
           "null",
           "string"
-        ],
-        "format": "date-time"
+        ]
       },
       "cards_url": {
         "type": [

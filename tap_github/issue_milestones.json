@@ -4,12 +4,17 @@
       "object"
     ],
     "properties": {
+      "_sdc_repository": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
       "url": {
         "type": [
           "null",
           "string"
-        ],
-        "format": "date-time"
+        ]
       },
       "html_url": {
         "type": [

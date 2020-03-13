@@ -4,12 +4,29 @@
       "object"
     ],
     "properties": {
+      "_sdc_repository": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "cards_url": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "name": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
       "url": {
         "type": [
           "null",
           "string"
-        ],
-        "format": "date-time"
+        ]
       },
       "id": {
         "type": [
@@ -73,22 +90,19 @@
         "type": [
           "null",
           "string"
-        ],
-        "format": "date-time"
+        ]
       },
       "content_url": {
         "type": [
           "null",
           "string"
-        ],
-        "format": "date-time"
+        ]
       },
       "project_url": {
         "type": [
           "null",
           "string"
-        ],
-        "format": "date-time"
+        ]
       }
     }
   }
