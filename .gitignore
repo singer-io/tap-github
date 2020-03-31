@@ -92,3 +92,5 @@ ENV/
 
 config.json
 properties.json
+
+.vscode
