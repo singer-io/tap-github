@@ -223,6 +223,7 @@ def get_all_teams(schemas, repo_path, state, mdata):
         ):
             teams = response.json()
             extraction_time = singer.utils.now()
+
             for r in teams:
                 r['_sdc_repository'] = repo_path
 
@@ -238,6 +239,11 @@ def get_all_teams(schemas, repo_path, state, mdata):
                     for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata):
                         singer.write_record('team_members', team_members_rec, time_extracted=extraction_time)
                         singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
+
+                if schemas.get('team_memberships'):
+                    team_slug = r['slug']
+                    for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata):
+                        singer.write_record('team_memberships', team_memberships_rec, time_extracted=extraction_time)
 
     return state
 
@@ -256,30 +262,31 @@ def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 counter.increment()
-                yield rec
 
-                if schemas.get('team_memberships'):
-                    extraction_time = singer.utils.now()
-                    username = r['login']
-                    for team_memberships_rec in get_all_team_memberships(team_slug, username, schemas['team_memberships'], repo_path, state, mdata):
-                        singer.write_record('team_memberships', team_memberships_rec, time_extracted=extraction_time)
+                yield rec
 
     return state
 
-def get_all_team_memberships(team_slug, username, schemas, repo_path, state, mdata):
+def get_all_team_memberships(team_slug, schemas, repo_path, state, mdata):
     org = repo_path.split('/')[0]
-    with metrics.record_counter('team_membership') as counter:
-        for response in authed_get_all_pages(
-            'memberships',
-            'https://api.github.com/orgs/{}/teams/{}/memberships/{}'.format(org, team_slug, username)
+    for response in authed_get_all_pages(
+            'team_members',
+            'https://api.github.com/orgs/{}/teams/{}/members?sort=created_at&direction=desc'.format(org, team_slug)
         ):
-            team_memberships = response.json()
-            for r in team_memberships:
-                r['_sdc_repository'] = repo_path
-                with singer.Transformer() as transformer:
-                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                counter.increment()
-                yield rec
+        team_members = response.json()
+        with metrics.record_counter('team_memberships') as counter:
+            for r in team_members:
+                username = r['login']
+                for res in authed_get_all_pages(
+                    'memberships',
+                    'https://api.github.com/orgs/{}/teams/{}/memberships/{}'.format(org, team_slug, username)
+                ):
+                    team_membership = res.json()
+                    team_membership['_sdc_repository'] = repo_path
+                    with singer.Transformer() as transformer:
+                        rec = transformer.transform(team_membership, schemas, metadata=metadata.to_map(mdata))
+                    counter.increment()
+                    yield rec
     return state
 
 def get_all_events(schemas, repo_path, state, mdata):
