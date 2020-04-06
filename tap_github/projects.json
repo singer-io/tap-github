@@ -20,7 +20,8 @@
         "type": [
           "null",
           "string"
-        ]
+        ],
+        "format": "date-time"
       },
       "columns_url": {
         "type": [

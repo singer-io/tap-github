@@ -116,6 +116,54 @@
             "string"
           ]
         },
+        "action": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "comment": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "issue": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "description": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "master_branch": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "pusher_type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "ref": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "ref_type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
         "commits": {
           "type": [
             "null",

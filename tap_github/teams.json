@@ -79,9 +79,8 @@
     "parent": {
       "type": [
         "null",
-        "object"
-      ],
-      "properties": {}
+        "string"
+      ]
     }
   }
 }

@@ -111,6 +111,12 @@
           "null",
           "boolean"
         ]
+      },
+      "_sdc_repository": {
+        "type": [
+          "null",
+          "string"
+        ]
       }
     }
   }

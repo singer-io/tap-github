@@ -4,6 +4,24 @@
       "object"
     ],
     "properties": {
+      "_sdc_repository": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "cards_url": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "name": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
       "url": {
         "type": [
           "null",

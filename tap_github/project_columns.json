@@ -4,6 +4,12 @@
       "object"
     ],
     "properties": {
+      "_sdc_repository": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
       "url": {
         "type": [
           "null",

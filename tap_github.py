@@ -36,7 +36,8 @@ KEY_PROPERTIES = {
     'project_cards': ['id'],
     'repos': ['id'],
     'teams': ['id'],
-    'team_members': ['id']
+    'team_members': ['id'],
+    'team_memberships': ['url']
 }
 
 class AuthException(Exception):
@@ -222,6 +223,7 @@ def get_all_teams(schemas, repo_path, state, mdata):
         ):
             teams = response.json()
             extraction_time = singer.utils.now()
+
             for r in teams:
                 r['_sdc_repository'] = repo_path
 
@@ -237,6 +239,11 @@ def get_all_teams(schemas, repo_path, state, mdata):
                     for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata):
                         singer.write_record('team_members', team_members_rec, time_extracted=extraction_time)
                         singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
+
+                if schemas.get('team_memberships'):
+                    team_slug = r['slug']
+                    for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata):
+                        singer.write_record('team_memberships', team_memberships_rec, time_extracted=extraction_time)
 
     return state
 
@@ -254,9 +261,32 @@ def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
                 # transform and write release record
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                # counter.increment()
+                counter.increment()
+
                 yield rec
 
+    return state
+
+def get_all_team_memberships(team_slug, schemas, repo_path, state, mdata):
+    org = repo_path.split('/')[0]
+    for response in authed_get_all_pages(
+            'team_members',
+            'https://api.github.com/orgs/{}/teams/{}/members?sort=created_at&direction=desc'.format(org, team_slug)
+        ):
+        team_members = response.json()
+        with metrics.record_counter('team_memberships') as counter:
+            for r in team_members:
+                username = r['login']
+                for res in authed_get_all_pages(
+                    'memberships',
+                    'https://api.github.com/orgs/{}/teams/{}/memberships/{}'.format(org, team_slug, username)
+                ):
+                    team_membership = res.json()
+                    team_membership['_sdc_repository'] = repo_path
+                    with singer.Transformer() as transformer:
+                        rec = transformer.transform(team_membership, schemas, metadata=metadata.to_map(mdata))
+                    counter.increment()
+                    yield rec
     return state
 
 def get_all_events(schemas, repo_path, state, mdata):
@@ -284,7 +314,8 @@ def get_all_events(schemas, repo_path, state, mdata):
                 # the GitHub API doesn't currently allow a ?since param for pulls
                 # once we find the first piece of old data we can return, thanks to
                 # the sorting
-                if bookmark_time and singer.utils.strptime_to_utc(r.get('updated_at')) < bookmark_time:
+                updated_at = r.get('created_at') if r.get('updated_at') is None else r.get('updated_at')
+                if bookmark_time and singer.utils.strptime_to_utc(updated_at) < bookmark_time:
                     return state
 
                 # transform and write release record
@@ -300,13 +331,13 @@ def get_all_issue_milestones(schemas, repo_path, state, mdata):
     # Incremental sync off `due on` ??? confirm.
     # https://developer.github.com/v3/issues/milestones/#list-milestones-for-a-repository
     # 'https://api.github.com/repos/{}/milestones?sort=created_at&direction=desc'.format(repo_path)
-    bookmark_value = get_bookmark(state, repo_path, "milestones", "since")
+    bookmark_value = get_bookmark(state, repo_path, "issue_milestones", "since")
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
         bookmark_time = 0
 
-    with metrics.record_counter('milestones') as counter:
+    with metrics.record_counter('issue_milestones') as counter:
         for response in authed_get_all_pages(
                 'milestones',
                 'https://api.github.com/repos/{}/milestones?direction=desc'.format(repo_path)
@@ -326,8 +357,8 @@ def get_all_issue_milestones(schemas, repo_path, state, mdata):
                 # transform and write release record
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                singer.write_record('milestones', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'milestones', {'since': singer.utils.strftime(extraction_time)})
+                singer.write_record('issue_milestones', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'issue_milestones', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -337,7 +368,7 @@ def get_all_issue_labels(schemas, repo_path, state, mdata):
     # not sure if incremental key
     # 'https://api.github.com/repos/{}/labels?sort=created_at&direction=desc'.format(repo_path)
 
-    with metrics.record_counter('milestones') as counter:
+    with metrics.record_counter('issue_labels') as counter:
         for response in authed_get_all_pages(
                 'issue_labels',
                 'https://api.github.com/repos/{}/labels'.format(repo_path)
@@ -351,7 +382,7 @@ def get_all_issue_labels(schemas, repo_path, state, mdata):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('issue_labels', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'milestones', {'since': singer.utils.strftime(extraction_time)})
+                singer.write_bookmark(state, repo_path, 'issue_labels', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -846,10 +877,9 @@ SYNC_FUNCTIONS = {
 }
 
 SUB_STREAMS = {
-
-    'pull_requests': ['reviews', 'review_comments', 'pr_commits'],
+    'pull_requests': ['reviews', 'review_comments'],
     'projects': ['project_cards', 'project_columns'],
-    'teams': ['team_members']
+    'teams': ['team_members', 'team_memberships']
 }
 
 def do_sync(config, state, catalog):
