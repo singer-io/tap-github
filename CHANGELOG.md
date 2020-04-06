@@ -1,5 +1,8 @@
 # Changelog
 
+# 1.8.0
+  * Added team_memberships stream [#75](https://github.com/singer-io/tap-github/pull/75)
+
 # 1.7.1
   * Remove `"format": "date-time"` from JSON schema's for keys that are not dates [#72](https://github.com/singer-io/tap-github/pull/72)
 
