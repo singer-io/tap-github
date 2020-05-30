@@ -877,7 +877,7 @@ SYNC_FUNCTIONS = {
 }
 
 SUB_STREAMS = {
-    'pull_requests': ['reviews', 'review_comments'],
+    'pull_requests': ['reviews', 'review_comments', 'pr_commits'],
     'projects': ['project_cards', 'project_columns'],
     'teams': ['team_members', 'team_memberships']
 }
