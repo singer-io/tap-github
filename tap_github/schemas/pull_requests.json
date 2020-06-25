@@ -64,6 +64,15 @@
         }
       }
     },
+    "base": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "type": ["null", "string"]
+        }
+      }
+    },
     "merged_at": {
       "type": ["null", "string"],
       "format": "date-time"
