@@ -1,5 +1,8 @@
 # Changelog
 
+# 1.8.1
+  * Add stream `pr_commits` back in [#81](https://github.com/singer-io/tap-github/pull/81)
+
 # 1.8.0
   * Added team_memberships stream [#75](https://github.com/singer-io/tap-github/pull/75)
 
