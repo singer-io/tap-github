@@ -1,5 +1,8 @@
 # Changelog
 
+# 1.8.2
+  * Fix [issue 83](https://github.com/singer-io/tap-github/issues/83) by removing `format: date-time` from `html_url` field in `projects.json`.
+
 # 1.8.1
   * Add stream `pr_commits` back in [#81](https://github.com/singer-io/tap-github/pull/81)
 
