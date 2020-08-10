@@ -19,7 +19,7 @@ setup(name='tap-github',
       ''',
       packages=['tap_github'],
       package_data = {
-          'tap_github': ['tap_github/*.json']
+          'tap_github': ['tap_github/schemas/*.json']
       },
       include_package_data=True
 )
