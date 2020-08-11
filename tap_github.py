@@ -6,6 +6,7 @@ import singer
 import singer.bookmarks as bookmarks
 import singer.metrics as metrics
 import collections
+import time
 
 from singer import metadata
 
@@ -44,6 +45,9 @@ class AuthException(Exception):
     pass
 
 class NotFoundException(Exception):
+    pass
+
+class HttpException(Exception):
     pass
 
 def translate_state(state, catalog, repositories):
@@ -96,18 +100,33 @@ def get_bookmark(state, repo, stream_name, bookmark_key):
     return None
 
 def authed_get(source, url, headers={}):
-    with metrics.http_request_timer(source) as timer:
-        session.headers.update(headers)
-        resp = session.request(method='get', url=url)
-        if resp.status_code == 401:
-            raise AuthException(resp.text)
-        if resp.status_code == 403:
-            raise AuthException(resp.text)
-        if resp.status_code == 404:
-            raise NotFoundException(resp.text)
+    for _ in range(0, 3):  # 3 attempts
+        with metrics.http_request_timer(source) as timer:
+            session.headers.update(headers)
+            resp = session.request(method='get', url=url)
+
+            # Handle github's rate limited responses
+            remaining = resp.headers.get('X-RateLimit-Remaining')
+            time_to_reset = resp.headers.get('X-RateLimit-Reset', time.time() + 60)
+            if remaining is not None and remaining == '0':
+                time.sleep(float(time_to_reset) - time.time())
+                continue  # next attempt
+
+            # Handle github's possible failures as retries
+            if resp.status_code == 502 or resp.status_code == 503:
+                continue  # next attempt
+
+            if resp.status_code == 401:
+                raise AuthException(resp.text)
+            if resp.status_code == 403:
+                raise AuthException(resp.text)
+            if resp.status_code == 404:
+                raise NotFoundException(resp.text)
 
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         return resp
+
+    raise HttpException(resp.text)
 
 def authed_get_all_pages(source, url, headers={}):
     while True:
