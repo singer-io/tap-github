@@ -140,8 +140,8 @@ def generate_pr_commit_schema(commit_schema):
 def load_schemas():
     schemas = {}
 
-    for filename in os.listdir(get_abs_path('tap_github')):
-        path = get_abs_path('tap_github') + '/' + filename
+    for filename in os.listdir(get_abs_path('schemas')):
+        path = get_abs_path('schemas') + '/' + filename
         file_raw = filename.replace('.json', '')
         with open(path) as file:
             schemas[file_raw] = json.load(file)
