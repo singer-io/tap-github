@@ -457,11 +457,7 @@ def get_all_projects(schemas, repo_path, state, mdata):
 
                 project_id = r.get('id')
 
-                # sync project_cards if that schema is present (only there if selected)
-                if schemas.get('project_cards'):
-                    for project_card_rec in get_all_project_cards(project_id, schemas['project_cards'], repo_path, state, mdata):
-                        singer.write_record('project_cards', project_card_rec, time_extracted=extraction_time)
-                        singer.write_bookmark(state, repo_path, 'project_cards', {'since': singer.utils.strftime(extraction_time)})
+
 
                 # sync project_columns if that schema is present (only there if selected)
                 if schemas.get('project_columns'):
@@ -469,9 +465,16 @@ def get_all_projects(schemas, repo_path, state, mdata):
                         singer.write_record('project_columns', project_column_rec, time_extracted=extraction_time)
                         singer.write_bookmark(state, repo_path, 'project_columns', {'since': singer.utils.strftime(extraction_time)})
 
+                        # sync project_cards if that schema is present (only there if selected)
+                        if schemas.get('project_cards'):
+                            column_id = project_column_rec['id']
+                            for project_card_rec in get_all_project_cards(column_id, schemas['project_cards'], repo_path, state, mdata):
+                                singer.write_record('project_cards', project_card_rec, time_extracted=extraction_time)
+                                singer.write_bookmark(state, repo_path, 'project_cards', {'since': singer.utils.strftime(extraction_time)})
     return state
 
-def get_all_project_cards(project_id, schemas, repo_path, state, mdata):
+
+def get_all_project_cards(column_id, schemas, repo_path, state, mdata):
     bookmark_value = get_bookmark(state, repo_path, "project_cards", "since")
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
@@ -481,7 +484,7 @@ def get_all_project_cards(project_id, schemas, repo_path, state, mdata):
     with metrics.record_counter('project_cards') as counter:
         for response in authed_get_all_pages(
                 'project_cards',
-                'https://api.github.com/projects/{}/columns?sort=created_at&direction=desc'.format(project_id)
+                'https://api.github.com/projects/columns/{}/cards?sort=created_at&direction=desc'.format(column_id)
         ):
             project_cards = response.json()
             for r in project_cards:
