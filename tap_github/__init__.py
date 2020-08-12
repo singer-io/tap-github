@@ -500,7 +500,7 @@ def get_all_project_cards(column_id, schemas, repo_path, state, mdata):
                 # transform and write release record
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                # counter.increment()
+                counter.increment()
                 yield rec
 
     return state
@@ -531,7 +531,7 @@ def get_all_project_columns(project_id, schemas, repo_path, state, mdata):
                 # transform and write release record
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                # counter.increment()
+                counter.increment()
                 yield rec
 
     return state
