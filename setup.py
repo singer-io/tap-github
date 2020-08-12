@@ -13,6 +13,13 @@ setup(name='tap-github',
           'singer-python==5.3.3',
           'requests==2.20.0'
       ],
+      extras_require={
+          'dev': [
+              'pylint',
+              'ipdb',
+              'nose',
+          ]
+      },
       entry_points='''
           [console_scripts]
           tap-github=tap_github:main

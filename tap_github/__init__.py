@@ -1,11 +1,11 @@
 import argparse
 import os
 import json
+import collections
 import requests
 import singer
 import singer.bookmarks as bookmarks
 import singer.metrics as metrics
-import collections
 
 from singer import metadata
 
@@ -95,6 +95,7 @@ def get_bookmark(state, repo, stream_name, bookmark_key):
         return repo_stream_dict.get(bookmark_key)
     return None
 
+# pylint: disable=dangerous-default-value
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
@@ -167,8 +168,8 @@ def validate_dependencies(selected_stream_ids):
         raise DependencyException(" ".join(errs))
 
 
-def write_metadata(metadata, values, breadcrumb):
-    metadata.append(
+def write_metadata(mdata, values, breadcrumb):
+    mdata.append(
         {
             'metadata': values,
             'breadcrumb': breadcrumb
@@ -278,8 +279,8 @@ def get_all_team_memberships(team_slug, schemas, repo_path, state, mdata):
             for r in team_members:
                 username = r['login']
                 for res in authed_get_all_pages(
-                    'memberships',
-                    'https://api.github.com/orgs/{}/teams/{}/memberships/{}'.format(org, team_slug, username)
+                        'memberships',
+                        'https://api.github.com/orgs/{}/teams/{}/memberships/{}'.format(org, team_slug, username)
                 ):
                     team_membership = res.json()
                     team_membership['_sdc_repository'] = repo_path
@@ -431,6 +432,7 @@ def get_all_projects(schemas, repo_path, state, mdata):
         bookmark_time = 0
 
     with metrics.record_counter('projects') as counter:
+        #pylint: disable=too-many-nested-blocks
         for response in authed_get_all_pages(
                 'projects',
                 'https://api.github.com/repos/{}/projects?sort=created_at&direction=desc'.format(repo_path),
@@ -457,11 +459,7 @@ def get_all_projects(schemas, repo_path, state, mdata):
 
                 project_id = r.get('id')
 
-                # sync project_cards if that schema is present (only there if selected)
-                if schemas.get('project_cards'):
-                    for project_card_rec in get_all_project_cards(project_id, schemas['project_cards'], repo_path, state, mdata):
-                        singer.write_record('project_cards', project_card_rec, time_extracted=extraction_time)
-                        singer.write_bookmark(state, repo_path, 'project_cards', {'since': singer.utils.strftime(extraction_time)})
+
 
                 # sync project_columns if that schema is present (only there if selected)
                 if schemas.get('project_columns'):
@@ -469,9 +467,16 @@ def get_all_projects(schemas, repo_path, state, mdata):
                         singer.write_record('project_columns', project_column_rec, time_extracted=extraction_time)
                         singer.write_bookmark(state, repo_path, 'project_columns', {'since': singer.utils.strftime(extraction_time)})
 
+                        # sync project_cards if that schema is present (only there if selected)
+                        if schemas.get('project_cards'):
+                            column_id = project_column_rec['id']
+                            for project_card_rec in get_all_project_cards(column_id, schemas['project_cards'], repo_path, state, mdata):
+                                singer.write_record('project_cards', project_card_rec, time_extracted=extraction_time)
+                                singer.write_bookmark(state, repo_path, 'project_cards', {'since': singer.utils.strftime(extraction_time)})
     return state
 
-def get_all_project_cards(project_id, schemas, repo_path, state, mdata):
+
+def get_all_project_cards(column_id, schemas, repo_path, state, mdata):
     bookmark_value = get_bookmark(state, repo_path, "project_cards", "since")
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
@@ -481,7 +486,7 @@ def get_all_project_cards(project_id, schemas, repo_path, state, mdata):
     with metrics.record_counter('project_cards') as counter:
         for response in authed_get_all_pages(
                 'project_cards',
-                'https://api.github.com/projects/{}/columns?sort=created_at&direction=desc'.format(project_id)
+                'https://api.github.com/projects/columns/{}/cards?sort=created_at&direction=desc'.format(column_id)
         ):
             project_cards = response.json()
             for r in project_cards:
@@ -497,7 +502,7 @@ def get_all_project_cards(project_id, schemas, repo_path, state, mdata):
                 # transform and write release record
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                # counter.increment()
+                counter.increment()
                 yield rec
 
     return state
@@ -528,7 +533,7 @@ def get_all_project_columns(project_id, schemas, repo_path, state, mdata):
                 # transform and write release record
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                # counter.increment()
+                counter.increment()
                 yield rec
 
     return state
@@ -631,7 +636,6 @@ def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata):
             'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)
     ):
         reviews = response.json()
-        extraction_time = singer.utils.now()
         for review in reviews:
             review['_sdc_repository'] = repo_path
             with singer.Transformer() as transformer:
@@ -647,7 +651,6 @@ def get_review_comments_for_pr(pr_number, schema, repo_path, state, mdata):
             'https://api.github.com/repos/{}/pulls/{}/comments'.format(repo_path,pr_number)
     ):
         review_comments = response.json()
-        extraction_time = singer.utils.now()
         for comment in review_comments:
             comment['_sdc_repository'] = repo_path
             with singer.Transformer() as transformer:
@@ -664,7 +667,6 @@ def get_commits_for_pr(pr_number, pr_id, schema, repo_path, state, mdata):
     ):
 
         commit_data = response.json()
-        extraction_time = singer.utils.now()
         for commit in commit_data:
             commit['_sdc_repository'] = repo_path
             commit['pr_number'] = pr_number
@@ -729,8 +731,6 @@ def get_all_commits(schema, repo_path,  state, mdata):
     else:
         query_string = ''
 
-    latest_commit_time = None
-
     with metrics.record_counter('commits') as counter:
         for response in authed_get_all_pages(
                 'commits',
@@ -759,7 +759,6 @@ def get_all_issues(schema, repo_path,  state, mdata):
     else:
         query_string = ''
 
-    last_issue_time = None
     with metrics.record_counter('issues') as counter:
         for response in authed_get_all_pages(
                 'issues',
@@ -787,7 +786,6 @@ def get_all_comments(schema, repo_path, state, mdata):
     else:
         query_string = ''
 
-    last_comment_time = None
     with metrics.record_counter('comments') as counter:
         for response in authed_get_all_pages(
                 'comments',
@@ -815,7 +813,7 @@ def get_all_stargazers(schema, repo_path, state, mdata):
         query_string = ''
 
     stargazers_headers = {'Accept': 'application/vnd.github.v3.star+json'}
-    last_stargazer_time = None
+
     with metrics.record_counter('stargazers') as counter:
         for response in authed_get_all_pages(
                 'stargazers',
@@ -895,8 +893,9 @@ def do_sync(config, state, catalog):
     state = translate_state(state, catalog, repositories)
     singer.write_state(state)
 
+    #pylint: disable=too-many-nested-blocks
     for repo in repositories:
-        logger.info("Starting sync of repository: {}".format(repo))
+        logger.info("Starting sync of repository: %s", repo)
         for stream in catalog['streams']:
             stream_id = stream['tap_stream_id']
             stream_schema = stream['schema']
