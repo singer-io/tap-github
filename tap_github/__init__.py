@@ -301,20 +301,15 @@ def get_all_issue_events(schemas, repo_path, state, mdata):
 
 
     #missing “issues events” /repos/{owner}/{repo}/issues/events
-    # headers={"Accept": "application/vnd.github.starfox-preview"}
     with metrics.record_counter('issue_events') as counter:
         for response in authed_get_all_pages(
                 'issue_events',
-                # change the url
-                # 'https://api.github.com/repos/{}/events?sort=created_at&direction=desc'.format(repo_path)
                 'https://api.github.com/repos/{}/issues/events?sort=created_at&direction=desc'.format(repo_path)
-                #'https://api.github.com/repos/{}/events?sort=created_at&direction=desc'.format(repo_path)
         ):
             events = response.json()
             extraction_time = singer.utils.now()
             for event in events:
                 event['_sdc_repository'] = repo_path
-
                 # skip records that haven't been updated since the last run
                 # the GitHub API doesn't currently allow a ?since param for pulls
                 # once we find the first piece of old data we can return, thanks to
