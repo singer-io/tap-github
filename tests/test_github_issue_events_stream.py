@@ -54,7 +54,6 @@ class TestGithubIssueEventsStreams(TestGithubBase):
         self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
-        # Select the 3 projects streams
         catalogs_to_test = ['issue_events']
         our_catalogs = [catalog for catalog in found_catalogs if
                         catalog.get('tap_stream_id') in catalogs_to_test]
