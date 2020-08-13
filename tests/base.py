@@ -66,6 +66,7 @@ class TestGithubBase(unittest.TestCase):
             'events',
             'issue_labels',
             'issue_milestones',
+            'issue_events',
             'issues',
             'pr_commits',
             'project_cards',
