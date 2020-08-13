@@ -73,8 +73,6 @@ class TestGithubIssueEventsStreams(TestGithubBase):
         for catalog_name in catalogs_to_test:
             synced_messages = synced_records.get(catalog_name, {}).get('messages', [])
             if catalog_name == 'issue_events':
-                import ipdb; ipdb.set_trace()
-                1+1
             self.assertGreater(len(synced_messages), 0, msg="Expect synced_messages to sync data for stream {}".format(catalog_name))
 
 
