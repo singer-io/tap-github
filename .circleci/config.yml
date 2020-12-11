@@ -10,7 +10,7 @@ jobs:
           command: |
             python3 -mvenv /usr/local/share/virtualenvs/tap-github
             source /usr/local/share/virtualenvs/tap-github/bin/activate
-            pip install -U 'pip<19.2' setuptools
+            pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
           name: 'JSON Validator'
