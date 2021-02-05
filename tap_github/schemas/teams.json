@@ -79,7 +79,7 @@
     "parent": {
       "type": [
         "null",
-        "string"
+        "object"
       ]
     }
   }
