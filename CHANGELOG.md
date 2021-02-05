@@ -1,5 +1,13 @@
 # Changelog
 
+# 1.9.1
+  * Fix some field data types for the `issue_events` stream [#102](https://github.com/singer-io/tap-github/pull/102)
+    * `issue_events.issue.milestone`
+    * `issue_events.issue.active_lock_reason`
+    * `issue_events.issue.performed_via_github_app`
+    * `issue_events.issue.labels.description`
+    * `issue_events.performed_via_github_app`
+
 # 1.9.0
   * Adds `issue_events` stream [#92](https://github.com/singer-io/tap-github/pull/92)
   * Makes `project_cards` stream a child of `project_columns`[#89](https://github.com/singer-io/tap-github/pull/89)
