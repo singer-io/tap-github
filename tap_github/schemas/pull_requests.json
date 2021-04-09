@@ -64,6 +64,35 @@
         }
       }
     },
+    "base": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "type": ["null", "string"]
+        },
+        "label": {
+          "type": ["null", "string"]
+        },
+        "repo": {
+          "type": ["null", "object"],
+          "properties": {
+            "id": {
+              "type": [ "null", "number" ]
+            },
+            "name": {
+              "type": [ "null", "string" ]
+            },
+            "url": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "sha": {
+          "type": ["null", "string"]
+        }
+      }
+    },
     "merged_at": {
       "type": ["null", "string"],
       "format": "date-time"
