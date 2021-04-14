@@ -1,5 +1,8 @@
 # Changelog
 
+# 1.9.2
+  * Adds `base` to `pull_requests` schema [#109](https://github.com/singer-io/tap-github/pull/109)
+
 # 1.9.1
   * Fix some field data types for the `issue_events` stream [#102](https://github.com/singer-io/tap-github/pull/102)
     * `issue_events.issue.milestone`
