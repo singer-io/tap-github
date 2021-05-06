@@ -2,7 +2,6 @@ import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 import re
-import os
 
 from base import TestGithubBase
 
@@ -20,10 +19,6 @@ class TestGithubDiscovery(TestGithubBase):
                 in self.expected_metadata().items()}
 
     def test_run(self):
-        env_var = os.environ
-        print('>>>>>>')
-        print(dict(env_var))
-
         conn_id = connections.ensure_connection(self)
 
         #run in check mode
