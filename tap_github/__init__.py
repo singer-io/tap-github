@@ -102,8 +102,7 @@ def get_bookmark(state, repo, stream_name, bookmark_key):
 
 def calculate_seconds(epoch):
     current = time.time()
-    future = epoch
-    return int(round((future - current), 0))
+    return int(round((epoch - current), 0))
 
 def rate_throttling(response):
     if int(response.headers['X-RateLimit-Remaining']) == 0:
@@ -112,7 +111,7 @@ def rate_throttling(response):
         if seconds_to_sleep > 600:
             raise RateLimitExceeded("API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep))
 
-        logger.info("API rate limit exceeded, will sleep for %s seconds now.", seconds_to_sleep)
+        logger.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
         time.sleep(seconds_to_sleep)
 
 # pylint: disable=dangerous-default-value
