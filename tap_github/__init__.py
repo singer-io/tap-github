@@ -389,7 +389,7 @@ def get_all_issue_milestones(schemas, repo_path, state, mdata):
                 # the GitHub API doesn't currently allow a ?since param for pulls
                 # once we find the first piece of old data we can return, thanks to
                 # the sorting
-                if bookmark_time and singer.utils.strptime_to_utc(r.get('due_on')) < bookmark_time:
+                if bookmark_time and r.get("due_on") and singer.utils.strptime_to_utc(r.get("due_on")) < bookmark_time:
                     return state
 
                 # transform and write release record
