@@ -2,6 +2,7 @@ import argparse
 import os
 import json
 import collections
+import time
 import requests
 import singer
 import singer.bookmarks as bookmarks
@@ -45,6 +46,9 @@ class AuthException(Exception):
     pass
 
 class NotFoundException(Exception):
+    pass
+
+class RateLimitExceeded(Exception):
     pass
 
 def translate_state(state, catalog, repositories):
@@ -96,6 +100,20 @@ def get_bookmark(state, repo, stream_name, bookmark_key):
         return repo_stream_dict.get(bookmark_key)
     return None
 
+def calculate_seconds(epoch):
+    current = time.time()
+    return int(round((epoch - current), 0))
+
+def rate_throttling(response):
+    if int(response.headers['X-RateLimit-Remaining']) == 0:
+        seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
+
+        if seconds_to_sleep > 600:
+            raise RateLimitExceeded("API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep))
+
+        logger.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
+        time.sleep(seconds_to_sleep)
+
 # pylint: disable=dangerous-default-value
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
@@ -109,6 +127,7 @@ def authed_get(source, url, headers={}):
             raise NotFoundException(resp.text)
 
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
+        rate_throttling(resp)
         return resp
 
 def authed_get_all_pages(source, url, headers={}):
