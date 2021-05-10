@@ -211,7 +211,44 @@ def get_catalog():
 
     return {'streams': streams}
 
-def do_discover():
+def verify_repo_access(url_for_repo, repo):
+    try:
+        authed_get("verifying repo access", url_for_repo)
+    except NotFoundException as e:
+        logger.error("Access Token does not have permission to access private repositories or this account is not collaborator of '%s' this repository", repo)
+        raise e
+
+def verify_org_access(url_for_org, org):
+    try:
+        authed_get("verifying org access", url_for_org)
+    except NotFoundException as e:
+        logger.error("'%s' is not an oragnization", org)
+        raise e
+    except AuthException as e:
+        logger.error("Not a member or access token has not permission to read orgs data for this '%s' organization", org)
+        raise e
+
+def verify_access_for_repo_org(config):
+
+    access_token = config['access_token']
+    session.headers.update({'authorization': 'token ' + access_token, 'per_page': '1', 'page': '1'})
+
+    repositories = list(filter(None, config['repository'].split(' ')))
+
+    for repo in repositories:
+        logger.info("Verifying access of repository: %s", repo)
+        org = repo.split('/')[0]
+
+        url_for_repo = "https://api.github.com/repos/{}/commits".format(repo)
+        url_for_org = "https://api.github.com/orgs/{}/teams".format(org)
+
+        # Verifying for Repo access
+        verify_repo_access(url_for_repo, repo)
+        # Verifying for Org access
+        verify_org_access(url_for_org, org)
+
+def do_discover(config):
+    verify_access_for_repo_org(config)
     catalog = get_catalog()
     # dump catalog
     print(json.dumps(catalog, indent=2))
@@ -977,7 +1014,7 @@ def main():
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
     if args.discover:
-        do_discover()
+        do_discover(args.config)
     else:
         catalog = args.properties if args.properties else get_catalog()
         do_sync(args.config, args.state, catalog)
