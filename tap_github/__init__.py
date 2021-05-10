@@ -236,14 +236,19 @@ def get_all_teams(schemas, repo_path, state, mdata):
                 singer.write_bookmark(state, repo_path, 'teams', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
+                slug = r.get('slug')
+                if any(key in schemas for key in ('team_members', 'team_memberships')) and not slug:
+                    logger.error('Could not find slug in org: %s', org)
+                    continue
+
                 if schemas.get('team_members'):
-                    team_slug = r['slug']
+                    team_slug = slug
                     for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata):
                         singer.write_record('team_members', team_members_rec, time_extracted=extraction_time)
                         singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
 
                 if schemas.get('team_memberships'):
-                    team_slug = r['slug']
+                    team_slug = slug
                     for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata):
                         singer.write_record('team_memberships', team_memberships_rec, time_extracted=extraction_time)
 
