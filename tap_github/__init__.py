@@ -41,6 +41,9 @@ KEY_PROPERTIES = {
     'team_memberships': ['url']
 }
 
+class BadCredentialsException(Exception):
+    pass
+
 class AuthException(Exception):
     pass
 
@@ -102,7 +105,7 @@ def authed_get(source, url, headers={}):
         session.headers.update(headers)
         resp = session.request(method='get', url=url)
         if resp.status_code == 401:
-            raise AuthException(resp.text)
+            raise BadCredentialsException(resp.text)
         if resp.status_code == 403:
             raise AuthException(resp.text)
         if resp.status_code == 404:
@@ -215,17 +218,23 @@ def verify_repo_access(url_for_repo, repo):
     try:
         authed_get("verifying repo access", url_for_repo)
     except NotFoundException as e:
-        logger.error("Access Token does not have permission to access private repositories or this account is not collaborator of '%s' this repository", repo)
+        logger.error("API token does not have the permission to access '%s' repository.", repo)
+        raise e
+    except BadCredentialsException as e:
+        logger.error("API token is invalid. Please enter correct credentials.")
         raise e
 
 def verify_org_access(url_for_org, org):
     try:
         authed_get("verifying org access", url_for_org)
     except NotFoundException as e:
-        logger.error("'%s' is not an oragnization", org)
+        logger.error("'%s' is not an Oragnization.", org)
         raise e
     except AuthException as e:
-        logger.error("Not a member or access token has not permission to read orgs data for this '%s' organization", org)
+        logger.error("API token does hot have access to '%s' organization.", org)
+        raise e
+    except BadCredentialsException as e:
+        logger.error("API token is invalid. Please enter correct credentials.")
         raise e
 
 def verify_access_for_repo_org(config):
