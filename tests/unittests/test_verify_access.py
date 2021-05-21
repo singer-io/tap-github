@@ -25,7 +25,8 @@ def get_response(status_code, json={}, raise_error=False):
 class TestCredentials(unittest.TestCase):
 
     def test_repo_invalid_creds(self, mocked_request):
-        mocked_request.return_value = get_response(404, True)
+        json = {"message": "Not Found", "documentation_url": "https:/"}
+        mocked_request.return_value = get_response(404, json, True)
 
         try:
             tap_github.verify_repo_access("", "repo")
@@ -79,7 +80,8 @@ class TestCredentials(unittest.TestCase):
 
     @mock.patch("tap_github.get_catalog")
     def test_discover_invalid_creds_1(self, mocked_get_catalog, mocked_request):
-        mocked_request.return_value = get_response(404, True)
+        json = {"message": "Not Found", "documentation_url": "https:/"}
+        mocked_request.return_value = get_response(404, json, True)
         mocked_get_catalog.return_value = {}
 
         try:

@@ -156,15 +156,15 @@ def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
         resp = session.request(method='get', url=url)
-
-        timer.tags[metrics.Tag.http_status_code] = resp.status_code
-        return resp
+        if resp.status_code != 200:
+            raise_for_error(resp)
+        else:
+            timer.tags[metrics.Tag.http_status_code] = resp.status_code
+            return resp
 
 def authed_get_all_pages(source, url, headers={}):
     while True:
         r = authed_get(source, url, headers)
-        if r.status_code != 200:
-            raise_for_error(r)
         yield r
         if 'next' in r.links:
             url = r.links['next']['url']
@@ -262,16 +262,14 @@ def get_catalog():
     return {'streams': streams}
 
 def verify_repo_access(url_for_repo, repo):
-    resp = authed_get("verifying repository access", url_for_repo)
-    if resp.status_code != 200:
-        if resp.status_code == 404:
-            raise NotFoundException("HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo))
-        raise_for_error(resp)
+    try:
+        authed_get("verifying repository access", url_for_repo)
+    except NotFoundException:
+        # throwing user-friendly error message as it checks token access
+        raise NotFoundException("HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)) from None
 
 def verify_org_access(url_for_org):
-    resp = authed_get("verifying organization access", url_for_org)
-    if resp.status_code != 200:
-        raise_for_error(resp)
+    authed_get("verifying repository access", url_for_org)
 
 def verify_access_for_repo_org(config):
 
