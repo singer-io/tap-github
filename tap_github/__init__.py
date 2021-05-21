@@ -53,15 +53,35 @@ class AuthException(GithubException):
 class NotFoundException(GithubException):
     pass
 
-class BadRequestExecption(GithubException):
+class BadRequestException(GithubException):
     pass
 
 class InternalServerError(GithubException):
     pass
 
+class UnprocessableError(GithubException):
+    pass
+
+class NotModifiedError(GithubException):
+    pass
+
+class MovedPermanentlyError(GithubException):
+    pass
+
+class ConflictError(GithubException):
+    pass
+
 ERROR_CODE_EXCEPTION_MAPPING = {
+    301: {
+        "raise_exception": MovedPermanentlyError,
+        "message": "The resource you are looking for is moved to another URL."
+    },
+    304: {
+        "raise_exception": NotModifiedError,
+        "message": "The requested resource has not been modified since the last time you accessed it."
+    },
     400:{
-        "raise_exception": BadRequestExecption,
+        "raise_exception": BadRequestException,
         "message": "A validation exception has occurred."
     },
     401: {
@@ -75,6 +95,14 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     404: {
         "raise_exception": NotFoundException,
         "message": "The resource you have specified cannot be found."
+    },
+    409: {
+        "raise_exception": ConflictError,
+        "message": "The request could not be completed due to a conflict with the current state of the server."
+    },
+    422: {
+        "raise_exception": UnprocessableError,
+        "message": "The request was not able to process right now."
     },
     500: {
         "raise_exception": InternalServerError,

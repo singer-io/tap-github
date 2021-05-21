@@ -34,7 +34,7 @@ class TestCredentials(unittest.TestCase):
             self.assertEquals(str(e), "HTTP-error-code: 404, Error: Please check the repository name 'repo' or you do not have sufficient permissions to access this repository.")
 
     def test_repo_wrong_creds(self, mocked_request):
-        json = {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+        json = {"message": "Bad credentials", "documentation_url": "https://docs.github.com/rest"}
         mocked_request.return_value = get_response(401, json, True)
 
         try:
@@ -61,7 +61,7 @@ class TestCredentials(unittest.TestCase):
             self.assertEquals(str(e), "HTTP-error-code: 403, Error: {}".format(json))
 
     def test_org_wrong_creds(self, mocked_request):
-        json = {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+        json = {"message": "Bad credentials", "documentation_url": "https://docs.github.com/rest"}
         mocked_request.return_value = get_response(401, json, True)
 
         try:
@@ -119,11 +119,11 @@ class TestCredentials(unittest.TestCase):
 @mock.patch("tap_github.verify_repo_access")
 @mock.patch("tap_github.verify_org_access")
 class TestRepoCallCount(unittest.TestCase):
-    """
-        Here 3 repos are given,
-        so tap will check creds for 3 repos
-    """
-    def test_repo_call_count(self, mocked_org, mocked_repo, mocked_logger_info):
+    def test_repo_call_count_positive(self, mocked_org, mocked_repo, mocked_logger_info):
+        """
+            Here 3 repos are given,
+            so tap will check creds for 3 repos
+        """
         mocked_org.return_value = None
         mocked_repo.return_value = None
 

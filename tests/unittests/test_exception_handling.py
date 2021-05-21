@@ -28,7 +28,7 @@ class TestExceptionHandling(unittest.TestCase):
         
         try:
             tap_github.authed_get("", "")
-        except tap_github.BadRequestExecption as e:
+        except tap_github.BadRequestException as e:
             self.assertEquals(str(e), "HTTP-error-code: 400, Error: A validation exception has occurred.")
     
     def test_401_error(self, mocked_request):
@@ -62,6 +62,38 @@ class TestExceptionHandling(unittest.TestCase):
             tap_github.authed_get("", "")
         except tap_github.InternalServerError as e:
             self.assertEquals(str(e), "HTTP-error-code: 500, Error: An error has occurred at Github's end.")
+
+    def test_301_error(self, mocked_request):
+        mocked_request.return_value = get_response(301, raise_error = True)
+
+        try:
+            tap_github.authed_get("", "")
+        except tap_github.MovedPermanentlyError as e:
+            self.assertEquals(str(e), "HTTP-error-code: 301, Error: The resource you are looking for is moved to another URL.")
+
+    def test_304_error(self, mocked_request):
+        mocked_request.return_value = get_response(304, raise_error = True)
+
+        try:
+            tap_github.authed_get("", "")
+        except tap_github.NotModifiedError as e:
+            self.assertEquals(str(e), "HTTP-error-code: 304, Error: The requested resource has not been modified since the last time you accessed it.")
+
+    def test_422_error(self, mocked_request):
+        mocked_request.return_value = get_response(422, raise_error = True)
+
+        try:
+            tap_github.authed_get("", "")
+        except tap_github.UnprocessableError as e:
+            self.assertEquals(str(e), "HTTP-error-code: 422, Error: The request was not able to process right now.")
+
+    def test_409_error(self, mocked_request):
+        mocked_request.return_value = get_response(409, raise_error = True)
+
+        try:
+            tap_github.authed_get("", "")
+        except tap_github.ConflictError as e:
+            self.assertEquals(str(e), "HTTP-error-code: 409, Error: The request could not be completed due to a conflict with the current state of the server.")
 
     def test_200_error(self, mocked_request):
         json = {"key": "value"}
