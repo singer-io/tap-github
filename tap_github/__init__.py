@@ -390,7 +390,7 @@ def get_all_issue_milestones(schemas, repo_path, state, mdata):
                 # once we find the first piece of old data we can return, thanks to
                 # the sorting
                 if bookmark_time and r.get("due_on") and singer.utils.strptime_to_utc(r.get("due_on")) < bookmark_time:
-                    return state
+                    continue
 
                 # transform and write release record
                 with singer.Transformer() as transformer:
