@@ -1,56 +1,75 @@
 from unittest import mock
 import tap_github
 import unittest
+import requests
 
 class Mockresponse:
-    def __init__(self, status_code, text=None):
+    def __init__(self, status_code, json, raise_error, text=None):
         self.status_code = status_code
-        self.text = ""
+        self.raise_error = raise_error
+        self.text = json
 
-def get_response(status_code):
-    return Mockresponse(status_code=status_code)
+    def raise_for_status(self):
+        if not self.raise_error:
+            return self.status_code
 
-@mock.patch("tap_github.logger.error")
+        raise requests.HTTPError("Sample message")
+
+    def json(self):
+        return self.text
+
+def get_response(status_code, json={}, raise_error=False):
+    return Mockresponse(status_code, json, raise_error)
+
 @mock.patch("requests.Session.request")
 class TestCredentials(unittest.TestCase):
 
-    def test_repo_invalid_creds(self, mocked_request, mocked_logger_error):
-        mocked_request.return_value = get_response(404)
+    def test_repo_invalid_creds(self, mocked_request):
+        mocked_request.return_value = get_response(404, True)
 
-        with self.assertRaises(tap_github.NotFoundException):
+        try:
             tap_github.verify_repo_access("", "repo")
-        mocked_logger_error.assert_called_with("API token does not have the permission to access '%s' repository.", "repo")
+        except tap_github.NotFoundException as e:
+            self.assertEquals(str(e), "HTTP-error-code: 404, Error: Please check the repository name 'repo' or you do not have sufficient permissions to access this repository.")
 
-    def test_repo_wrong_creds(self, mocked_request, mocked_logger_error):
-        mocked_request.return_value = get_response(401)
+    def test_repo_wrong_creds(self, mocked_request):
+        json = {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+        mocked_request.return_value = get_response(401, json, True)
 
-        with self.assertRaises(tap_github.BadCredentialsException):
+        try:
             tap_github.verify_repo_access("", "repo")
-        mocked_logger_error.assert_called_with("API token is invalid. Please enter correct credentials.")
+        except tap_github.BadCredentialsException as e:
+            self.assertEquals(str(e), "HTTP-error-code: 401, Error: {}".format(json))
 
-    def test_org_invalid_creds_1(self, mocked_request, mocked_logger_error):
-        mocked_request.return_value = get_response(404)
+    def test_org_invalid_creds_1(self, mocked_request):
+        json = {"message": "Not Found", "documentation_url": "https:/"}
+        mocked_request.return_value = get_response(404, json, True)
 
-        with self.assertRaises(tap_github.NotFoundException):
-            tap_github.verify_org_access("", "org")
-        mocked_logger_error.assert_called_with("'%s' is not an Oragnization.", "org")
+        try:
+            tap_github.verify_org_access("")
+        except tap_github.NotFoundException as e:
+            self.assertEquals(str(e), "HTTP-error-code: 404, Error: {}".format(json))
 
-    def test_org_invalid_creds_2(self, mocked_request, mocked_logger_error):
-        mocked_request.return_value = get_response(403)
+    def test_org_invalid_creds_2(self, mocked_request):
+        json = {'message': 'Must have admin rights to Repository.', 'documentation_url': 'https://docs.github.com/rest/reference/'}
+        mocked_request.return_value = get_response(403, json, True)
 
-        with self.assertRaises(tap_github.AuthException):
-            tap_github.verify_org_access("", "org")
-        mocked_logger_error.assert_called_with("API token does hot have access to '%s' organization.", "org")
+        try:
+            tap_github.verify_org_access("")
+        except tap_github.AuthException as e:
+            self.assertEquals(str(e), "HTTP-error-code: 403, Error: {}".format(json))
 
-    def test_org_wrong_creds(self, mocked_request, mocked_logger_error):
-        mocked_request.return_value = get_response(401)
+    def test_org_wrong_creds(self, mocked_request):
+        json = {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+        mocked_request.return_value = get_response(401, json, True)
 
-        with self.assertRaises(tap_github.BadCredentialsException):
-            tap_github.verify_org_access("", "org")
-        mocked_logger_error.assert_called_with("API token is invalid. Please enter correct credentials.")
+        try:
+            tap_github.verify_org_access("")
+        except tap_github.BadCredentialsException as e:
+            self.assertEquals(str(e), "HTTP-error-code: 401, Error: {}".format(json))
 
     @mock.patch("tap_github.get_catalog")
-    def test_discover_valid_creds(self, mocked_get_catalog, mocked_request, mocked_logger_error):
+    def test_discover_valid_creds(self, mocked_get_catalog, mocked_request):
         mocked_request.return_value = get_response(200)
         mocked_get_catalog.return_value = {}
 
@@ -59,30 +78,38 @@ class TestCredentials(unittest.TestCase):
         self.assertTrue(mocked_get_catalog.call_count, 1)
 
     @mock.patch("tap_github.get_catalog")
-    def test_discover_invalid_creds_1(self, mocked_get_catalog, mocked_request, mocked_logger_error):
-        mocked_request.return_value = get_response(404)
+    def test_discover_invalid_creds_1(self, mocked_get_catalog, mocked_request):
+        mocked_request.return_value = get_response(404, True)
         mocked_get_catalog.return_value = {}
 
-        with self.assertRaises(tap_github.NotFoundException):
+        try:
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
+        except tap_github.NotFoundException as e:
+                self.assertEquals(str(e), "HTTP-error-code: 404, Error: Please check the repository name 'org/repo' or you do not have sufficient permissions to access this repository.")
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
     @mock.patch("tap_github.get_catalog")
-    def test_discover_invalid_creds_2(self, mocked_get_catalog, mocked_request, mocked_logger_error):
-        mocked_request.return_value = get_response(401)
+    def test_discover_invalid_creds_2(self, mocked_get_catalog, mocked_request):
+        json = {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+        mocked_request.return_value = get_response(401, json, True)
         mocked_get_catalog.return_value = {}
 
-        with self.assertRaises(tap_github.BadCredentialsException):
+        try:
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
+        except tap_github.BadCredentialsException as e:
+                self.assertEquals(str(e), "HTTP-error-code: 401, Error: {}".format(json))
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
     @mock.patch("tap_github.get_catalog")
-    def test_discover_invalid_creds_3(self, mocked_get_catalog, mocked_request, mocked_logger_error):
-        mocked_request.return_value = get_response(403)
+    def test_discover_invalid_creds_3(self, mocked_get_catalog, mocked_request):
+        json = {'message': 'Must have admin rights to Repository.', 'documentation_url': 'https://docs.github.com/rest/reference/'}
+        mocked_request.return_value = get_response(403, json, True)
         mocked_get_catalog.return_value = {}
 
-        with self.assertRaises(tap_github.AuthException):
+        try:
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
+        except tap_github.AuthException as e:
+                self.assertEquals(str(e), "HTTP-error-code: 403, Error: {}".format(json))
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
 

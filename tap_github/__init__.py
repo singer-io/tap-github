@@ -41,14 +41,46 @@ KEY_PROPERTIES = {
     'team_memberships': ['url']
 }
 
-class BadCredentialsException(Exception):
+class GithubException(Exception):
     pass
 
-class AuthException(Exception):
+class BadCredentialsException(GithubException):
     pass
 
-class NotFoundException(Exception):
+class AuthException(GithubException):
     pass
+
+class NotFoundException(GithubException):
+    pass
+
+class BadRequestExecption(GithubException):
+    pass
+
+class InternalServerError(GithubException):
+    pass
+
+ERROR_CODE_EXCEPTION_MAPPING = {
+    400:{
+        "raise_exception": BadRequestExecption,
+        "message": "A validation exception has occurred."
+    },
+    401: {
+        "raise_exception": BadCredentialsException,
+        "message": "Invalid authorization credentials."
+    },
+    403: {
+        "raise_exception": AuthException,
+        "message": "User doesn't have permission to access the resource."
+    },
+    404: {
+        "raise_exception": NotFoundException,
+        "message": "The resource you have specified cannot be found."
+    },
+    500: {
+        "raise_exception": InternalServerError,
+        "message": "An error has occurred at Github's end."
+    },
+}
 
 def translate_state(state, catalog, repositories):
     '''
@@ -99,17 +131,31 @@ def get_bookmark(state, repo, stream_name, bookmark_key):
         return repo_stream_dict.get(bookmark_key)
     return None
 
+def raise_for_error(resp):
+    try:
+        resp.raise_for_status()
+    except (requests.HTTPError, requests.ConnectionError) as error:
+        try:
+            error_code = resp.status_code
+            try:
+                response_json = resp.json()
+            except Exception:
+                response_json = {}
+
+            message = "HTTP-error-code: {}, Error: {}".format(
+                error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
+
+            exc = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception", GithubException)
+            raise exc(message) from None
+
+        except (ValueError, TypeError):
+            raise GithubException(error) from None
+
 # pylint: disable=dangerous-default-value
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
         resp = session.request(method='get', url=url)
-        if resp.status_code == 401:
-            raise BadCredentialsException(resp.text)
-        if resp.status_code == 403:
-            raise AuthException(resp.text)
-        if resp.status_code == 404:
-            raise NotFoundException(resp.text)
 
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         return resp
@@ -117,7 +163,8 @@ def authed_get(source, url, headers={}):
 def authed_get_all_pages(source, url, headers={}):
     while True:
         r = authed_get(source, url, headers)
-        r.raise_for_status()
+        if r.status_code != 200:
+            raise_for_error(r)
         yield r
         if 'next' in r.links:
             url = r.links['next']['url']
@@ -215,27 +262,16 @@ def get_catalog():
     return {'streams': streams}
 
 def verify_repo_access(url_for_repo, repo):
-    try:
-        authed_get("verifying repo access", url_for_repo)
-    except NotFoundException as e:
-        logger.error("API token does not have the permission to access '%s' repository.", repo)
-        raise e
-    except BadCredentialsException as e:
-        logger.error("API token is invalid. Please enter correct credentials.")
-        raise e
+    resp = authed_get("verifying repository access", url_for_repo)
+    if resp.status_code != 200:
+        if resp.status_code == 404:
+            raise NotFoundException("HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo))
+        raise_for_error(resp)
 
-def verify_org_access(url_for_org, org):
-    try:
-        authed_get("verifying org access", url_for_org)
-    except NotFoundException as e:
-        logger.error("'%s' is not an Oragnization.", org)
-        raise e
-    except AuthException as e:
-        logger.error("API token does hot have access to '%s' organization.", org)
-        raise e
-    except BadCredentialsException as e:
-        logger.error("API token is invalid. Please enter correct credentials.")
-        raise e
+def verify_org_access(url_for_org):
+    resp = authed_get("verifying organization access", url_for_org)
+    if resp.status_code != 200:
+        raise_for_error(resp)
 
 def verify_access_for_repo_org(config):
 
@@ -254,7 +290,7 @@ def verify_access_for_repo_org(config):
         # Verifying for Repo access
         verify_repo_access(url_for_repo, repo)
         # Verifying for Org access
-        verify_org_access(url_for_org, org)
+        verify_org_access(url_for_org)
 
 def do_discover(config):
     verify_access_for_repo_org(config)
