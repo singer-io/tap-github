@@ -227,6 +227,7 @@ def get_all_teams(schemas, repo_path, state, mdata):
             extraction_time = singer.utils.now()
 
             for r in teams:
+                team_slug = r.get('slug')
                 r['_sdc_repository'] = repo_path
 
                 # transform and write release record
@@ -236,19 +237,12 @@ def get_all_teams(schemas, repo_path, state, mdata):
                 singer.write_bookmark(state, repo_path, 'teams', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
-                slug = r.get('slug')
-                if any(key in schemas for key in ('team_members', 'team_memberships')) and not slug:
-                    logger.error('Could not find slug in org: %s', org)
-                    continue
-
                 if schemas.get('team_members'):
-                    team_slug = slug
                     for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata):
                         singer.write_record('team_members', team_members_rec, time_extracted=extraction_time)
                         singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
 
                 if schemas.get('team_memberships'):
-                    team_slug = slug
                     for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata):
                         singer.write_record('team_memberships', team_memberships_rec, time_extracted=extraction_time)
 
@@ -864,10 +858,11 @@ def get_all_stargazers(schema, repo_path, state, mdata):
             stargazers = response.json()
             extraction_time = singer.utils.now()
             for stargazer in stargazers:
+                user_id = stargazer['user']['id']
                 stargazer['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(stargazer, schema, metadata=metadata.to_map(mdata))
-                rec['user_id'] = rec['user']['id']
+                rec['user_id'] = user_id
                 singer.write_record('stargazers', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'stargazers', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()

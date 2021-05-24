@@ -1,9 +1,6 @@
 import unittest
 from unittest import mock
-import singer
-import json
 import tap_github.__init__ as tap_github
-logger = singer.get_logger()
 
 class Mockresponse:
     def __init__(self, resp):
@@ -16,61 +13,145 @@ def get_response(json):
     yield Mockresponse(resp=json)
 
 @mock.patch("tap_github.__init__.authed_get_all_pages")
-@mock.patch("tap_github.logger.error")
-class TestRateLimit(unittest.TestCase):
+class TestKeyErrorSlug(unittest.TestCase):
 
     @mock.patch("tap_github.__init__.get_all_team_members")
-    def test_slug_and_sub_stream_in_resp(self, mocked_team_members, mocked_logger_error, mocked_request):
-        """
-            "slug" is present in responnse and "team_members" is selected in schema,
-            so function will perform smoothly and get data for "team_members"
-        """
-        schemas = {"team_members": "None"}
-        json = {"key": "value", "slug": "my-team"}
+    def test_slug_sub_stream_selected_slug_selected(self, mocked_team_members, mocked_request):
+        json = {"key": "value", "slug": "team-slug"}
+
         mocked_request.return_value = get_response(json)
 
-        tap_github.get_all_teams(schemas, "tap-github", {}, {})
-
-        self.assertEquals(mocked_logger_error.call_count, 0)
+        schemas = {"teams": "None", "team_members": "None"}
+        mdata  =[
+        {
+            'breadcrumb': [], 
+            'metadata': {'selected': True, 'table-key-properties': ['id']}
+        }, 
+        {
+            'breadcrumb': ['properties', 'slug'], 
+            'metadata': {'inclusion': 'available'}
+        }, 
+        {
+            "breadcrumb": [ "properties", "name"],
+            "metadata": {"inclusion": "available"}
+        }]
+        tap_github.get_all_teams(schemas, "tap-github", {}, mdata)
         self.assertEquals(mocked_team_members.call_count, 1)
 
+    @mock.patch("tap_github.__init__.get_all_team_members")
+    def test_slug_sub_stream_not_selected_slug_selected(self, mocked_team_members, mocked_request):
+        json = {"key": "value", "slug": "team-slug"}
 
-    def test_not_slug_and_sub_stream_in_resp(self, mocked_logger_error, mocked_request):
-        """
-            "slug" is not given in response,
-            error will be generated
-        """
-        schemas = {"team_members": "None"}
-        json = {"key": "value"}
         mocked_request.return_value = get_response(json)
 
-        tap_github.get_all_teams(schemas, "tap-github", {}, {})
+        schemas = {"teams": "None"}
+        mdata  =[
+        {
+            'breadcrumb': [], 
+            'metadata': {'selected': True, 'table-key-properties': ['id']}
+        }, 
+        {
+            'breadcrumb': ['properties', 'slug'], 
+            'metadata': {'inclusion': 'available'}
+        }, 
+        {
+            "breadcrumb": [ "properties", "name"],
+            "metadata": {"inclusion": "available"}
+        }]
+        tap_github.get_all_teams(schemas, "tap-github", {}, mdata)
+        self.assertEquals(mocked_team_members.call_count, 0)
 
-        self.assertEquals(mocked_logger_error.call_count, 1)
-        mocked_logger_error.assert_called_with('Could not find slug in org: %s', 'tap-github')
-    
-    def test_slug_and_not_sub_stream_in_resp(self, mocked_logger_error, mocked_request):
-        """
-            "slug" is present in responnse and "team_members" is not selected in schema,
-            so function will perform smoothly and not get the data for "team_members"
-        """
+    @mock.patch("tap_github.__init__.get_all_team_members")
+    def test_slug_sub_stream_selected_slug_not_selected(self, mocked_team_members, mocked_request):
+        json = {"key": "value", "slug": "team-slug"}
 
-        json = {"key": "value", "slug": "my-team"}
         mocked_request.return_value = get_response(json)
 
-        tap_github.get_all_teams({}, "tap-github", {}, {})
+        schemas = {"teams": "None", "team_members": "None"}
+        mdata  =[
+        {
+            'breadcrumb': [], 
+            'metadata': {'selected': True, 'table-key-properties': ['id']}
+        }, 
+        {
+            'breadcrumb': ['properties', 'slug'], 
+            'metadata': {'inclusion': 'available', 'selected': False}
+        }, 
+        {
+            "breadcrumb": [ "properties", "name"],
+            "metadata": {"inclusion": "available"}
+        }]
+        tap_github.get_all_teams(schemas, "tap-github", {}, mdata)
+        self.assertEquals(mocked_team_members.call_count, 1)
 
-        self.assertEquals(mocked_logger_error.call_count, 0)
+    @mock.patch("tap_github.__init__.get_all_team_members")
+    def test_slug_sub_stream_not_selected_slug_not_selected(self, mocked_team_members, mocked_request):
+        json = {"key": "value", "slug": "team-slug"}
 
-    def test_not_slug_and_not_sub_stream_in_resp(self, mocked_logger_error, mocked_request):
-        """
-            "slug" is not given in response,
-            error will be generated
-        """
-
-        json = {"key": "value"}
         mocked_request.return_value = get_response(json)
 
-        tap_github.get_all_teams({}, "tap-github", {}, {})
+        schemas = {"teams": "None"}
+        mdata  =[
+        {
+            'breadcrumb': [], 
+            'metadata': {'selected': True, 'table-key-properties': ['id']}
+        }, 
+        {
+            'breadcrumb': ['properties', 'slug'], 
+            'metadata': {'inclusion': 'available', 'selected': False}
+        }, 
+        {
+            "breadcrumb": [ "properties", "name"],
+            "metadata": {"inclusion": "available"}
+        }]
+        tap_github.get_all_teams(schemas, "tap-github", {}, mdata)
+        self.assertEquals(mocked_team_members.call_count, 0)
 
-        self.assertEquals(mocked_logger_error.call_count, 0)
+@mock.patch("tap_github.__init__.authed_get_all_pages")
+class TestKeyErrorUser(unittest.TestCase):
+
+    @mock.patch("singer.write_record")
+    def test_user_not_selected_in_stargazers(self, mocked_write_records, mocked_request):
+        json = {"key": "value", "user": {"id": 1}}
+
+        mocked_request.return_value = get_response(json)
+
+        schemas = {"teams": "None"}
+        mdata  =[
+        {
+            'breadcrumb': [], 
+            'metadata': {'selected': True, 'table-key-properties': ['user_id']}
+        },
+        {
+          "breadcrumb": ["properties", "user"],
+          "metadata": {"inclusion": "available", "selected": False}
+        },
+        {
+          "breadcrumb": ["properties", "starred_at"],
+          "metadata": {"inclusion": "available"}
+        }]
+        tap_github.get_all_stargazers(schemas, "tap-github", {}, mdata)
+        self.assertEquals(mocked_write_records.call_count, 1)
+
+    @mock.patch("singer.write_record")
+    def test_user_selected_in_stargazers(self, mocked_write_records, mocked_request):
+        json = {"key": "value", "user": {"id": 1}}
+
+        mocked_request.return_value = get_response(json)
+
+        schemas = {"stargazers": "None"}
+        mdata  =[
+        {
+            'breadcrumb': [], 
+            'metadata': {'selected': True, 'table-key-properties': ['user_id']}
+        },
+        {
+          "breadcrumb": ["properties", "user"],
+          "metadata": {"inclusion": "available"}
+        },
+        {
+          "breadcrumb": ["properties", "starred_at"],
+          "metadata": {"inclusion": "available"}
+        }]
+        tap_github.get_all_stargazers(schemas, "tap-github", {}, mdata)
+        self.assertEquals(mocked_write_records.call_count, 1)
