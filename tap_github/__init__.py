@@ -861,18 +861,13 @@ def get_all_stargazers(schema, repo_path, state, mdata):
     '''
     https://developer.github.com/v3/activity/starring/#list-stargazers
     '''
-    bookmark = get_bookmark(state, repo_path, "stargazers", "since")
-    if bookmark:
-        query_string = '&since={}'.format(bookmark)
-    else:
-        query_string = ''
 
     stargazers_headers = {'Accept': 'application/vnd.github.v3.star+json'}
 
     with metrics.record_counter('stargazers') as counter:
         for response in authed_get_all_pages(
                 'stargazers',
-                'https://api.github.com/repos/{}/stargazers?sort=updated&direction=asc{}'.format(repo_path, query_string), stargazers_headers
+                'https://api.github.com/repos/{}/stargazers'.format(repo_path), stargazers_headers
         ):
             stargazers = response.json()
             extraction_time = singer.utils.now()
