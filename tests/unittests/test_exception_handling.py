@@ -95,7 +95,7 @@ class TestExceptionHandling(unittest.TestCase):
         except tap_github.ConflictError as e:
             self.assertEquals(str(e), "HTTP-error-code: 409, Error: The request could not be completed due to a conflict with the current state of the server.")
 
-    def test_200_error(self, mocked_request):
+    def test_200_success(self, mocked_request):
         json = {"key": "value"}
         mocked_request.return_value = get_response(200, json)
 
