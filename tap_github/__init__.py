@@ -82,7 +82,7 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     },
     400:{
         "raise_exception": BadRequestException,
-        "message": "A validation exception has occurred."
+        "message": "The request is missing or has a bad parameter."
     },
     401: {
         "raise_exception": BadCredentialsException,
@@ -107,7 +107,7 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     500: {
         "raise_exception": InternalServerError,
         "message": "An error has occurred at Github's end."
-    },
+    }
 }
 
 def translate_state(state, catalog, repositories):

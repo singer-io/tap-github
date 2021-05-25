@@ -29,7 +29,7 @@ class TestExceptionHandling(unittest.TestCase):
         try:
             tap_github.authed_get("", "")
         except tap_github.BadRequestException as e:
-            self.assertEquals(str(e), "HTTP-error-code: 400, Error: A validation exception has occurred.")
+            self.assertEquals(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
     
     def test_401_error(self, mocked_request):
         mocked_request.return_value = get_response(401, raise_error = True)
