@@ -11,7 +11,7 @@ setup(name='tap-github',
       py_modules=['tap_github'],
       install_requires=[
           'singer-python==5.12.1',
-          'requests==2.20.0'
+          'requests==2.21.0'
       ],
       extras_require={
           'dev': [
