@@ -17,6 +17,10 @@ class GithubStartDateTest(TestGithubBase):
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
 
+        env_var = os.environ
+        print('>>>>>>')
+        print(dict(env_var))
+
         self.start_date_1 = '2020-04-01T00:00:00Z'
         self.start_date_2 = self.timedelta_formatted(self.start_date_1, days=365)
 
