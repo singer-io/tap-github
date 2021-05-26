@@ -4,10 +4,11 @@ import unittest
 import requests
 
 class Mockresponse:
-    def __init__(self, status_code, json, raise_error, text=None):
+    def __init__(self, status_code, json, raise_error, headers={'X-RateLimit-Remaining': 1}, text=None):
         self.status_code = status_code
         self.raise_error = raise_error
         self.text = json
+        self.headers = headers
 
     def raise_for_status(self):
         if not self.raise_error:
@@ -41,15 +42,6 @@ class TestCredentials(unittest.TestCase):
         except tap_github.BadRequestException as e:
             self.assertEquals(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
 
-    def test_repo_unprocessable_error(self, mocked_request):
-        json = {"message": "No commit found for SHA: !", "documentation_url": "https://docs.github.com/rest/reference/repos"}
-        mocked_request.return_value = get_response(422, json, True)
-
-        try:
-            tap_github.verify_repo_access("", "repo")
-        except tap_github.UnprocessableError as e:
-            self.assertEquals(str(e), "HTTP-error-code: 422, Error: {}".format(json))
-
     def test_repo_bad_creds(self, mocked_request):
         json = {"message": "Bad credentials", "documentation_url": "https://docs.github.com/rest"}
         mocked_request.return_value = get_response(401, json, True)
@@ -75,15 +67,6 @@ class TestCredentials(unittest.TestCase):
             tap_github.verify_org_access("")
         except tap_github.BadRequestException as e:
             self.assertEquals(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
-
-    def test_org_unprocessable_error(self, mocked_request):
-        json = {"message": "No commit found for SHA: !", "documentation_url": "https://docs.github.com/rest/reference/repos"}
-        mocked_request.return_value = get_response(422, json, True)
-
-        try:
-            tap_github.verify_org_access("")
-        except tap_github.UnprocessableError as e:
-            self.assertEquals(str(e), "HTTP-error-code: 422, Error: {}".format(json))
 
     def test_org_forbidden(self, mocked_request):
         json = {'message': 'Must have admin rights to Repository.', 'documentation_url': 'https://docs.github.com/rest/reference/'}
@@ -133,18 +116,6 @@ class TestCredentials(unittest.TestCase):
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
         except tap_github.BadRequestException as e:
                 self.assertEquals(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
-        self.assertEqual(mocked_get_catalog.call_count, 0)
-
-    @mock.patch("tap_github.get_catalog")
-    def test_discover_unprocessable_error(self, mocked_get_catalog, mocked_request):
-        json = {"message": "No commit found for SHA: !", "documentation_url": "https://docs.github.com/rest/reference/repos"}
-        mocked_request.return_value = get_response(422, json, True)
-        mocked_get_catalog.return_value = {}
-
-        try:
-            tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
-        except tap_github.UnprocessableError as e:
-                self.assertEquals(str(e), "HTTP-error-code: 422, Error: {}".format(json))
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
     @mock.patch("tap_github.get_catalog")

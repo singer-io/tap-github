@@ -4,10 +4,11 @@ import unittest
 import requests
 
 class Mockresponse:
-    def __init__(self, status_code, json, raise_error, text=None):
+    def __init__(self, status_code, json, raise_error, headers={'X-RateLimit-Remaining': 1}, text=None):
         self.status_code = status_code
         self.raise_error = raise_error
         self.text = json
+        self.headers = headers
 
     def raise_for_status(self):
         if not self.raise_error:
