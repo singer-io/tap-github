@@ -2,6 +2,7 @@ import argparse
 import os
 import json
 import collections
+import time
 import requests
 import singer
 import singer.bookmarks as bookmarks
@@ -45,6 +46,9 @@ class AuthException(Exception):
     pass
 
 class NotFoundException(Exception):
+    pass
+
+class RateLimitExceeded(Exception):
     pass
 
 def translate_state(state, catalog, repositories):
@@ -96,6 +100,20 @@ def get_bookmark(state, repo, stream_name, bookmark_key):
         return repo_stream_dict.get(bookmark_key)
     return None
 
+def calculate_seconds(epoch):
+    current = time.time()
+    return int(round((epoch - current), 0))
+
+def rate_throttling(response):
+    if int(response.headers['X-RateLimit-Remaining']) == 0:
+        seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
+
+        if seconds_to_sleep > 600:
+            raise RateLimitExceeded("API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep))
+
+        logger.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
+        time.sleep(seconds_to_sleep)
+
 # pylint: disable=dangerous-default-value
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
@@ -109,6 +127,7 @@ def authed_get(source, url, headers={}):
             raise NotFoundException(resp.text)
 
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
+        rate_throttling(resp)
         return resp
 
 def authed_get_all_pages(source, url, headers={}):
@@ -227,6 +246,7 @@ def get_all_teams(schemas, repo_path, state, mdata):
             extraction_time = singer.utils.now()
 
             for r in teams:
+                team_slug = r.get('slug')
                 r['_sdc_repository'] = repo_path
 
                 # transform and write release record
@@ -237,13 +257,11 @@ def get_all_teams(schemas, repo_path, state, mdata):
                 counter.increment()
 
                 if schemas.get('team_members'):
-                    team_slug = r['slug']
                     for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata):
                         singer.write_record('team_members', team_members_rec, time_extracted=extraction_time)
                         singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
 
                 if schemas.get('team_memberships'):
-                    team_slug = r['slug']
                     for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata):
                         singer.write_record('team_memberships', team_memberships_rec, time_extracted=extraction_time)
 
@@ -389,8 +407,8 @@ def get_all_issue_milestones(schemas, repo_path, state, mdata):
                 # the GitHub API doesn't currently allow a ?since param for pulls
                 # once we find the first piece of old data we can return, thanks to
                 # the sorting
-                if bookmark_time and singer.utils.strptime_to_utc(r.get('due_on')) < bookmark_time:
-                    return state
+                if bookmark_time and r.get("due_on") and singer.utils.strptime_to_utc(r.get("due_on")) < bookmark_time:
+                    continue
 
                 # transform and write release record
                 with singer.Transformer() as transformer:
@@ -843,26 +861,22 @@ def get_all_stargazers(schema, repo_path, state, mdata):
     '''
     https://developer.github.com/v3/activity/starring/#list-stargazers
     '''
-    bookmark = get_bookmark(state, repo_path, "stargazers", "since")
-    if bookmark:
-        query_string = '&since={}'.format(bookmark)
-    else:
-        query_string = ''
 
     stargazers_headers = {'Accept': 'application/vnd.github.v3.star+json'}
 
     with metrics.record_counter('stargazers') as counter:
         for response in authed_get_all_pages(
                 'stargazers',
-                'https://api.github.com/repos/{}/stargazers?sort=updated&direction=asc{}'.format(repo_path, query_string), stargazers_headers
+                'https://api.github.com/repos/{}/stargazers'.format(repo_path), stargazers_headers
         ):
             stargazers = response.json()
             extraction_time = singer.utils.now()
             for stargazer in stargazers:
+                user_id = stargazer['user']['id']
                 stargazer['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(stargazer, schema, metadata=metadata.to_map(mdata))
-                rec['user_id'] = rec['user']['id']
+                rec['user_id'] = user_id
                 singer.write_record('stargazers', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'stargazers', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
