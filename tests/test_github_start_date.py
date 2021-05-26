@@ -82,8 +82,9 @@ class GithubStartDateTest(TestGithubBase):
             # There are no data or not enough data for testing for below streams
             # pull_request_review -> always skipped during sync mode
             # commit_comments, releases -> No data in tap-github repositery
+            # issue_milestones -> One data for isuue_milestones so not able to pass incremental cases
             # projects, projects_columns, project_cards -> One record for project so not able to pass incremental cases
-            if stream in ["pull_request_reviews", "commit_comments", "releases", "projects", "project_columns", "project_cards"]:
+            if stream in ["pull_request_reviews", "commit_comments", "releases", "issue_milestones", "projects", "project_columns", "project_cards"]:
                 continue
             
             with self.subTest(stream=stream):
@@ -110,7 +111,7 @@ class GithubStartDateTest(TestGithubBase):
                     # Sub stream fetch all data for records of related incremental super stream.
                     # Data of commit doesn't contain created_at or updated_at field. 
                     # Data of isuue_milestomes contains bookmark key(due_on) with null value also.
-                    if not self.is_full_table_sub_stream(stream) and stream != 'commits' and stream != 'issue_milestones':
+                    if not self.is_full_table_sub_stream(stream) and stream != 'commits':
 
                         # Expected bookmark key is one element in set so directly access it
                         bookmark_keys_list_1 = [message.get('data').get(next(iter(expected_bookmark_keys))) for message in synced_records_1.get(stream).get('messages')
