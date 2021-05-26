@@ -27,9 +27,6 @@ class GithubStartDateTest(TestGithubBase):
 
         expected_streams = self.expected_streams()
 
-        #Skipping issue_milestones, This will be removed from here once bug fix PR is merged for issue_milestones
-        expected_streams.remove('issue_milestones')
-
         ##########################################################################
         ### First Sync
         ##########################################################################
@@ -83,7 +80,7 @@ class GithubStartDateTest(TestGithubBase):
         for stream in expected_streams:
 
             # There are no data or not enough data for testing for below streams
-            # pull_request_review -> always skipped during sunc mode
+            # pull_request_review -> always skipped during sync mode
             # commit_comments, releases -> No data in tap-github repositery
             # projects, projects_columns, project_cards -> One record for project so not able to pass incremental cases
             if stream in ["pull_request_reviews", "commit_comments", "releases", "projects", "project_columns", "project_cards"]:
@@ -112,7 +109,8 @@ class GithubStartDateTest(TestGithubBase):
                     
                     # Sub stream fetch all data for records of related incremental super stream.
                     # Data of commit doesn't contain created_at or updated_at field. 
-                    if not self.is_full_table_sub_stream(stream) and stream != 'commits':
+                    # Data of isuue_milestomes contains bookmark key(due_on) with null value also.
+                    if not self.is_full_table_sub_stream(stream) and stream != 'commits' and stream != 'issue_milestones':
 
                         # Expected bookmark key is one element in set so directly access it
                         bookmark_keys_list_1 = [message.get('data').get(next(iter(expected_bookmark_keys))) for message in synced_records_1.get(stream).get('messages')
