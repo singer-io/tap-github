@@ -175,14 +175,14 @@ class DependencyException(Exception):
 
 def validate_dependencies(selected_stream_ids):
     errs = []
-    msg_tmpl = ("Unable to extract {0} data. "
-                "To receive {0} data, you also need to select {1}.")
+    msg_tmpl = ("Unable to extract '{0}' data, "
+                "to receive '{0}' data, you also need to select '{1}'.")
 
-    if 'reviews' in selected_stream_ids and 'pull_requests' not in selected_stream_ids:
-        errs.append(msg_tmpl.format('reviews','pull_requests'))
-
-    if 'review_comments' in selected_stream_ids and 'pull_requests' not in selected_stream_ids:
-        errs.append(msg_tmpl.format('review_comments','pull_requests'))
+    for main_stream, sub_streams in SUB_STREAMS.items():
+        if main_stream not in selected_stream_ids:
+            for sub_stream in sub_streams:
+                if sub_stream in selected_stream_ids:
+                    errs.append(msg_tmpl.format(sub_stream, main_stream))
 
     if errs:
         raise DependencyException(" ".join(errs))
