@@ -42,14 +42,77 @@ KEY_PROPERTIES = {
     'team_memberships': ['url']
 }
 
-class AuthException(Exception):
+class GithubException(Exception):
     pass
 
-class NotFoundException(Exception):
+class BadCredentialsException(GithubException):
     pass
 
-class RateLimitExceeded(Exception):
+class AuthException(GithubException):
     pass
+
+class NotFoundException(GithubException):
+    pass
+
+class BadRequestException(GithubException):
+    pass
+
+class InternalServerError(GithubException):
+    pass
+
+class UnprocessableError(GithubException):
+    pass
+
+class NotModifiedError(GithubException):
+    pass
+
+class MovedPermanentlyError(GithubException):
+    pass
+
+class ConflictError(GithubException):
+    pass
+
+class RateLimitExceeded(GithubException):
+    pass
+
+ERROR_CODE_EXCEPTION_MAPPING = {
+    301: {
+        "raise_exception": MovedPermanentlyError,
+        "message": "The resource you are looking for is moved to another URL."
+    },
+    304: {
+        "raise_exception": NotModifiedError,
+        "message": "The requested resource has not been modified since the last time you accessed it."
+    },
+    400:{
+        "raise_exception": BadRequestException,
+        "message": "The request is missing or has a bad parameter."
+    },
+    401: {
+        "raise_exception": BadCredentialsException,
+        "message": "Invalid authorization credentials."
+    },
+    403: {
+        "raise_exception": AuthException,
+        "message": "User doesn't have permission to access the resource."
+    },
+    404: {
+        "raise_exception": NotFoundException,
+        "message": "The resource you have specified cannot be found."
+    },
+    409: {
+        "raise_exception": ConflictError,
+        "message": "The request could not be completed due to a conflict with the current state of the server."
+    },
+    422: {
+        "raise_exception": UnprocessableError,
+        "message": "The request was not able to process right now."
+    },
+    500: {
+        "raise_exception": InternalServerError,
+        "message": "An error has occurred at Github's end."
+    }
+}
 
 def translate_state(state, catalog, repositories):
     '''
@@ -100,6 +163,25 @@ def get_bookmark(state, repo, stream_name, bookmark_key):
         return repo_stream_dict.get(bookmark_key)
     return None
 
+def raise_for_error(resp):
+    try:
+        resp.raise_for_status()
+    except (requests.HTTPError, requests.ConnectionError) as error:
+        try:
+            error_code = resp.status_code
+            try:
+                response_json = resp.json()
+            except Exception:
+                response_json = {}
+
+            message = "HTTP-error-code: {}, Error: {}".format(
+                error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
+
+            exc = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception", GithubException)
+            raise exc(message) from None
+
+        except (ValueError, TypeError):
+            raise GithubException(error) from None
 def calculate_seconds(epoch):
     current = time.time()
     return int(round((epoch - current), 0))
@@ -119,21 +201,17 @@ def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
         resp = session.request(method='get', url=url)
-        if resp.status_code == 401:
-            raise AuthException(resp.text)
-        if resp.status_code == 403:
-            raise AuthException(resp.text)
-        if resp.status_code == 404:
-            raise NotFoundException(resp.text)
-
-        timer.tags[metrics.Tag.http_status_code] = resp.status_code
-        rate_throttling(resp)
-        return resp
+        if resp.status_code != 200:
+            raise_for_error(resp)
+            return None
+        else:
+            timer.tags[metrics.Tag.http_status_code] = resp.status_code
+            rate_throttling(resp)
+            return resp
 
 def authed_get_all_pages(source, url, headers={}):
     while True:
         r = authed_get(source, url, headers)
-        r.raise_for_status()
         yield r
         if 'next' in r.links:
             url = r.links['next']['url']
@@ -230,7 +308,37 @@ def get_catalog():
 
     return {'streams': streams}
 
-def do_discover():
+def verify_repo_access(url_for_repo, repo):
+    try:
+        authed_get("verifying repository access", url_for_repo)
+    except NotFoundException:
+        # throwing user-friendly error message as it checks token access
+        raise NotFoundException("HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)) from None
+
+def verify_org_access(url_for_org):
+    authed_get("verifying repository access", url_for_org)
+
+def verify_access_for_repo_org(config):
+
+    access_token = config['access_token']
+    session.headers.update({'authorization': 'token ' + access_token, 'per_page': '1', 'page': '1'})
+
+    repositories = list(filter(None, config['repository'].split(' ')))
+
+    for repo in repositories:
+        logger.info("Verifying access of repository: %s", repo)
+        org = repo.split('/')[0]
+
+        url_for_repo = "https://api.github.com/repos/{}/collaborators".format(repo)
+        url_for_org = "https://api.github.com/orgs/{}/teams".format(org)
+
+        # Verifying for Repo access
+        verify_repo_access(url_for_repo, repo)
+        # Verifying for Org access
+        verify_org_access(url_for_org)
+
+def do_discover(config):
+    verify_access_for_repo_org(config)
     catalog = get_catalog()
     # dump catalog
     print(json.dumps(catalog, indent=2))
@@ -991,7 +1099,7 @@ def main():
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
     if args.discover:
-        do_discover()
+        do_discover(args.config)
     else:
         catalog = args.properties if args.properties else get_catalog()
         do_sync(args.config, args.state, catalog)
