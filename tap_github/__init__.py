@@ -31,7 +31,6 @@ KEY_PROPERTIES = {
     'issue_events': ['id'],
     'issue_labels': ['id'],
     'issue_milestones': ['id'],
-    'pull_request_reviews': ['id'],
     'commit_comments': ['id'],
     'projects': ['id'],
     'project_columns': ['id'],

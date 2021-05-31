@@ -77,7 +77,6 @@ class TestGithubBase(unittest.TestCase):
             'project_cards',
             'project_columns',
             'projects',
-            'pull_request_reviews',
             'pull_requests',
             'releases',
             'review_comments',
@@ -155,11 +154,6 @@ class TestGithubBase(unittest.TestCase):
                 self.BOOKMARK: {"updated_at"}
             },
             "projects": {
-                self.PRIMARY_KEYS: {"id"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
-            },
-            "pull_request_reviews": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.BOOKMARK: {"updated_at"}
