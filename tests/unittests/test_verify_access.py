@@ -56,15 +56,15 @@ class TestCredentials(unittest.TestCase):
         mocked_request.return_value = get_response(404, json, True)
 
         try:
-            tap_github.verify_org_access("")
+            tap_github.verify_org_access("", "personal-repo")
         except tap_github.NotFoundException as e:
-            self.assertEquals(str(e), "HTTP-error-code: 404, Error: {}".format(json))
+            self.assertEquals(str(e), "HTTP-error-code: 404, Error: 'personal-repo' is not an organization.")
 
     def test_org_bad_request(self, mocked_request):
         mocked_request.return_value = get_response(400, raise_error = True)
 
         try:
-            tap_github.verify_org_access("")
+            tap_github.verify_org_access("", "personal-repo")
         except tap_github.BadRequestException as e:
             self.assertEquals(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
 
@@ -73,7 +73,7 @@ class TestCredentials(unittest.TestCase):
         mocked_request.return_value = get_response(403, json, True)
 
         try:
-            tap_github.verify_org_access("")
+            tap_github.verify_org_access("", "personal-repo")
         except tap_github.AuthException as e:
             self.assertEquals(str(e), "HTTP-error-code: 403, Error: {}".format(json))
 
@@ -82,7 +82,7 @@ class TestCredentials(unittest.TestCase):
         mocked_request.return_value = get_response(401, json, True)
 
         try:
-            tap_github.verify_org_access("")
+            tap_github.verify_org_access("", "personal-repo")
         except tap_github.BadCredentialsException as e:
             self.assertEquals(str(e), "HTTP-error-code: 401, Error: {}".format(json))
 

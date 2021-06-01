@@ -193,7 +193,8 @@ def rate_throttling(response):
         seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
         if seconds_to_sleep > 600:
-            raise RateLimitExceeded("API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep))
+            message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
+            raise RateLimitExceeded(message) from None
 
         logger.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
         time.sleep(seconds_to_sleep)
@@ -315,10 +316,16 @@ def verify_repo_access(url_for_repo, repo):
         authed_get("verifying repository access", url_for_repo)
     except NotFoundException:
         # throwing user-friendly error message as it checks token access
-        raise NotFoundException("HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)) from None
+        message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
+        raise NotFoundException(message) from None
 
-def verify_org_access(url_for_org):
-    authed_get("verifying repository access", url_for_org)
+def verify_org_access(url_for_org, org):
+    try:
+        authed_get("verifying organization access", url_for_org)
+    except NotFoundException:
+        # throwing user-friendly error message as it shows "Not Found" message
+        message = "HTTP-error-code: 404, Error: \'{}\' is not an organization.".format(org)
+        raise NotFoundException(message) from None
 
 def verify_access_for_repo_org(config):
 
@@ -337,7 +344,7 @@ def verify_access_for_repo_org(config):
         # Verifying for Repo access
         verify_repo_access(url_for_repo, repo)
         # Verifying for Org access
-        verify_org_access(url_for_org)
+        verify_org_access(url_for_org, org)
 
 def do_discover(config):
     verify_access_for_repo_org(config)
