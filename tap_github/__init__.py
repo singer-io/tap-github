@@ -156,10 +156,12 @@ def translate_state(state, catalog, repositories):
     return new_state
 
 
-def get_bookmark(state, repo, stream_name, bookmark_key):
+def get_bookmark(state, repo, stream_name, bookmark_key, start_date):
     repo_stream_dict = bookmarks.get_bookmark(state, repo, stream_name)
     if repo_stream_dict:
         return repo_stream_dict.get(bookmark_key)
+    if start_date:
+        return start_date
     return None
 
 def raise_for_error(resp):
@@ -342,7 +344,7 @@ def do_discover(config):
     # dump catalog
     print(json.dumps(catalog, indent=2))
 
-def get_all_teams(schemas, repo_path, state, mdata):
+def get_all_teams(schemas, repo_path, state, mdata, _start_date):
     org = repo_path.split('/')[0]
     with metrics.record_counter('teams') as counter:
         for response in authed_get_all_pages(
@@ -417,8 +419,8 @@ def get_all_team_memberships(team_slug, schemas, repo_path, state, mdata):
     return state
 
 
-def get_all_issue_events(schemas, repo_path, state, mdata):
-    bookmark_value = get_bookmark(state, repo_path, "issue_events", "since")
+def get_all_issue_events(schemas, repo_path, state, mdata, start_date):
+    bookmark_value = get_bookmark(state, repo_path, "issue_events", "since", start_date)
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -452,12 +454,12 @@ def get_all_issue_events(schemas, repo_path, state, mdata):
     return state
 
 
-def get_all_events(schemas, repo_path, state, mdata):
+def get_all_events(schemas, repo_path, state, mdata, start_date):
     # Incremental sync off `created_at`
     # https://developer.github.com/v3/issues/events/#list-events-for-a-repository
     # 'https://api.github.com/repos/{}/issues/events?sort=created_at&direction=desc'.format(repo_path)
 
-    bookmark_value = get_bookmark(state, repo_path, "events", "since")
+    bookmark_value = get_bookmark(state, repo_path, "events", "since", start_date)
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -490,11 +492,11 @@ def get_all_events(schemas, repo_path, state, mdata):
 
     return state
 
-def get_all_issue_milestones(schemas, repo_path, state, mdata):
+def get_all_issue_milestones(schemas, repo_path, state, mdata, start_date):
     # Incremental sync off `due on` ??? confirm.
     # https://developer.github.com/v3/issues/milestones/#list-milestones-for-a-repository
     # 'https://api.github.com/repos/{}/milestones?sort=created_at&direction=desc'.format(repo_path)
-    bookmark_value = get_bookmark(state, repo_path, "issue_milestones", "since")
+    bookmark_value = get_bookmark(state, repo_path, "issue_milestones", "since", start_date)
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -526,7 +528,7 @@ def get_all_issue_milestones(schemas, repo_path, state, mdata):
 
     return state
 
-def get_all_issue_labels(schemas, repo_path, state, mdata):
+def get_all_issue_labels(schemas, repo_path, state, mdata, _start_date):
     # https://developer.github.com/v3/issues/labels/
     # not sure if incremental key
     # 'https://api.github.com/repos/{}/labels?sort=created_at&direction=desc'.format(repo_path)
@@ -550,11 +552,11 @@ def get_all_issue_labels(schemas, repo_path, state, mdata):
 
     return state
 
-def get_all_commit_comments(schemas, repo_path, state, mdata):
+def get_all_commit_comments(schemas, repo_path, state, mdata, start_date):
     # https://developer.github.com/v3/repos/comments/
     # updated_at? incremental
     # 'https://api.github.com/repos/{}/comments?sort=created_at&direction=desc'.format(repo_path)
-    bookmark_value = get_bookmark(state, repo_path, "commit_comments", "since")
+    bookmark_value = get_bookmark(state, repo_path, "commit_comments", "since", start_date)
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -586,8 +588,8 @@ def get_all_commit_comments(schemas, repo_path, state, mdata):
 
     return state
 
-def get_all_projects(schemas, repo_path, state, mdata):
-    bookmark_value = get_bookmark(state, repo_path, "projects", "since")
+def get_all_projects(schemas, repo_path, state, mdata, start_date):
+    bookmark_value = get_bookmark(state, repo_path, "projects", "since", start_date)
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -625,21 +627,21 @@ def get_all_projects(schemas, repo_path, state, mdata):
 
                 # sync project_columns if that schema is present (only there if selected)
                 if schemas.get('project_columns'):
-                    for project_column_rec in get_all_project_columns(project_id, schemas['project_columns'], repo_path, state, mdata):
+                    for project_column_rec in get_all_project_columns(project_id, schemas['project_columns'], repo_path, state, mdata, start_date):
                         singer.write_record('project_columns', project_column_rec, time_extracted=extraction_time)
                         singer.write_bookmark(state, repo_path, 'project_columns', {'since': singer.utils.strftime(extraction_time)})
 
                         # sync project_cards if that schema is present (only there if selected)
                         if schemas.get('project_cards'):
                             column_id = project_column_rec['id']
-                            for project_card_rec in get_all_project_cards(column_id, schemas['project_cards'], repo_path, state, mdata):
+                            for project_card_rec in get_all_project_cards(column_id, schemas['project_cards'], repo_path, state, mdata, start_date):
                                 singer.write_record('project_cards', project_card_rec, time_extracted=extraction_time)
                                 singer.write_bookmark(state, repo_path, 'project_cards', {'since': singer.utils.strftime(extraction_time)})
     return state
 
 
-def get_all_project_cards(column_id, schemas, repo_path, state, mdata):
-    bookmark_value = get_bookmark(state, repo_path, "project_cards", "since")
+def get_all_project_cards(column_id, schemas, repo_path, state, mdata, start_date):
+    bookmark_value = get_bookmark(state, repo_path, "project_cards", "since", start_date)
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -669,8 +671,8 @@ def get_all_project_cards(column_id, schemas, repo_path, state, mdata):
 
     return state
 
-def get_all_project_columns(project_id, schemas, repo_path, state, mdata):
-    bookmark_value = get_bookmark(state, repo_path, "project_columns", "since")
+def get_all_project_columns(project_id, schemas, repo_path, state, mdata, start_date):
+    bookmark_value = get_bookmark(state, repo_path, "project_columns", "since", start_date)
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -700,7 +702,7 @@ def get_all_project_columns(project_id, schemas, repo_path, state, mdata):
 
     return state
 
-def get_all_releases(schemas, repo_path, state, mdata):
+def get_all_releases(schemas, repo_path, state, mdata, _start_date):
     # Releases doesn't seem to have an `updated_at` property, yet can be edited.
     # For this reason and since the volume of release can safely be considered low,
     #    bookmarks were ignored for releases.
@@ -724,12 +726,12 @@ def get_all_releases(schemas, repo_path, state, mdata):
 
     return state
 
-def get_all_pull_requests(schemas, repo_path, state, mdata):
+def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
     '''
     https://developer.github.com/v3/pulls/#list-pull-requests
     '''
 
-    bookmark_value = get_bookmark(state, repo_path, "pull_requests", "since")
+    bookmark_value = get_bookmark(state, repo_path, "pull_requests", "since", start_date)
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
@@ -841,7 +843,7 @@ def get_commits_for_pr(pr_number, pr_id, schema, repo_path, state, mdata):
         return state
 
 
-def get_all_assignees(schema, repo_path, state, mdata):
+def get_all_assignees(schema, repo_path, state, mdata, _start_date):
     '''
     https://developer.github.com/v3/issues/assignees/#list-assignees
     '''
@@ -862,7 +864,7 @@ def get_all_assignees(schema, repo_path, state, mdata):
 
     return state
 
-def get_all_collaborators(schema, repo_path, state, mdata):
+def get_all_collaborators(schema, repo_path, state, mdata, _start_date):
     '''
     https://developer.github.com/v3/repos/collaborators/#list-collaborators
     '''
@@ -883,11 +885,11 @@ def get_all_collaborators(schema, repo_path, state, mdata):
 
     return state
 
-def get_all_commits(schema, repo_path,  state, mdata):
+def get_all_commits(schema, repo_path,  state, mdata, start_date):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
-    bookmark = get_bookmark(state, repo_path, "commits", "since")
+    bookmark = get_bookmark(state, repo_path, "commits", "since", start_date)
     if bookmark:
         query_string = '?since={}'.format(bookmark)
     else:
@@ -910,12 +912,12 @@ def get_all_commits(schema, repo_path,  state, mdata):
 
     return state
 
-def get_all_issues(schema, repo_path,  state, mdata):
+def get_all_issues(schema, repo_path,  state, mdata, start_date):
     '''
     https://developer.github.com/v3/issues/#list-issues-for-a-repository
     '''
 
-    bookmark = get_bookmark(state, repo_path, "issues", "since")
+    bookmark = get_bookmark(state, repo_path, "issues", "since", start_date)
     if bookmark:
         query_string = '&since={}'.format(bookmark)
     else:
@@ -937,12 +939,12 @@ def get_all_issues(schema, repo_path,  state, mdata):
                 counter.increment()
     return state
 
-def get_all_comments(schema, repo_path, state, mdata):
+def get_all_comments(schema, repo_path, state, mdata, start_date):
     '''
     https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository
     '''
 
-    bookmark = get_bookmark(state, repo_path, "comments", "since")
+    bookmark = get_bookmark(state, repo_path, "comments", "since", start_date)
     if bookmark:
         query_string = '&since={}'.format(bookmark)
     else:
@@ -964,7 +966,7 @@ def get_all_comments(schema, repo_path, state, mdata):
                 counter.increment()
     return state
 
-def get_all_stargazers(schema, repo_path, state, mdata):
+def get_all_stargazers(schema, repo_path, state, mdata, _start_date):
     '''
     https://developer.github.com/v3/activity/starring/#list-stargazers
     '''
@@ -1043,6 +1045,7 @@ def do_sync(config, state, catalog):
     access_token = config['access_token']
     session.headers.update({'authorization': 'token ' + access_token})
 
+    start_date = config['start_date'] if 'start_date' in config else None
     # get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
@@ -1074,7 +1077,7 @@ def do_sync(config, state, catalog):
 
                 # sync stream
                 if not sub_stream_ids:
-                    state = sync_func(stream_schema, repo, state, mdata)
+                    state = sync_func(stream_schema, repo, state, mdata, start_date)
 
                 # handle streams with sub streams
                 else:
@@ -1089,7 +1092,7 @@ def do_sync(config, state, catalog):
                                                 sub_stream['key_properties'])
 
                     # sync stream and it's sub streams
-                    state = sync_func(stream_schemas, repo, state, mdata)
+                    state = sync_func(stream_schemas, repo, state, mdata, start_date)
 
                 singer.write_state(state)
 
