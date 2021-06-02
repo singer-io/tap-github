@@ -8,13 +8,25 @@ class GitHubPaginationTest(TestGithubBase):
     def name():
         return "tap_tester_github_pagination_test"
 
+    def get_properties(self, original: bool = True):
+        return_value = {
+            'start_date' : '2020-01-01T00:00:00Z',
+            'repository': 'singer-io/tap-github'
+        }
+        if original:
+            return return_value
+
+        # Reassign start and end dates
+        return_value["start_date"] = self.START_DATE
+        return return_value
+
     def test_run(self):
-        # page size for "commits"
+        # page size for "pull_requests"
         page_size = 30
         conn_id = connections.ensure_connection(self)
 
-        # Checking pagination for "commits" stream
-        expected_streams = ["commits"]
+        # Checking pagination for "pull_requests" stream
+        expected_streams = ["pull_requests"]
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # table and field selection
