@@ -40,7 +40,7 @@ This tap:
 
 3. Create the config file
 
-    Create a JSON file containing the access token you just created
+    Create a JSON file containing the start date, access token you just created
     and the path to one or multiple repositories that you want to extract data from. Each repo path should be space delimited. The repo path is relative to
     `https://github.com/`. For example the path for this repository is
     `singer-io/tap-github`. 
