@@ -13,7 +13,7 @@ from singer import metadata
 session = requests.Session()
 logger = singer.get_logger()
 
-REQUIRED_CONFIG_KEYS = ['access_token', 'repository']
+REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
 
 KEY_PROPERTIES = {
     'commits': ['sha'],
