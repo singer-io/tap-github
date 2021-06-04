@@ -35,7 +35,7 @@ class TestKeyErrorSlug(unittest.TestCase):
             "breadcrumb": [ "properties", "name"],
             "metadata": {"inclusion": "available"}
         }]
-        tap_github.get_all_teams(schemas, "tap-github", {}, mdata)
+        tap_github.get_all_teams(schemas, "tap-github", {}, mdata, "")
         self.assertEquals(mocked_team_members.call_count, 1)
 
     @mock.patch("tap_github.__init__.get_all_team_members")
@@ -58,7 +58,7 @@ class TestKeyErrorSlug(unittest.TestCase):
             "breadcrumb": [ "properties", "name"],
             "metadata": {"inclusion": "available"}
         }]
-        tap_github.get_all_teams(schemas, "tap-github", {}, mdata)
+        tap_github.get_all_teams(schemas, "tap-github", {}, mdata, "")
         self.assertEquals(mocked_team_members.call_count, 0)
 
     @mock.patch("tap_github.__init__.get_all_team_members")
@@ -81,7 +81,7 @@ class TestKeyErrorSlug(unittest.TestCase):
             "breadcrumb": [ "properties", "name"],
             "metadata": {"inclusion": "available"}
         }]
-        tap_github.get_all_teams(schemas, "tap-github", {}, mdata)
+        tap_github.get_all_teams(schemas, "tap-github", {}, mdata, "")
         self.assertEquals(mocked_team_members.call_count, 1)
 
     @mock.patch("tap_github.__init__.get_all_team_members")
@@ -104,7 +104,7 @@ class TestKeyErrorSlug(unittest.TestCase):
             "breadcrumb": [ "properties", "name"],
             "metadata": {"inclusion": "available"}
         }]
-        tap_github.get_all_teams(schemas, "tap-github", {}, mdata)
+        tap_github.get_all_teams(schemas, "tap-github", {}, mdata, "")
         self.assertEquals(mocked_team_members.call_count, 0)
 
 @mock.patch("tap_github.__init__.authed_get_all_pages")
@@ -130,7 +130,7 @@ class TestKeyErrorUser(unittest.TestCase):
           "breadcrumb": ["properties", "starred_at"],
           "metadata": {"inclusion": "available"}
         }]
-        tap_github.get_all_stargazers(schemas, "tap-github", {}, mdata)
+        tap_github.get_all_stargazers(schemas, "tap-github", {}, mdata, "")
         self.assertEquals(mocked_write_records.call_count, 1)
 
     @mock.patch("singer.write_record")
@@ -153,5 +153,5 @@ class TestKeyErrorUser(unittest.TestCase):
           "breadcrumb": ["properties", "starred_at"],
           "metadata": {"inclusion": "available"}
         }]
-        tap_github.get_all_stargazers(schemas, "tap-github", {}, mdata)
+        tap_github.get_all_stargazers(schemas, "tap-github", {}, mdata, "")
         self.assertEquals(mocked_write_records.call_count, 1)

@@ -9,6 +9,6 @@ class TestStargazersFullTable(unittest.TestCase):
 
         schemas = {"stargazers": "None"}
 
-        tap_github.get_all_stargazers(schemas, "tap-github", {}, {})
+        tap_github.get_all_stargazers(schemas, "tap-github", {}, {}, "")
 
         mocked_request.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/stargazers", mock.ANY)

@@ -49,12 +49,21 @@ class TestExceptionHandling(unittest.TestCase):
             self.assertEquals(str(e), "HTTP-error-code: 403, Error: User doesn't have permission to access the resource.")
     
     def test_404_error(self, mocked_request):
-        mocked_request.return_value = get_response(404, raise_error = True)
+        json = {"message": "Not Found", "documentation_url": "https:/docs.github.com/"}
+        mocked_request.return_value = get_response(404, json = json, raise_error = True)
 
         try:
             tap_github.authed_get("", "")
         except tap_github.NotFoundException as e:
-            self.assertEquals(str(e), "HTTP-error-code: 404, Error: The resource you have specified cannot be found.")
+            self.assertEquals(str(e), "HTTP-error-code: 404, Error: The resource you have specified cannot be found. Please refer '{}' for more details.".format(json.get("documentation_url")))
+
+    def test_404_error_for_teams(self, mocked_request):
+        json = {"message": "Not Found", "documentation_url": "https:/docs.github.com/"}
+
+        try:
+            tap_github.raise_for_error(get_response(404, json = json, raise_error = True), "teams")
+        except tap_github.NotFoundException as e:
+            self.assertEquals(str(e), "HTTP-error-code: 404, Error: The resource you have specified cannot be found or the organization you specified is a personal space. Please refer '{}' for more details.".format(json.get("documentation_url")))
 
     def test_500_error(self, mocked_request):
         mocked_request.return_value = get_response(500, raise_error = True)

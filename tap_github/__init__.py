@@ -97,7 +97,7 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     },
     404: {
         "raise_exception": NotFoundException,
-        "message": "The resource you have specified cannot be found."
+        "message": "The resource you have specified cannot be found"
     },
     409: {
         "raise_exception": ConflictError,
@@ -164,7 +164,7 @@ def get_bookmark(state, repo, stream_name, bookmark_key, start_date):
         return start_date
     return None
 
-def raise_for_error(resp):
+def raise_for_error(resp, source):
     try:
         resp.raise_for_status()
     except (requests.HTTPError, requests.ConnectionError) as error:
@@ -175,14 +175,20 @@ def raise_for_error(resp):
             except Exception:
                 response_json = {}
 
-            message = "HTTP-error-code: {}, Error: {}".format(
-                error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
+            if error_code == 404:
+                details = ERROR_CODE_EXCEPTION_MAPPING.get(error_code).get("message")
+                details += ' or the organization you specified is a personal space' if source == "teams" else ""
+                message = "HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details.".format(details, response_json.get("documentation_url"))
+            else:
+                message = "HTTP-error-code: {}, Error: {}".format(
+                    error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
 
             exc = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception", GithubException)
             raise exc(message) from None
 
         except (ValueError, TypeError):
             raise GithubException(error) from None
+
 def calculate_seconds(epoch):
     current = time.time()
     return int(round((epoch - current), 0))
@@ -204,7 +210,7 @@ def authed_get(source, url, headers={}):
         session.headers.update(headers)
         resp = session.request(method='get', url=url)
         if resp.status_code != 200:
-            raise_for_error(resp)
+            raise_for_error(resp, source)
             return None
         else:
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
@@ -318,15 +324,7 @@ def verify_repo_access(url_for_repo, repo):
         message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
         raise NotFoundException(message) from None
 
-def verify_org_access(url_for_org, org):
-    try:
-        authed_get("verifying organization access", url_for_org)
-    except NotFoundException:
-        # throwing user-friendly error message as it shows "Not Found" message
-        message = "HTTP-error-code: 404, Error: \'{}\' is not an organization.".format(org)
-        raise NotFoundException(message) from None
-
-def verify_access_for_repo_org(config):
+def verify_access_for_repo(config):
 
     access_token = config['access_token']
     session.headers.update({'authorization': 'token ' + access_token, 'per_page': '1', 'page': '1'})
@@ -335,18 +333,14 @@ def verify_access_for_repo_org(config):
 
     for repo in repositories:
         logger.info("Verifying access of repository: %s", repo)
-        org = repo.split('/')[0]
 
-        url_for_repo = "https://api.github.com/repos/{}/collaborators".format(repo)
-        url_for_org = "https://api.github.com/orgs/{}/teams".format(org)
+        url_for_repo = "https://api.github.com/repos/{}/commits".format(repo)
 
         # Verifying for Repo access
         verify_repo_access(url_for_repo, repo)
-        # Verifying for Org access
-        verify_org_access(url_for_org, org)
 
 def do_discover(config):
-    verify_access_for_repo_org(config)
+    verify_access_for_repo(config)
     catalog = get_catalog()
     # dump catalog
     print(json.dumps(catalog, indent=2))
