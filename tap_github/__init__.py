@@ -212,6 +212,7 @@ def get_catalog():
     return {'streams': streams}
 
 def do_discover():
+
     catalog = get_catalog()
     # dump catalog
     print(json.dumps(catalog, indent=2))

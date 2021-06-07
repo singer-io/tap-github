@@ -14,10 +14,12 @@ def capture_output(func, *args, **kwargs):
 
     sys.stdout = temp_out
 
+    getbuffer = kwargs.pop('getbuffer', None)
     func(*args, **kwargs)
 
     sys.stdout = sys.__stdout__
-
+    if getbuffer:
+        return temp_out
     return temp_out.getvalue()
 
 
