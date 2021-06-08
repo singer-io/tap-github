@@ -18,6 +18,10 @@ setup(name='tap-github',
               'pylint',
               'ipdb',
               'nose',
+          ],
+          'test': [
+              'pytest',
+              'target-stitch'
           ]
       },
       entry_points='''

@@ -4,6 +4,7 @@ from alu_tester import BaseTest
 from alu_tester import capture_output
 from alu_tester import partition
 from alu_tester import user
+from alu_tester import cli
 import target_stitch
 import json
 import logging
@@ -27,7 +28,11 @@ class GithubBaseTest(BaseTest):
     def test_run(self):
 
         # Run Discovery
-        raw_catalog = capture_output(tap_github.do_discover)
+        #raw_catalog = capture_output(tap_github.do_discover)
+        config = {'user-agent': 'alu@talend.com',
+                  'access_token': os.getenv("TAP_GITHUB_TOKEN"),
+                  'repository': 'singer-io/tap-github',}
+        raw_catalog = cli.run_discovery(config)
 
         catalog = json.loads(raw_catalog)
 
@@ -37,10 +42,6 @@ class GithubBaseTest(BaseTest):
 
 
         selected_catalog = user.select_all_streams(catalog)
-
-        config = {'user-agent': 'alu@talend.com',
-                  'access_token': os.getenv("TAP_GITHUB_TOKEN"),
-                  'repository': 'singer-io/tap-github',}
 
         # singer_messages = capture_output(tap_github.do_sync,
         #                                  config,
