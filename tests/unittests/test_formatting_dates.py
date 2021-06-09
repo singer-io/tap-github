@@ -7,6 +7,7 @@ class Mockresponse:
     def __init__(self, resp, not_list=False):
         self.not_list = not_list
         self.json_data = resp
+        self.content = "github"
     
     def json(self):
         if self.not_list:

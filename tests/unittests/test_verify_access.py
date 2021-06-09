@@ -9,6 +9,7 @@ class Mockresponse:
         self.raise_error = raise_error
         self.text = json
         self.headers = headers
+        self.content = "github"
 
     def raise_for_status(self):
         if not self.raise_error:

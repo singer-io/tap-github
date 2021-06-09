@@ -5,6 +5,7 @@ import tap_github.__init__ as tap_github
 class Mockresponse:
     def __init__(self, resp):
         self.json_data = resp
+        self.content = "github"
 
     def json(self):
         return [(self.json_data)]

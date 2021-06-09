@@ -165,30 +165,30 @@ def get_bookmark(state, repo, stream_name, bookmark_key, start_date):
     return None
 
 def raise_for_error(resp, source):
+
+    content_length = len(resp.content)
+    if content_length == 0:
+        # There is nothing we can do here since Github has neither sent
+        # us a 2xx response nor a response content.
+        return
+
+    error_code = resp.status_code
     try:
-        resp.raise_for_status()
-    except (requests.HTTPError, requests.ConnectionError) as error:
-        try:
-            error_code = resp.status_code
-            try:
-                response_json = resp.json()
-            except Exception:
-                response_json = {}
+        response_json = resp.json()
+    except Exception:
+        response_json = {}
 
-            if error_code == 404:
-                details = ERROR_CODE_EXCEPTION_MAPPING.get(error_code).get("message")
-                if source == "teams":
-                    details += ' or the organization you specified is a personal space'
-                message = "HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details.".format(details, response_json.get("documentation_url"))
-            else:
-                message = "HTTP-error-code: {}, Error: {}".format(
-                    error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
+    if error_code == 404:
+        details = ERROR_CODE_EXCEPTION_MAPPING.get(error_code).get("message")
+        if source == "teams":
+            details += ' or the organization you specified is a personal space'
+        message = "HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details.".format(details, response_json.get("documentation_url"))
+    else:
+        message = "HTTP-error-code: {}, Error: {}".format(
+            error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
 
-            exc = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception", GithubException)
-            raise exc(message) from None
-
-        except (ValueError, TypeError):
-            raise GithubException(error) from None
+    exc = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception", GithubException)
+    raise exc(message) from None
 
 def calculate_seconds(epoch):
     current = time.time()
