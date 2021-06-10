@@ -64,7 +64,7 @@ class TestExceptionHandling(unittest.TestCase):
         try:
             tap_github.raise_for_error(get_response(404, json = json, raise_error = True), "teams")
         except tap_github.NotFoundException as e:
-            self.assertEquals(str(e), "HTTP-error-code: 404, Error: The resource you have specified cannot be found or the organization you specified is a personal space. Please refer '{}' for more details.".format(json.get("documentation_url")))
+            self.assertEquals(str(e), "HTTP-error-code: 404, Error: The resource you have specified cannot be found or it is a personal account repository. Please refer '{}' for more details.".format(json.get("documentation_url")))
 
     def test_500_error(self, mocked_request):
         mocked_request.return_value = get_response(500, raise_error = True)

@@ -181,7 +181,7 @@ def raise_for_error(resp, source):
     if error_code == 404:
         details = ERROR_CODE_EXCEPTION_MAPPING.get(error_code).get("message")
         if source == "teams":
-            details += ' or the organization you specified is a personal space'
+            details += ' or it is a personal account repository'
         message = "HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details.".format(details, response_json.get("documentation_url"))
     else:
         message = "HTTP-error-code: {}, Error: {}".format(
