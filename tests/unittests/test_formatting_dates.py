@@ -7,6 +7,7 @@ class Mockresponse:
     def __init__(self, resp, not_list=False):
         self.not_list = not_list
         self.json_data = resp
+        self.content = "github"
     
     def json(self):
         if self.not_list:
@@ -34,7 +35,7 @@ class TestRateLimit(unittest.TestCase):
         init_state = {}
         repo_path = "singer-io/tap-github"
 
-        final_state = tap_github.get_all_issue_milestones({}, repo_path, init_state, {})
+        final_state = tap_github.get_all_issue_milestones({}, repo_path, init_state, {}, "")
         # as we will get 1 record and initial bookmark is empty, checking that if bookmark exists in state file returned
         self.assertTrue(final_state["bookmarks"][repo_path]["issue_milestones"]["since"])
 
@@ -51,7 +52,7 @@ class TestRateLimit(unittest.TestCase):
         init_state = {'bookmarks': {'singer-io/tap-github': {'issue_milestones': {'since': '2021-05-05T07:20:36.887412Z'}}}}
         init_bookmark = singer.utils.strptime_to_utc(init_state["bookmarks"][repo_path]["issue_milestones"]["since"])
 
-        final_state = tap_github.get_all_issue_milestones({}, repo_path, init_state, {})
+        final_state = tap_github.get_all_issue_milestones({}, repo_path, init_state, {}, "")
         last_bookmark = singer.utils.strptime_to_utc(final_state["bookmarks"][repo_path]["issue_milestones"]["since"])
         # as we will get 1 record, final bookmark will be greater than initial bookmark
         self.assertGreater(last_bookmark, init_bookmark)
@@ -70,7 +71,7 @@ class TestRateLimit(unittest.TestCase):
         init_state = {'bookmarks': {'singer-io/tap-github': {'issue_milestones': {'since': '2021-05-05T07:20:36.887412Z'}}}}
         init_bookmark = singer.utils.strptime_to_utc(init_state["bookmarks"][repo_path]["issue_milestones"]["since"])
 
-        final_state = tap_github.get_all_issue_milestones({}, repo_path, init_state, {})
+        final_state = tap_github.get_all_issue_milestones({}, repo_path, init_state, {}, "")
         last_bookmark = singer.utils.strptime_to_utc(final_state["bookmarks"][repo_path]["issue_milestones"]["since"])
         # as we will get 1 record, final bookmark will be greater than initial bookmark
         self.assertGreater(last_bookmark, init_bookmark)
@@ -88,7 +89,7 @@ class TestRateLimit(unittest.TestCase):
         init_state = {'bookmarks': {'singer-io/tap-github': {'issue_milestones': {'since': '2021-05-08T07:20:36.887412Z'}}}}
         init_bookmark = init_state["bookmarks"][repo_path]["issue_milestones"]["since"]
 
-        final_state = tap_github.get_all_issue_milestones({}, repo_path, init_state, {})
+        final_state = tap_github.get_all_issue_milestones({}, repo_path, init_state, {}, "")
         # as we will get 0 records, initial and final bookmark will be same
         self.assertEquals(init_bookmark, final_state["bookmarks"][repo_path]["issue_milestones"]["since"])
 
@@ -111,7 +112,7 @@ class TestRateLimit(unittest.TestCase):
         init_state = {'bookmarks': {'singer-io/tap-github': {'issue_milestones': {'since': '2021-05-08T07:20:36.887412Z'}}}}
         init_bookmark = singer.utils.strptime_to_utc(init_state["bookmarks"][repo_path]["issue_milestones"]["since"])
 
-        final_state = tap_github.get_all_issue_milestones({}, repo_path, init_state, {})
+        final_state = tap_github.get_all_issue_milestones({}, repo_path, init_state, {}, "")
         last_bookmark = singer.utils.strptime_to_utc(final_state["bookmarks"][repo_path]["issue_milestones"]["since"])
         # as we will get 2 record, final bookmark will be greater than initial bookmark
         self.assertGreater(last_bookmark, init_bookmark)
