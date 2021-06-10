@@ -80,11 +80,10 @@ class GithubStartDateTest(TestGithubBase):
         for stream in expected_streams:
 
             # There are no data or not enough data for testing for below streams
-            # pull_request_review -> always skipped during sync mode
             # commit_comments, releases -> No data in tap-github repositery
             # issue_milestones -> One data for isuue_milestones so not able to pass incremental cases
             # projects, projects_columns, project_cards -> One record for project so not able to pass incremental cases
-            if stream in ["pull_request_reviews", "commit_comments", "releases", "issue_milestones", "projects", "project_columns", "project_cards"]:
+            if stream in ["commit_comments", "releases", "issue_milestones", "projects", "project_columns", "project_cards"]:
                 continue
             
             with self.subTest(stream=stream):
