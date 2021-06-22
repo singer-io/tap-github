@@ -18,7 +18,7 @@ class GithubStartDateTest(TestGithubBase):
         """Instantiate start date according to the desired data set and run the test"""
 
         self.start_date_1 = '2020-04-01T00:00:00Z'
-        self.start_date_2 = self.timedelta_formatted(self.start_date_1, days=365)
+        self.start_date_2 = '2021-06-10T00:00:00Z'
 
         start_date_1_epoch = self.dt_to_ts(self.start_date_1)
         start_date_2_epoch = self.dt_to_ts(self.start_date_2)
@@ -83,7 +83,7 @@ class GithubStartDateTest(TestGithubBase):
             # commit_comments, releases -> No data in tap-github repositery
             # issue_milestones -> One data for isuue_milestones so not able to pass incremental cases
             # projects, projects_columns, project_cards -> One record for project so not able to pass incremental cases
-            if stream in ["commit_comments", "releases", "issue_milestones", "projects", "project_columns", "project_cards", "events"]:
+            if stream in ["commit_comments", "releases", "issue_milestones", "projects", "project_columns", "project_cards",]:
                 continue
             
             with self.subTest(stream=stream):
