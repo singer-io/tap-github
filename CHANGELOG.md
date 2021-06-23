@@ -1,5 +1,14 @@
 # Changelog
 
+# 1.10.0
+  * Handle rate limiting [#113](https://github.com/singer-io/tap-github/pull/113)
+  * Handle `None` date times in the Issue Milestones Stream [#114](https://github.com/singer-io/tap-github/pull/114)
+  * Change the Stargazers Stream to be Full Table replication [#118](https://github.com/singer-io/tap-github/pull/118)
+  * Log an error message if an organization cannot be found [#121](https://github.com/singer-io/tap-github/pull/121)
+  * Bump `singer-python` dependency to `v5.12.1` [#117](https://github.com/singer-io/tap-github/pull/117)
+  * Remove stream `pull_request_reviews` [#117](https://github.com/singer-io/tap-github/pull/117)
+  * Add API access check to discovery mode [#123](https://github.com/singer-io/tap-github/pull/123)
+
 # 1.9.2
   * Adds `base` to `pull_requests` schema [#109](https://github.com/singer-io/tap-github/pull/109)
 
