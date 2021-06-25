@@ -13,7 +13,7 @@ from singer import metadata
 session = requests.Session()
 logger = singer.get_logger()
 
-REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
+REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'organization']
 
 KEY_PROPERTIES = {
     'commits': ['sha'],
@@ -994,6 +994,38 @@ def get_all_stargazers(schema, repo_path, state, mdata, _start_date):
 
     return state
 
+def get_all_repositories(org: str, exclude: list):
+    """
+    https://docs.github.com/en/rest/reference/repos
+    """
+
+    type = "private"
+    headers = {'Accept': 'application/vnd.github.v3+json'}
+    per_page = 100
+
+    with metrics.record_counter('repositories') as counter:
+        repos = []
+        for response in authed_get_all_pages(
+            'repositories',
+            f"https://api.github.com/orgs/{org}/repos?type={type}&per_page={per_page}",
+            headers
+        ):
+            repositories = response.json()
+            for repository in repositories:
+                if repository['name'] in exclude or repository['archived'] or repository['disabled']:
+                    continue
+                repo = {
+                    'id': repository['id'],
+                    'name': repository['name'],
+                    'full_name': repository['full_name'],
+                    'size': repository['size'],
+                    'updated_at': repository['updated_at']
+                }
+                repos.append(repo)
+                counter.increment()
+
+    return repos
+
 def get_selected_streams(catalog):
     '''
     Gets selected streams.  Checks schema's 'selected'
@@ -1052,7 +1084,18 @@ def do_sync(config, state, catalog):
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
 
-    repositories = list(filter(None, config['repository'].split(' ')))
+    organization = config['organization']
+    repos_include = config.get('repos_include')
+    if repos_include:
+        repositories = list(map(
+            lambda r: f"{organization}/{r}",
+            filter(None, repos_include.split(' '))
+        ))
+    else:
+        repositories = map(
+            lambda r: r['full_name'],
+            get_all_repositories(organization, config.get('repos_exclude'))
+        )
 
     state = translate_state(state, catalog, repositories)
     singer.write_state(state)
