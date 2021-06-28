@@ -1,8 +1,12 @@
-# tap-github
+# pipelinewise-tap-github
 
-This is a [Singer](https://singer.io) tap that produces JSON-formatted
-data from the GitHub API following the [Singer
-spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
+[![PyPI version](https://badge.fury.io/py/pipelinewise-tap-github.svg)](https://badge.fury.io/py/pipelinewise-tap-github)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pipelinewise-tap-github.svg)](https://pypi.org/project/pipelinewise-tap-github/)
+[![License: MIT](https://img.shields.io/badge/License-AGPLv3-yellow.svg)](https://opensource.org/licenses/AGPL-3.0)
+
+[Singer](https://singer.io) tap that produces JSON-formatted data from the GitHub API following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
+
+This is a [PipelineWise](https://transferwise.github.io/pipelinewise) compatible tap connector.
 
 This tap:
 - Pulls raw data from the [GitHub REST API](https://developer.github.com/v3/)
@@ -26,9 +30,10 @@ This tap:
    We recommend using a virtualenv:
 
     ```bash
-    > virtualenv -p python3 venv
-    > source venv/bin/activate
-    > pip install tap-github
+    python3 -m venv venv
+    . venv/bin/activate
+    pip install --upgrade pip
+    pip install .
     ```
 
 2. Create a GitHub access token
@@ -82,6 +87,18 @@ This tap:
     tap-github --config config.json --properties properties.json
     ```
 
----
 
-Copyright &copy; 2018 Stitch
+## To run tests
+
+1. Install python test dependencies in a virtual env and run nose unit and integration tests
+```
+  python3 -m venv venv
+  . venv/bin/activate
+  pip install --upgrade pip
+  pip install -e .[test]
+```
+
+2. To run unit tests:
+```
+  pytest tests/unittests
+```

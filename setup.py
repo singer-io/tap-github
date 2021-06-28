@@ -2,20 +2,29 @@
 
 from setuptools import setup, find_packages
 
-setup(name='tap-github',
-      version='1.10.0',
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+setup(name='pipelinewise-tap-github',
+      version='0.0.1',
       description='Singer.io tap for extracting data from the GitHub API',
-      author='Stitch',
-      url='http://singer.io',
-      classifiers=['Programming Language :: Python :: 3 :: Only'],
+      long_description=long_description,
+      long_description_content_type='text/markdown',
+      author='Wise',
+      url='https://github.com/transferwise/pipelinewise-tap-github',
+      classifiers=[
+          'License :: OSI Approved :: GNU Affero General Public License v3',
+          'Programming Language :: Python :: 3 :: Only'
+      ],
       py_modules=['tap_github'],
       install_requires=[
-          'singer-python==5.12.1',
+          'pipelinewise-singer-python==1.*',
           'requests==2.20.0'
       ],
       extras_require={
-          'dev': [
+          'test': [
               'pylint',
+              'pytest',
               'ipdb',
               'nose',
           ]
