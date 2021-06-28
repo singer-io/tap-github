@@ -4,12 +4,12 @@ import unittest
 import requests
 
 class Mockresponse:
-    def __init__(self, status_code, json, raise_error, headers={'X-RateLimit-Remaining': 1}, text=None):
+    def __init__(self, status_code, json, raise_error, headers={'X-RateLimit-Remaining': 1}, text=None, content=None):
         self.status_code = status_code
         self.raise_error = raise_error
         self.text = json
         self.headers = headers
-        self.content = "github"
+        self.content = content if content is not None else 'github'
 
     def raise_for_status(self):
         if not self.raise_error:
@@ -20,11 +20,19 @@ class Mockresponse:
     def json(self):
         return self.text
 
-def get_response(status_code, json={}, raise_error=False):
-    return Mockresponse(status_code, json, raise_error)
+def get_response(status_code, json={}, raise_error=False, content=None):
+    return Mockresponse(status_code, json, raise_error, content=content)
 
 @mock.patch("requests.Session.request")
 class TestExceptionHandling(unittest.TestCase):
+    def test_zero_content_length(self, mocked_request):
+        mocked_request.return_value = get_response(400, raise_error = True, content='')
+
+        try:
+            tap_github.authed_get("", "")
+        except tap_github.BadRequestException as e:
+            self.assertEquals(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
+
     def test_400_error(self, mocked_request):
         mocked_request.return_value = get_response(400, raise_error = True)
         
