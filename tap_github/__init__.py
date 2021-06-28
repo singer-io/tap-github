@@ -165,13 +165,6 @@ def get_bookmark(state, repo, stream_name, bookmark_key, start_date):
     return None
 
 def raise_for_error(resp, source):
-
-    content_length = len(resp.content)
-    if content_length == 0:
-        # There is nothing we can do here since Github has neither sent
-        # us a 2xx response nor a response content.
-        return
-
     error_code = resp.status_code
     try:
         response_json = resp.json()
@@ -212,11 +205,9 @@ def authed_get(source, url, headers={}):
         resp = session.request(method='get', url=url)
         if resp.status_code != 200:
             raise_for_error(resp, source)
-            return None
-        else:
-            timer.tags[metrics.Tag.http_status_code] = resp.status_code
-            rate_throttling(resp)
-            return resp
+        timer.tags[metrics.Tag.http_status_code] = resp.status_code
+        rate_throttling(resp)
+        return resp
 
 def authed_get_all_pages(source, url, headers={}):
     while True:

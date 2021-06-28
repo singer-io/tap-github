@@ -24,17 +24,15 @@ def get_response(status_code, json={}, raise_error=False, content=None):
     return Mockresponse(status_code, json, raise_error, content=content)
 
 @mock.patch("requests.Session.request")
-class TestBug(unittest.TestCase):
-
-    def test_for_bug_in_raise_for_error(self, mocked_request):
+class TestExceptionHandling(unittest.TestCase):
+    def test_zero_content_length(self, mocked_request):
         mocked_request.return_value = get_response(400, raise_error = True, content='')
 
-        with self.assertRaises(tap_github.GithubException):
-            [x for x in tap_github.get_all_teams(None, "", None, None, None)]
+        try:
+            tap_github.authed_get("", "")
+        except tap_github.BadRequestException as e:
+            self.assertEquals(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
 
-
-@mock.patch("requests.Session.request")
-class TestExceptionHandling(unittest.TestCase):
     def test_400_error(self, mocked_request):
         mocked_request.return_value = get_response(400, raise_error = True)
         
