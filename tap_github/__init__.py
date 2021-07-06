@@ -24,6 +24,7 @@ KEY_PROPERTIES = {
     'pull_requests':['id'],
     'stargazers': ['user_id'],
     'releases': ['id'],
+    'repositories': ['id'],
     'reviews': ['id'],
     'review_comments': ['id'],
     'pr_commits': ['id'],
@@ -719,6 +720,31 @@ def get_all_releases(schemas, repo_path, state, mdata, _start_date):
 
     return state
 
+def get_a_repository(schemas, repo_path, state, mdata, _start_date):
+    '''
+    Fetch a single record about the repo at repo_path. This is unusual in that it
+    loads a single record, not a list. It will work off the list of repos defined
+    in the config file.
+    '''
+
+    with metrics.record_counter('repositories') as counter:
+        for response in authed_get_all_pages(
+                'repositories',
+                'https://api.github.com/repos/{}'.format(repo_path)
+        ):
+            r = response.json()
+            extraction_time = singer.utils.now()
+            r['_sdc_repository'] = repo_path
+
+            # transform and write release record
+            with singer.Transformer() as transformer:
+                rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+            singer.write_record('repositories', rec, time_extracted=extraction_time)
+            singer.write_bookmark(state, repo_path, 'repositories', {'since': singer.utils.strftime(extraction_time)})
+            counter.increment()
+
+    return state
+
 def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
     '''
     https://developer.github.com/v3/pulls/#list-pull-requests
@@ -1018,6 +1044,7 @@ SYNC_FUNCTIONS = {
     'collaborators': get_all_collaborators,
     'pull_requests': get_all_pull_requests,
     'releases': get_all_releases,
+    'repositories': get_a_repository,
     'stargazers': get_all_stargazers,
     'events': get_all_events,
     'issue_events': get_all_issue_events,
