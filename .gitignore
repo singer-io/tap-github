@@ -97,3 +97,6 @@ properties.json
 
 # Jetbrains IDE
 .idea
+
+# OS
+*.DS_Store

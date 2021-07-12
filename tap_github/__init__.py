@@ -1,19 +1,21 @@
-import argparse
-import os
-import json
 import collections
+import json
+import os
 import time
+
 import requests
 import singer
 import singer.bookmarks as bookmarks
 import singer.metrics as metrics
-
 from singer import metadata
 
 session = requests.Session()
 logger = singer.get_logger()
 
-REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
+# repository is deprecated. Use instead:
+# organization and repos_exclude
+# or repos_include instead
+REQUIRED_CONFIG_KEYS = ['start_date', 'access_token']
 
 KEY_PROPERTIES = {
     'commits': ['sha'],
@@ -45,6 +47,9 @@ class GithubException(Exception):
     pass
 
 class BadCredentialsException(GithubException):
+    pass
+
+class InvalidParametersException(Exception):
     pass
 
 class AuthException(GithubException):
@@ -330,7 +335,7 @@ def verify_access_for_repo(config):
     access_token = config['access_token']
     session.headers.update({'authorization': 'token ' + access_token, 'per_page': '1', 'page': '1'})
 
-    repositories = list(filter(None, config['repository'].split(' ')))
+    repositories = get_repos_from_config(config)
 
     for repo in repositories:
         logger.info("Verifying access of repository: %s", repo)
@@ -994,6 +999,59 @@ def get_all_stargazers(schema, repo_path, state, mdata, _start_date):
 
     return state
 
+
+def get_all_repositories(org: str, exclude=[], include_archived=False, include_disabled=False) -> dict:
+    '''
+    https://docs.github.com/en/rest/reference/repos
+    '''
+
+    headers = {'Accept': 'application/vnd.github.v3+json'}
+    per_page = 100
+    repos = []
+    with metrics.record_counter('repositories') as counter:
+        for response in authed_get_all_pages(
+            'repositories',
+            f"https://api.github.com/orgs/{org}/repos?per_page={per_page}",
+            headers
+        ):
+            repositories = response.json()
+            for repository in repositories:
+
+                if should_skip_repo(repository, exclude, include_archived, include_disabled):
+                    continue
+
+                repo = {
+                    'id': repository['id'],
+                    'name': repository.get('name'),
+                    'full_name': repository['full_name'],
+                    'size': repository['size'],
+                    'updated_at': repository['updated_at']
+                }
+                repos.append(repo)
+                counter.increment()
+
+    return repos
+
+
+def should_skip_repo(repository, exclude, include_archived: bool, include_disabled: bool):
+    name = repository.get('name')
+    is_archived = repository.get('archived', False)
+    is_disabled = repository.get('disabled', False)
+
+    if name in exclude:
+        return True
+
+    if is_archived and not include_archived:
+        return True
+
+    if is_disabled and not include_disabled:
+        return True
+
+    return False
+
+
+
+
 def get_selected_streams(catalog):
     '''
     Gets selected streams.  Checks schema's 'selected'
@@ -1052,7 +1110,7 @@ def do_sync(config, state, catalog):
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
 
-    repositories = list(filter(None, config['repository'].split(' ')))
+    repositories = get_repos_from_config(config)
 
     state = translate_state(state, catalog, repositories)
     singer.write_state(state)
@@ -1097,6 +1155,45 @@ def do_sync(config, state, catalog):
                     state = sync_func(stream_schemas, repo, state, mdata, start_date)
 
                 singer.write_state(state)
+
+
+def _validate_repo_config(config):
+    organization = config.get('organization')
+    repository = config.get('repository') #TODO repository is deprecated
+    repos_include = config.get('repos_include')
+    repos_exclude = config.get('repos_exclude')
+
+    if (not repository and not repos_include) and not organization:
+        raise InvalidParametersException("organization is required when repos_include isn't present")
+
+    if repos_exclude and not organization:
+        raise InvalidParametersException("repos_exclude requires organization")
+
+
+def get_repos_from_config(config) -> list:
+    _validate_repo_config(config)
+    organization = config.get('organization')
+
+    repos_include = [repo for repo in config.get('repos_include', '').split(' ') if repo] \
+        + [repo for repo in config.get('repository', '').split(' ') if repo]
+
+    repos_exclude = [repo for repo in config.get('repos_exclude', '').split(' ') if repo]
+
+    if repos_include:
+        return [_get_repository_full_name(organization, r) for r in repos_include]
+    else:
+        include_archived = config.get('include_archived', False)
+        include_disabled = config.get('include_disabled', False)
+        repos = get_all_repositories(organization, repos_exclude, include_archived, include_disabled)
+
+        return [r['full_name'] for r in repos]
+
+
+def _get_repository_full_name(org, repo_name):
+    if '/' in repo_name:
+        return repo_name
+    else:
+        return f"{org}/{repo_name}"
 
 @singer.utils.handle_top_exception(logger)
 def main():

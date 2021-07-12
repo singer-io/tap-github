@@ -45,16 +45,37 @@ This tap:
 
 3. Create the config file
 
-    Create a JSON file containing the start date, access token you just created
-    and the path to one or multiple repositories that you want to extract data from. Each repo path should be space delimited. The repo path is relative to
-    `https://github.com/`. For example the path for this repository is
-    `singer-io/tap-github`. 
+    Create a JSON file containing the required fields and/or the optional ones.
+    You can decide between allow-list or deny-list strategy combining organization with repos_include or repos_exclude.
 
-    ```json
-    {"access_token": "your-access-token",
-     "repository": "singer-io/tap-github singer-io/getting-started",
-     "start_date": "2021-01-01T00:00:00Z"}
-    ```
+Config                      |Required?  |Description
+:---------------------------|:---------:|:---------------
+access_token                |yes        |The access token to access github api
+start_date                  |yes        |The date inclusive to start extracting the data
+organization                |no         |The organization you want to extract the data from
+repos_include               |no         |Allow list strategy to extract selected repos data from organization   
+repos_exclude               |no         |Deny list to extract all repos from organization except the ones listed 
+include_archived            |no         |true/false to include archived repos. Default false  
+include_disabled            |no         |true/false to include disabled repos. Default false 
+repository                  |no         |(DEPRECATED) Allow list strategy to extract selected repos data from organization(has priority over repos_exclude) 
+
+Example:
+```json
+{
+  "access_token": "ghp_16C7e42F292c6912E7710c838347Ae178B4a",
+  "organization": "singer-io", 
+  "repos_exclude": "tap-github getting-started",
+  "repos_include": "tap-github getting-started",
+  "start_date": "2021-01-01T00:00:00Z",
+  "include_archived": false,
+  "include_disabled": false
+}
+```
+
+> You can also pass `singer-io/tap-github another-org/tap-octopus` on `repos_include`.
+
+> For retro compatibility you can pass `repository: "singer-io/tap-github singer-io/getting-started"` 
+
 4. Run the tap in discovery mode to get properties.json file
 
     ```bash
