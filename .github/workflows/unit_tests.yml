@@ -21,18 +21,15 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.container[1] }}
-        if: steps.check.outcome == 'failure'
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        if: steps.check.outcome == 'failure'
         run: |
           pip install -U pip setuptools wheel
           pip install -Ue .[test]
 
       - name: Run Unit tests
-        if: steps.check.outcome == 'failure'
         run: |
           pytest tests/unittests

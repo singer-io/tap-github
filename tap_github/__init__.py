@@ -5,9 +5,7 @@ import time
 
 import requests
 import singer
-import singer.bookmarks as bookmarks
-import singer.metrics as metrics
-from singer import metadata
+from singer import metadata, bookmarks, metrics
 
 session = requests.Session()
 logger = singer.get_logger()
