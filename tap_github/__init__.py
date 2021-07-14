@@ -15,6 +15,8 @@ logger = singer.get_logger()
 # or repos_include instead
 REQUIRED_CONFIG_KEYS = ['start_date', 'access_token']
 
+MAX_RATE_LIMIT_WAIT_SECONDS = 600
+
 KEY_PROPERTIES = {
     'commits': ['sha'],
     'comments': ['id'],
@@ -201,7 +203,7 @@ def rate_throttling(response):
     if int(response.headers['X-RateLimit-Remaining']) == 0:
         seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
-        if seconds_to_sleep > 600:
+        if seconds_to_sleep > MAX_RATE_LIMIT_WAIT_SECONDS:
             message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
             raise RateLimitExceeded(message) from None
 
@@ -1196,6 +1198,11 @@ def _get_repository_full_name(org, repo_name):
 @singer.utils.handle_top_exception(logger)
 def main():
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
+
+    global MAX_RATE_LIMIT_WAIT_SECONDS
+
+    if "max_rate_limit_wait_seconds" in args.config:
+        MAX_RATE_LIMIT_WAIT_SECONDS = args.config["max_rate_limit_wait_seconds"]
 
     if args.discover:
         do_discover(args.config)
