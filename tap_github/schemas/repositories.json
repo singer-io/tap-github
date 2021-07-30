@@ -1,0 +1,104 @@
+{
+  "type": ["null", "object"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": ["null", "string"]
+    },
+    "id": {
+      "type": ["null", "integer"]
+    },
+    "url": {
+      "type": ["null", "string"]
+    },
+    "node_id": {
+      "type": ["null", "string"]
+    },
+    "full_name": {
+      "type": ["null", "string"]
+    },
+    "description": {
+      "type": ["null", "string"]
+    },
+    "license": {
+      "type": ["null", "object"],
+      "properties": {
+        "key": {
+          "type": ["null", "string"]
+        },
+        "name": {
+          "type": ["null", "string"]
+        },
+        "spdx_id": {
+          "type": ["null", "string"]
+        },
+        "url": {
+          "type": ["null", "string"]
+        },
+        "node_id": {
+          "type": ["null", "string"]
+        }
+      }
+    },
+    "private": {
+      "type": ["null", "boolean"]
+    },
+    "homepage": {
+      "type": ["null", "string"]
+    },
+    "html_url": {
+      "type": ["null", "string"]
+    },
+    "stargazers_count": {
+      "type": ["null", "integer"]
+    },
+    "forks_count": {
+      "type": ["null", "integer"]
+    },
+    "watchers_count": {
+      "type": ["null", "integer"]
+    },
+    "language": {
+      "type": ["null", "string"]
+    },
+    "pushed_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "topics": {
+      "type": ["null", "array"],
+      "items": {
+          "type": ["null", "string"]
+      }
+    },
+    "owner": {
+      "type": ["null", "object"],
+      "properties": {
+        "login": {
+          "type": ["null", "string"]
+        },
+        "id": {
+          "type": ["null", "integer"]
+        },
+        "node_id": {
+          "type": ["null", "string"]
+        },
+        "avatar_url": {
+          "type": ["null", "string"]
+        },
+        "html_url": {
+          "type": ["null", "string"]
+        },
+        "type": {
+          "type": ["null", "string"]
+        }
+      }
+    },
+    "_sdc_repository": {
+      "type": ["string"]
+    }
+  },
+  "key_properties": [
+    "id"
+  ]
+}
