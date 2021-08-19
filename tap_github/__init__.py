@@ -897,6 +897,16 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
             extraction_time = singer.utils.now()
             for commit in commits:
                 commit['_sdc_repository'] = repo_path
+
+                # Augment each commit with file-level diff data by hitting the commits endpoint with
+                # the individual commit hash
+                for commit_response in authed_get_all_pages(
+                        'commits',
+                        'https://api.github.com/repos/{}/commits/{}'.format(repo_path, commit['sha'])
+                ):
+                    print(commit_response.json())
+                    logger.info("info")
+
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('commits', rec, time_extracted=extraction_time)
