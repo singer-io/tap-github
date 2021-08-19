@@ -9,6 +9,9 @@
       "type": ["null", "string"],
       "description": "The git commit hash"
     },
+    "node_id": {
+      "type": ["null", "string"]
+    },
     "url": {
       "type": ["null", "string"]
     },
@@ -33,6 +36,30 @@
         }
       }
     },
+    "stats": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": [
+            "null",
+            "number"
+          ]
+        },
+        "additions": {
+          "type": [
+            "null",
+            "number"
+          ]
+        },
+        "deletions": {
+          "type": [
+            "null",
+            "number"
+          ]
+        }
+      }
+    },
     "files": {
       "type": [
         "null",
@@ -44,7 +71,19 @@
           "object"
         ],
         "properties": {
+          "sha": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "filename": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
             "type": [
               "null",
               "string"
@@ -68,7 +107,7 @@
               "number"
             ]
           },
-          "status": {
+          "blob_url": {
             "type": [
               "null",
               "string"
@@ -80,7 +119,7 @@
               "string"
             ]
           },
-          "blob_url": {
+          "contents_url": {
             "type": [
               "null",
               "string"

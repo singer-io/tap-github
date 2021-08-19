@@ -17,7 +17,6 @@ REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
 
 KEY_PROPERTIES = {
     'commits': ['sha'],
-    'full_commits': ['sha'],
     'comments': ['id'],
     'issues': ['id'],
     'assignees': ['id'],
@@ -785,7 +784,21 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
                                 state,
                                 mdata
                         ):
-                            singer.write_record('pr_commits', pr_commit, time_extracted=extraction_time)
+                            # Augment each commit with file-level diff data by hitting the commits
+                            # endpoint with the individual commit hash
+                            # TODO: fetch multiple pages of changed files if the changed file count
+                            # exceeds 300.
+                            for commit_detail in authed_get_all_pages(
+                                'commits',
+                                'https://api.github.com/repos/{}/commits/{}'.format(repo_path,
+                                    pr_commit['sha'])
+                            ):
+                                fullcommit = commit_detail.json()
+                                # TODO: I don't think this response can have more than one item, but
+                                # it'd be good to throw an exception if one is found.
+                                break
+
+                            singer.write_record('pr_commits', fullcommit, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'pr_commits', {'since': singer.utils.strftime(extraction_time)})
 
     return state
@@ -899,19 +912,21 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
             commits = response.json()
             extraction_time = singer.utils.now()
             for commit in commits:
-                commit['_sdc_repository'] = repo_path
-
                 # Augment each commit with file-level diff data by hitting the commits endpoint with
                 # the individual commit hash
-                for commit_response in authed_get_all_pages(
-                        'commits',
-                        'https://api.github.com/repos/{}/commits/{}'.format(repo_path, commit['sha'])
+                # TODO: fetch multiple pages of changed files if the changed file count exceeds 300.
+                for commit_detail in authed_get_all_pages(
+                    'commits',
+                    'https://api.github.com/repos/{}/commits/{}'.format(repo_path, commit['sha'])
                 ):
-                    print(commit_response.json())
-                    logger.info("info")
+                    fullcommit = commit_detail.json()
+                    # TODO: I don't think this response can have more than one item, but it'd be
+                    # good to throw an exception if one is found.
+                    break
 
+                fullcommit['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
-                    rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
+                    rec = transformer.transform(fullcommit, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('commits', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'commits', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
