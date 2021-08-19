@@ -17,6 +17,7 @@ REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
 
 KEY_PROPERTIES = {
     'commits': ['sha'],
+    'full_commits': ['sha'],
     'comments': ['id'],
     'issues': ['id'],
     'assignees': ['id'],
@@ -756,6 +757,8 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
                     with singer.Transformer() as transformer:
                         rec = transformer.transform(pr, schemas['pull_requests'], metadata=metadata.to_map(mdata))
                     singer.write_record('pull_requests', rec, time_extracted=extraction_time)
+                    # BUGBUG? What if there's a failure to load the reviews, review comments, or pr
+                    # commits for this PR? Wouldn't they then not be fetched later?
                     singer.write_bookmark(state, repo_path, 'pull_requests', {'since': singer.utils.strftime(extraction_time)})
                     counter.increment()
 
