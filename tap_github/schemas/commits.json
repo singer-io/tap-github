@@ -9,9 +9,6 @@
       "type": ["null", "string"],
       "description": "The git commit hash"
     },
-    "node_id": {
-      "type": ["null", "string"]
-    },
     "url": {
       "type": ["null", "string"]
     },
@@ -83,12 +80,6 @@
               "string"
             ]
           },
-          "status": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
           "additions": {
             "type": [
               "null",
@@ -107,13 +98,19 @@
               "number"
             ]
           },
-          "blob_url": {
+          "status": {
             "type": [
               "null",
               "string"
             ]
           },
           "raw_url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "blob_url": {
             "type": [
               "null",
               "string"
