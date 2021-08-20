@@ -793,12 +793,14 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
                                 'https://api.github.com/repos/{}/commits/{}'.format(repo_path,
                                     pr_commit['sha'])
                             ):
-                                fullcommit = commit_detail.json()
+                                detail_json = commit_detail.json()
+                                pr_commit['files'] = detail_json['files']
+                                pr_commit['stats'] = detail_json['stats']
                                 # TODO: I don't think this response can have more than one item, but
                                 # it'd be good to throw an exception if one is found.
                                 break
 
-                            singer.write_record('pr_commits', fullcommit, time_extracted=extraction_time)
+                            singer.write_record('pr_commits', pr_commit, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'pr_commits', {'since': singer.utils.strftime(extraction_time)})
 
     return state
@@ -919,14 +921,17 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
                     'commits',
                     'https://api.github.com/repos/{}/commits/{}'.format(repo_path, commit['sha'])
                 ):
-                    fullcommit = commit_detail.json()
-                    # TODO: I don't think this response can have more than one item, but it'd be
-                    # good to throw an exception if one is found.
+
+                    detail_json = commit_detail.json()
+                    commit['files'] = detail_json['files']
+                    commit['stats'] = detail_json['stats']
+                    # TODO: I don't think this response can have more than one item, but
+                    # it'd be good to throw an exception if one is found.
                     break
 
-                fullcommit['_sdc_repository'] = repo_path
+                commit['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
-                    rec = transformer.transform(fullcommit, schema, metadata=metadata.to_map(mdata))
+                    rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('commits', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'commits', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
