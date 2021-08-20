@@ -33,6 +33,30 @@
         }
       }
     },
+    "stats": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": [
+            "null",
+            "number"
+          ]
+        },
+        "additions": {
+          "type": [
+            "null",
+            "number"
+          ]
+        },
+        "deletions": {
+          "type": [
+            "null",
+            "number"
+          ]
+        }
+      }
+    },
     "files": {
       "type": [
         "null",
@@ -44,6 +68,12 @@
           "object"
         ],
         "properties": {
+          "sha": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "filename": {
             "type": [
               "null",
@@ -81,6 +111,12 @@
             ]
           },
           "blob_url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contents_url": {
             "type": [
               "null",
               "string"

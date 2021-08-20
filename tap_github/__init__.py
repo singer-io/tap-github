@@ -756,6 +756,8 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
                     with singer.Transformer() as transformer:
                         rec = transformer.transform(pr, schemas['pull_requests'], metadata=metadata.to_map(mdata))
                     singer.write_record('pull_requests', rec, time_extracted=extraction_time)
+                    # BUGBUG? What if there's a failure to load the reviews, review comments, or pr
+                    # commits for this PR? Wouldn't they then not be fetched later?
                     singer.write_bookmark(state, repo_path, 'pull_requests', {'since': singer.utils.strftime(extraction_time)})
                     counter.increment()
 
@@ -782,6 +784,22 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
                                 state,
                                 mdata
                         ):
+                            # Augment each commit with file-level diff data by hitting the commits
+                            # endpoint with the individual commit hash
+                            # TODO: fetch multiple pages of changed files if the changed file count
+                            # exceeds 300.
+                            for commit_detail in authed_get_all_pages(
+                                'commits',
+                                'https://api.github.com/repos/{}/commits/{}'.format(repo_path,
+                                    pr_commit['sha'])
+                            ):
+                                detail_json = commit_detail.json()
+                                pr_commit['files'] = detail_json['files']
+                                pr_commit['stats'] = detail_json['stats']
+                                # TODO: I don't think this response can have more than one item, but
+                                # it'd be good to throw an exception if one is found.
+                                break
+
                             singer.write_record('pr_commits', pr_commit, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'pr_commits', {'since': singer.utils.strftime(extraction_time)})
 
@@ -896,6 +914,21 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
             commits = response.json()
             extraction_time = singer.utils.now()
             for commit in commits:
+                # Augment each commit with file-level diff data by hitting the commits endpoint with
+                # the individual commit hash
+                # TODO: fetch multiple pages of changed files if the changed file count exceeds 300.
+                for commit_detail in authed_get_all_pages(
+                    'commits',
+                    'https://api.github.com/repos/{}/commits/{}'.format(repo_path, commit['sha'])
+                ):
+
+                    detail_json = commit_detail.json()
+                    commit['files'] = detail_json['files']
+                    commit['stats'] = detail_json['stats']
+                    # TODO: I don't think this response can have more than one item, but
+                    # it'd be good to throw an exception if one is found.
+                    break
+
                 commit['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
