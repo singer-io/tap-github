@@ -7,6 +7,8 @@ import requests
 import singer
 import singer.bookmarks as bookmarks
 import singer.metrics as metrics
+import base64
+import difflib
 
 from singer import metadata
 
@@ -901,6 +903,7 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
     bookmark = get_bookmark(state, repo_path, "commits", "since", start_date)
+    bookmark = '2010-01-01'
     if bookmark:
         query_string = '?since={}'.format(bookmark)
     else:
@@ -915,19 +918,110 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
             extraction_time = singer.utils.now()
             for commit in commits:
                 # Augment each commit with file-level diff data by hitting the commits endpoint with
-                # the individual commit hash
-                # TODO: fetch multiple pages of changed files if the changed file count exceeds 300.
+                # the individual commit hash.
+                # This is copied from the github documentation:
+                # Note: If there are more than 300 files in the commit diff, the response will
+                # include pagination link headers for the remaining files, up to a limit of 3000
+                # files. Each page contains the static commit information, and the only changes are
+                # to the file listing.
+                # TODO: if the changed file count exceeds 3000, then use the raw checkout to fetch
+                # this data.
+
+                # Hash of file addition that's too large
+                #if commit['sha'] != '836f0c47362e2f92f57ddee977df0f5c0da6d53b':
+                #    continue
+                # Hash of commit with file change that's too large
+                if commit['sha'] != '1961e1b44e7c15b1f62f6da99b0e284b71d64048':
+                    continue
+
+                commit['files'] = []
                 for commit_detail in authed_get_all_pages(
                     'commits',
                     'https://api.github.com/repos/{}/commits/{}'.format(repo_path, commit['sha'])
                 ):
-
+                    # TODO: test fetching multiple pages of changed files if the changed file count
+                    # exceeds 300.
                     detail_json = commit_detail.json()
-                    commit['files'] = detail_json['files']
                     commit['stats'] = detail_json['stats']
-                    # TODO: I don't think this response can have more than one item, but
-                    # it'd be good to throw an exception if one is found.
-                    break
+                    commit['files'].extend(detail_json['files'])
+
+                # Iterate through each of the file changes and fetch the raw patch if it is missing
+                # because it is too big of a change
+                for commitFile in commit['files']:
+                    # Skip if there's already a patch
+                    if 'patch' in commitFile:
+                        continue
+                    # This will be true for binary files
+                    if commitFile['changes'] == 0 and commitFile['additions'] == 0 and \
+                            commitFile['deletions'] == 0:
+                        continue
+
+                    # Patch is missing for large file, get the urls of the current and previous
+                    # raw change blobs
+                    currentContentsUrl = commitFile['contents_url']
+
+                    logger.info(currentContentsUrl)
+                    for currentContents in authed_get_all_pages(
+                        'file_contents',
+                        currentContentsUrl
+                    ):
+                        currentContentsJson = currentContents.json()
+                        fileContent = currentContentsJson['content']
+                            # TODO: do we need to catch base64 decode errors in case file is binary?
+                        decodedFileContent = base64.b64decode(fileContent).decode("utf-8")
+                        # Will only be one page
+                        break
+
+                    # Get the previous contents if the file existed before (not added)
+                    decodedPreviousFileContent = ''
+                    if commitFile['status'] != 'added':
+                        contentPath = currentContentsUrl.split('?ref=')[0]
+                        # First parent is base, second parent is head
+                        baseSha = commit['parents'][0]['sha']
+                        previousContentsUrl = contentPath + '?ref=' + baseSha
+
+                        logger.info(previousContentsUrl)
+                        for previousContents in authed_get_all_pages(
+                            'file_contents',
+                            previousContentsUrl
+                        ):
+                            previousContentsJson = previousContents.json()
+                            previousFileContent = previousContentsJson['content']
+                            # TODO: do we need to catch base64 decode errors in case file is binary?
+                            decodedPreviousFileContent = base64.b64decode(previousFileContent).decode("utf-8")
+                            # Will only be one page
+                            break
+
+                    # Generate patch from the old and new content
+                    # Note: this patch may be slightly different from a patch generated with git
+                    # since the diffing algorithms aren't the same, but it should suffice for this
+                    # scenario and will at least be sound.
+                    diff = difflib.unified_diff(decodedPreviousFileContent.split('\n'), \
+                        decodedFileContent.split('\n'), n=0)
+                    # Remove the +++ and --- at the start of the diff to be in the same format as
+                    # the git patches. Also remove blank lines after each '@@...'
+                    difflist = list(diff)
+                    skipStart = 0
+                    newDiffList = []
+                    firstDiffFound = False
+                    for diffLine in difflist:
+                        if diffLine[0:2] == '@@':
+                            firstDiffFound = True
+                        if not firstDiffFound:
+                            continue
+                        # Remove blank lines after each @@ line
+                        if diffLine[-1:] == '\n':
+                            newDiffList.append(diffLine[:-1])
+                        else:
+                            newDiffList.append(diffLine)
+
+                    # TODO: add "\\ No newline at end of file" string at the end if necessary like
+                    # the github patch does
+
+                    textdiff = "\n".join(newDiffList)
+                    #logger.info('generated diff: ' + textdiff)
+                    with open("tmpdif.txt", "w") as text_file:
+                        text_file.write(textdiff)
 
                 commit['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
