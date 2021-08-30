@@ -996,20 +996,31 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
                     # Note: this patch may be slightly different from a patch generated with git
                     # since the diffing algorithms aren't the same, but it should suffice for this
                     # scenario and will at least be sound.
-                    diff = difflib.unified_diff(decodedPreviousFileContent.split('\n'), \
-                        decodedFileContent.split('\n'), n=0)
+                    prevContentSplit = decodedPreviousFileContent.split('\n')[:4]
+                    prevEndsInNewline = prevContentSplit[-1] == ''
+                    if not prevEndsInNewline:
+                        prevContentSplit.append
+                    prevFileLines = len(prevContentSplit)
+                    newContentSplit = decodedFileContent.split('\n')[:4]
+                    newEndsInNewline = newContentSplit[-1] == ''
+                    NewFileLines = len(newContentSplit)
+                    logger.info('METADATA: {}, {}, {}, {}'.format(prevEndsInNewline, prevFileLines, newEndsInNewline, NewFileLines))
+                    # Include the one line of context to pick up the sentinal at the end of the file
+                    # if it doesn't end in a newline.
+                    diff = difflib.unified_diff(prevContentSplit, newContentSplit, n=1)
                     # Remove the +++ and --- at the start of the diff to be in the same format as
                     # the git patches. Also remove blank lines after each '@@...'
                     difflist = list(diff)
-                    skipStart = 0
                     newDiffList = []
                     firstDiffFound = False
                     for diffLine in difflist:
                         if diffLine[0:2] == '@@':
                             firstDiffFound = True
+                            # Compute if the source or destination diff includes the last line of
+                            # the file, AND the file doesn't end in a newline. If so, then include
+                            # the extra "\ No newline at end of file" message.
                         if not firstDiffFound:
                             continue
-                        # Remove blank lines after each @@ line
                         if diffLine[-1:] == '\n':
                             newDiffList.append(diffLine[:-1])
                         else:
