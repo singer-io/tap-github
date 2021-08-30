@@ -127,6 +127,14 @@
               "null",
               "string"
             ]
+          },
+          "isBinary": {
+            "type": ["null", "boolean"],
+            "description": "True if there is no patch because the file is binary (this may be false for renaming binary files because the file isn't inspected in that scenario)."
+          },
+          "isLargeFile": {
+            "type": ["null", "boolean"],
+            "description": "True if there is no patch because the patch was too large to store (> 1 MB)."
           }
         }
       }
