@@ -898,12 +898,70 @@ def get_all_collaborators(schema, repo_path, state, mdata, _start_date):
 
     return state
 
+
+def create_patch_for_files(old_text, new_text):
+    # Note: this patch may be slightly different from a patch generated with git since the diffing
+    # algorithms aren't the same, but it will at least be correct and in the same format.
+
+    newlineToken = '\\ No newline at end of file'
+    # Add this random data too in the rare case where a file literally ends in the newlineToken but
+    # does have a new line at the end.
+    sentinal = "SDF1G5ALB3YU"
+    newlineMarker = newlineToken + sentinal
+    newlineMarkerLength = len(newlineMarker)
+
+    # Also remove empty lines at end so that they aren't included in the diff output to get the
+    # format to match git's patches.
+
+    oldSplit = old_text.split('\n')
+    if oldSplit[-1] != '':
+        oldSplit[-1] += newlineMarker
+    else:
+        oldSplit = oldSplit[:-1]
+
+    newSplit = new_text.split('\n')
+    if newSplit[-1] != '':
+        newSplit[-1] += newlineMarker
+    else:
+        newSplit = newSplit[:-1]
+
+    # Patches don't use any when coming from the github API, so don't use nay here
+    diff = difflib.unified_diff(oldSplit, newSplit, n=0)
+
+    # Transform this to match the format of git patches coming from the API
+    difflist = list(diff)
+    newDiffList = []
+    firstDiffFound = False
+    for diffLine in difflist:
+        # Skip lines before the first @@
+        if diffLine[0:2] == '@@':
+            firstDiffFound = True
+        if not firstDiffFound:
+            continue
+
+        # Remove extra newlines after each diff line
+        if diffLine[-1:] == '\n':
+            newDiffList.append(diffLine[:-1])
+        # If we found the newline marker at the end, remove it and add the newline token on the next
+        # line like the diff format from github.
+        elif diffLine[-newlineMarkerLength:] == newlineMarker:
+            newDiffList.append(diffLine[:-newlineMarkerLength])
+            newDiffList.append(newlineToken)
+        else:
+            newDiffList.append(diffLine)
+
+    output = '\n'.join(newDiffList)
+    return output
+
+# Diffs over this many bytes of text are dropped and instead replaced with a flag indicating that
+# the file is large.
+LARGE_FILE_DIFF_THRESHOLD = 1024 * 1024
+
 def get_all_commits(schema, repo_path,  state, mdata, start_date):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
     bookmark = get_bookmark(state, repo_path, "commits", "since", start_date)
-    bookmark = '2010-01-01'
     if bookmark:
         query_string = '?since={}'.format(bookmark)
     else:
@@ -927,12 +985,12 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
                 # TODO: if the changed file count exceeds 3000, then use the raw checkout to fetch
                 # this data.
 
-                # Hash of file addition that's too large
+                # Hash of file addition that's too large, for testing
                 #if commit['sha'] != '836f0c47362e2f92f57ddee977df0f5c0da6d53b':
                 #    continue
-                # Hash of commit with file change that's too large
-                if commit['sha'] != '1961e1b44e7c15b1f62f6da99b0e284b71d64048':
-                    continue
+                # Hash of commit with file change that's too large, for testing
+                #if commit['sha'] != '1961e1b44e7c15b1f62f6da99b0e284b71d64048':
+                #    continue
 
                 commit['files'] = []
                 for commit_detail in authed_get_all_pages(
@@ -948,19 +1006,26 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
                 # Iterate through each of the file changes and fetch the raw patch if it is missing
                 # because it is too big of a change
                 for commitFile in commit['files']:
+                    commitFile['isBinary'] = False
+                    commitFile['isLargeFile'] = False
+
                     # Skip if there's already a patch
                     if 'patch' in commitFile:
                         continue
-                    # This will be true for binary files
+                    # If no changes are showing, this is probably a binary file
                     if commitFile['changes'] == 0 and commitFile['additions'] == 0 and \
                             commitFile['deletions'] == 0:
+                        # Indicate that this file is binary if it's "modified" and the change
+                        # counts are zero. Change counts can be zero for other reasons with renames
+                        # and additions/deletions of empty files
+                        if commitFile['status'] == 'modified':
+                            commitFile['isBinary'] = True
                         continue
 
                     # Patch is missing for large file, get the urls of the current and previous
                     # raw change blobs
                     currentContentsUrl = commitFile['contents_url']
 
-                    logger.info(currentContentsUrl)
                     for currentContents in authed_get_all_pages(
                         'file_contents',
                         currentContentsUrl
@@ -980,7 +1045,6 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
                         baseSha = commit['parents'][0]['sha']
                         previousContentsUrl = contentPath + '?ref=' + baseSha
 
-                        logger.info(previousContentsUrl)
                         for previousContents in authed_get_all_pages(
                             'file_contents',
                             previousContentsUrl
@@ -992,47 +1056,11 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
                             # Will only be one page
                             break
 
-                    # Generate patch from the old and new content
-                    # Note: this patch may be slightly different from a patch generated with git
-                    # since the diffing algorithms aren't the same, but it should suffice for this
-                    # scenario and will at least be sound.
-                    prevContentSplit = decodedPreviousFileContent.split('\n')[:4]
-                    prevEndsInNewline = prevContentSplit[-1] == ''
-                    if not prevEndsInNewline:
-                        prevContentSplit.append
-                    prevFileLines = len(prevContentSplit)
-                    newContentSplit = decodedFileContent.split('\n')[:4]
-                    newEndsInNewline = newContentSplit[-1] == ''
-                    NewFileLines = len(newContentSplit)
-                    logger.info('METADATA: {}, {}, {}, {}'.format(prevEndsInNewline, prevFileLines, newEndsInNewline, NewFileLines))
-                    # Include the one line of context to pick up the sentinal at the end of the file
-                    # if it doesn't end in a newline.
-                    diff = difflib.unified_diff(prevContentSplit, newContentSplit, n=1)
-                    # Remove the +++ and --- at the start of the diff to be in the same format as
-                    # the git patches. Also remove blank lines after each '@@...'
-                    difflist = list(diff)
-                    newDiffList = []
-                    firstDiffFound = False
-                    for diffLine in difflist:
-                        if diffLine[0:2] == '@@':
-                            firstDiffFound = True
-                            # Compute if the source or destination diff includes the last line of
-                            # the file, AND the file doesn't end in a newline. If so, then include
-                            # the extra "\ No newline at end of file" message.
-                        if not firstDiffFound:
-                            continue
-                        if diffLine[-1:] == '\n':
-                            newDiffList.append(diffLine[:-1])
-                        else:
-                            newDiffList.append(diffLine)
-
-                    # TODO: add "\\ No newline at end of file" string at the end if necessary like
-                    # the github patch does
-
-                    textdiff = "\n".join(newDiffList)
-                    #logger.info('generated diff: ' + textdiff)
-                    with open("tmpdif.txt", "w") as text_file:
-                        text_file.write(textdiff)
+                    patch = create_patch_for_files(decodedFileContent, decodedPreviousFileContent)
+                    if len(patch) > LARGE_FILE_DIFF_THRESHOLD:
+                        commitFile['isLargeFile'] = True
+                    else:
+                        commitFile['patch'] = patch
 
                 commit['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
