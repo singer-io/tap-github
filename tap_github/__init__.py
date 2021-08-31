@@ -18,6 +18,7 @@ logger = singer.get_logger()
 REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
 
 KEY_PROPERTIES = {
+    'branches': ['name'],
     'commits': ['sha'],
     'comments': ['id'],
     'issues': ['id'],
@@ -953,6 +954,28 @@ def create_patch_for_files(old_text, new_text):
     output = '\n'.join(newDiffList)
     return output
 
+def get_all_branches(schema, repo_path,  state, mdata, start_date):
+    '''
+    https://docs.github.com/en/rest/reference/repos#list-branches
+    '''
+    # No bookmark available
+
+    with metrics.record_counter('branches') as counter:
+        for response in authed_get_all_pages(
+                'branches',
+                'https://api.github.com/repos/{}/branches?per_page=100'.format(repo_path)
+        ):
+            branches = response.json()
+            extraction_time = singer.utils.now()
+            for branch in branches:
+
+                branch['_sdc_repository'] = repo_path
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(branch, schema, metadata=metadata.to_map(mdata))
+                singer.write_record('branches', rec, time_extracted=extraction_time)
+                counter.increment()
+    return state
+
 # Diffs over this many bytes of text are dropped and instead replaced with a flag indicating that
 # the file is large.
 LARGE_FILE_DIFF_THRESHOLD = 1024 * 1024
@@ -1177,6 +1200,7 @@ def get_stream_from_catalog(stream_id, catalog):
     return None
 
 SYNC_FUNCTIONS = {
+    'branches': get_all_branches,
     'commits': get_all_commits,
     'comments': get_all_comments,
     'issues': get_all_issues,
