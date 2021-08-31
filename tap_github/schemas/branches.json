@@ -1,0 +1,19 @@
+{
+  "type": ["null", "object"],
+  "properties": {
+    "_sdc_repository": {
+      "type": ["string"]
+    },
+    "name": {
+      "type": ["string"]
+    },
+    "commit": {
+      "type": ["null", "object"],
+      "properties": {
+        "sha": {
+          "type": ["null", "string"]
+        }
+      }
+    }
+  }
+}
