@@ -899,7 +899,7 @@ def get_all_collaborators(schema, repo_path, state, mdata, _start_date):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('collaborators', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'collaborator', {'since': singer.utils.strftime(extraction_time)})
+                singer.write_bookmark(state, repo_path, 'collaborators', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
