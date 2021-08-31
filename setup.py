@@ -15,7 +15,7 @@ setup(name='tap-github',
       ],
       extras_require={
           'dev': [
-              'pylint==2.9.6',
+              'pylint==2.6.2',
               'ipdb',
               'nose',
           ]
