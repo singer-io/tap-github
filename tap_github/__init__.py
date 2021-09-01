@@ -18,7 +18,7 @@ logger = singer.get_logger()
 REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
 
 KEY_PROPERTIES = {
-    'branches': ['name'],
+    'branches': ['repo_name'],
     'commits': ['sha'],
     'comments': ['id'],
     'issues': ['id'],
@@ -29,7 +29,6 @@ KEY_PROPERTIES = {
     'releases': ['id'],
     'reviews': ['id'],
     'review_comments': ['id'],
-    'pr_commits': ['id'],
     'events': ['id'],
     'issue_events': ['id'],
     'issue_labels': ['id'],
@@ -159,7 +158,7 @@ def translate_state(state, catalog, repositories):
     return new_state
 
 
-def get_bookmark(state, repo, stream_name, bookmark_key, start_date):
+def get_bookmark(state, repo, stream_name, bookmark_key, start_date=None):
     repo_stream_dict = bookmarks.get_bookmark(state, repo, stream_name)
     if repo_stream_dict:
         return repo_stream_dict.get(bookmark_key)
@@ -212,6 +211,10 @@ def authed_get(source, url, headers={}):
         rate_throttling(resp)
         return resp
 
+def authed_get_yield(source, url, headers={}):
+    response = authed_get(source, url, headers)
+    yield response
+
 def authed_get_all_pages(source, url, headers={}):
     while True:
         r = authed_get(source, url, headers)
@@ -247,8 +250,6 @@ def load_schemas():
         file_raw = filename.replace('.json', '')
         with open(path) as file:
             schemas[file_raw] = json.load(file)
-
-    schemas['pr_commits'] = generate_pr_commit_schema(schemas['commits'])
     return schemas
 
 class DependencyException(Exception):
@@ -722,10 +723,14 @@ def get_all_releases(schemas, repo_path, state, mdata, _start_date):
 
     return state
 
+PR_CACHE = {}
 def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
     '''
     https://developer.github.com/v3/pulls/#list-pull-requests
     '''
+
+    cur_cache = {}
+    PR_CACHE[repo_path] = cur_cache
 
     bookmark_value = get_bookmark(state, repo_path, "pull_requests", "since", start_date)
     if bookmark_value:
@@ -737,23 +742,31 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
         with metrics.record_counter('reviews') as reviews_counter:
             for response in authed_get_all_pages(
                     'pull_requests',
-                    'https://api.github.com/repos/{}/pulls?state=all&sort=updated&direction=desc'.format(repo_path)
+                    'https://api.github.com/repos/{}/pulls?per_page=100&state=all&sort=updated&direction=desc'.format(repo_path)
             ):
                 pull_requests = response.json()
                 extraction_time = singer.utils.now()
                 for pr in pull_requests:
-
-
-                    # skip records that haven't been updated since the last run
-                    # the GitHub API doesn't currently allow a ?since param for pulls
-                    # once we find the first piece of old data we can return, thanks to
-                    # the sorting
+                    # Skip records that haven't been updated since the last run because
+                    # the GitHub API doesn't currently allow a ?since param for pulls.
+                    # Return early in this case to stop querying pages of pull requests.
+                    # PRs get "updated" when the head or base changes, so those commits will have
+                    # been fetched in a previous run.
                     if bookmark_time and singer.utils.strptime_to_utc(pr.get('updated_at')) < bookmark_time:
                         return state
 
                     pr_num = pr.get('number')
                     pr_id = pr.get('id')
                     pr['_sdc_repository'] = repo_path
+
+                    # Cache the commit into for commit fetching
+                    cur_cache[str(pr_num)] = {
+                        'pr_num': str(pr_num),
+                        'base_sha': pr['base']['sha'],
+                        'base_ref': pr['base']['ref'],
+                        'head_sha': pr['head']['sha'],
+                        'head_ref': pr['head']['ref']
+                    }
 
                     # transform and write pull_request record
                     with singer.Transformer() as transformer:
@@ -778,33 +791,8 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
                             singer.write_record('review_comments', review_comment_rec, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'review_comments', {'since': singer.utils.strftime(extraction_time)})
 
-                    if schemas.get('pr_commits'):
-                        for pr_commit in get_commits_for_pr(
-                                pr_num,
-                                pr_id,
-                                schemas['pr_commits'],
-                                repo_path,
-                                state,
-                                mdata
-                        ):
-                            # Augment each commit with file-level diff data by hitting the commits
-                            # endpoint with the individual commit hash
-                            # TODO: fetch multiple pages of changed files if the changed file count
-                            # exceeds 300.
-                            for commit_detail in authed_get_all_pages(
-                                'commits',
-                                'https://api.github.com/repos/{}/commits/{}'.format(repo_path,
-                                    pr_commit['sha'])
-                            ):
-                                detail_json = commit_detail.json()
-                                pr_commit['files'] = detail_json['files']
-                                pr_commit['stats'] = detail_json['stats']
-                                # TODO: I don't think this response can have more than one item, but
-                                # it'd be good to throw an exception if one is found.
-                                break
-
-                            singer.write_record('pr_commits', pr_commit, time_extracted=extraction_time)
-                            singer.write_bookmark(state, repo_path, 'pr_commits', {'since': singer.utils.strftime(extraction_time)})
+                    # We eliminated pr_commits entirely since they can now be obtained by following
+                    # the head commit from a PR.
 
     return state
 
@@ -837,25 +825,6 @@ def get_review_comments_for_pr(pr_number, schema, repo_path, state, mdata):
 
 
         return state
-
-def get_commits_for_pr(pr_number, pr_id, schema, repo_path, state, mdata):
-    for response in authed_get_all_pages(
-            'pr_commits',
-            'https://api.github.com/repos/{}/pulls/{}/commits'.format(repo_path,pr_number)
-    ):
-
-        commit_data = response.json()
-        for commit in commit_data:
-            commit['_sdc_repository'] = repo_path
-            commit['pr_number'] = pr_number
-            commit['pr_id'] = pr_id
-            commit['id'] = '{}-{}'.format(pr_id, commit['sha'])
-            with singer.Transformer() as transformer:
-                rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
-            yield rec
-
-        return state
-
 
 def get_all_assignees(schema, repo_path, state, mdata, _start_date):
     '''
@@ -954,11 +923,29 @@ def create_patch_for_files(old_text, new_text):
     output = '\n'.join(newDiffList)
     return output
 
+repo_cache = {}
+def get_repo_metadata(repo_path):
+    if not repo_path in repo_cache:
+        for response in authed_get_all_pages(
+                'branches',
+                'https://api.github.com/repos/{}'.format(repo_path)
+        ):
+            repo_cache[repo_path] = response.json()
+            # Will never be multiple pages
+            break
+    return repo_cache[repo_path]
+
+BRANCH_CACHE = {}
 def get_all_branches(schema, repo_path,  state, mdata, start_date):
     '''
     https://docs.github.com/en/rest/reference/repos#list-branches
     '''
     # No bookmark available
+
+    default_branch_name = get_repo_metadata(repo_path)['default_branch']
+
+    cur_cache = {}
+    BRANCH_CACHE[repo_path] = cur_cache
 
     with metrics.record_counter('branches') as counter:
         for response in authed_get_all_pages(
@@ -968,13 +955,160 @@ def get_all_branches(schema, repo_path,  state, mdata, start_date):
             branches = response.json()
             extraction_time = singer.utils.now()
             for branch in branches:
-
                 branch['_sdc_repository'] = repo_path
+                branch['repo_name'] = repo_path + ':' + branch['name']
+                isdefault = branch['name'] == default_branch_name
+                branch['isdefault'] = isdefault
+
+                cur_cache[branch['name']] = { 'sha': branch['commit']['sha'], \
+                    'isdefault': isdefault, 'name': branch['name'] }
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(branch, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('branches', rec, time_extracted=extraction_time)
                 counter.increment()
     return state
+
+def get_all_heads_for_commits(repo_path):
+    '''
+    Gets a list of all SHAs to use as heads for importing lists of commits. Includes all branches
+    and PRs (both base and head) as well as the main branch to get all potential starting points.
+    '''
+    default_branch_name = get_repo_metadata(repo_path)['default_branch']
+
+    # If this data has already been populated with get_all_branches, don't duplicate the work.
+    if not repo_path in BRANCH_CACHE:
+        cur_cache = {}
+        BRANCH_CACHE[repo_path] = cur_cache
+        for response in authed_get_all_pages(
+            'branches',
+            'https://api.github.com/repos/{}/branches?per_page=100'.format(repo_path)
+        ):
+            branches = response.json()
+            for branch in branches:
+                isdefault = branch['name'] == default_branch_name
+                cur_cache[branch['name']] = {
+                    'sha': branch['commit']['sha'],
+                    'isdefault': isdefault,
+                    'name': branch['name']
+                }
+
+    if not repo_path in PR_CACHE:
+        cur_cache = {}
+        PR_CACHE[repo_path] = cur_cache
+        for response in authed_get_all_pages(
+            'pull_requests',
+            'https://api.github.com/repos/{}/pulls?per_page=100&state=all'.format(repo_path)
+        ):
+            for pr in pull_requests:
+                pr_num = pr.get('number')
+                cur_cache[str(pr_num)] = {
+                    'pr_num': str(pr_num),
+                    'base_sha': pr['base']['sha'],
+                    'base_ref': pr['base']['ref'],
+                    'head_sha': pr['head']['sha'],
+                    'head_ref': pr['head']['ref']
+                }
+
+    # Now build a set of all potential heads
+    head_set = {}
+    for key, val in BRANCH_CACHE[repo_path].items():
+        head_set[val['sha']] = 1
+    for key, val in PR_CACHE[repo_path].items():
+        head_set[val['head_sha']] = 1
+        # There could be a PR into a branch that has since been deleted and this is our only record
+        # of its head, so include it
+        head_set[val['base_sha']] = 1
+    return head_set.keys()
+
+def get_commit_detail(commit, repo_path):
+    '''
+    # Augment each commit with overall stats and file-level diff data by hitting the commits
+    # endpoint with the individual commit hash.
+    # This is copied from the github documentation:
+    # Note: If there are more than 300 files in the commit diff, the response will
+    # include pagination link headers for the remaining files, up to a limit of 3000
+    # files. Each page contains the static commit information, and the only changes are
+    # to the file listing.
+    # TODO: if the changed file count exceeds 3000, then use the raw checkout to fetch
+    # this data.
+    '''
+
+    # Hash of file addition that's too large, for testing
+    #if commit['sha'] != '836f0c47362e2f92f57ddee977df0f5c0da6d53b':
+    #    continue
+    # Hash of commit with file change that's too large, for testing
+    #if commit['sha'] != '1961e1b44e7c15b1f62f6da99b0e284b71d64048':
+    #    continue
+
+    commit['files'] = []
+    for commit_detail in authed_get_all_pages(
+        'commits',
+        'https://api.github.com/repos/{}/commits/{}'.format(repo_path, commit['sha'])
+    ):
+        # TODO: test fetching multiple pages of changed files if the changed file count
+        # exceeds 300.
+        detail_json = commit_detail.json()
+        commit['stats'] = detail_json['stats']
+        commit['files'].extend(detail_json['files'])
+
+    # Iterate through each of the file changes and fetch the raw patch if it is missing
+    # because it is too big of a change
+    for commitFile in commit['files']:
+        commitFile['isBinary'] = False
+        commitFile['isLargeFile'] = False
+
+        # Skip if there's already a patch
+        if 'patch' in commitFile:
+            continue
+        # If no changes are showing, this is probably a binary file
+        if commitFile['changes'] == 0 and commitFile['additions'] == 0 and \
+                commitFile['deletions'] == 0:
+            # Indicate that this file is binary if it's "modified" and the change
+            # counts are zero. Change counts can be zero for other reasons with renames
+            # and additions/deletions of empty files
+            if commitFile['status'] == 'modified':
+                commitFile['isBinary'] = True
+            continue
+
+        # Patch is missing for large file, get the urls of the current and previous
+        # raw change blobs
+        currentContentsUrl = commitFile['contents_url']
+
+        for currentContents in authed_get_all_pages(
+            'file_contents',
+            currentContentsUrl
+        ):
+            currentContentsJson = currentContents.json()
+            fileContent = currentContentsJson['content']
+                # TODO: do we need to catch base64 decode errors in case file is binary?
+            decodedFileContent = base64.b64decode(fileContent).decode("utf-8")
+            # Will only be one page
+            break
+
+        # Get the previous contents if the file existed before (not added)
+        decodedPreviousFileContent = ''
+        if commitFile['status'] != 'added':
+            contentPath = currentContentsUrl.split('?ref=')[0]
+            # First parent is base, second parent is head
+            baseSha = commit['parents'][0]['sha']
+            previousContentsUrl = contentPath + '?ref=' + baseSha
+
+            for previousContents in authed_get_all_pages(
+                'file_contents',
+                previousContentsUrl
+            ):
+                previousContentsJson = previousContents.json()
+                previousFileContent = previousContentsJson['content']
+                # TODO: do we need to catch base64 decode errors in case file is binary?
+                decodedPreviousFileContent = base64.b64decode(previousFileContent).decode("utf-8")
+                # Will only be one page
+                break
+
+        patch = create_patch_for_files(decodedFileContent, decodedPreviousFileContent)
+        if len(patch) > LARGE_FILE_DIFF_THRESHOLD:
+            commitFile['isLargeFile'] = True
+        else:
+            commitFile['patch'] = patch
 
 # Diffs over this many bytes of text are dropped and instead replaced with a flag indicating that
 # the file is large.
@@ -984,113 +1118,86 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
+
     bookmark = get_bookmark(state, repo_path, "commits", "since", start_date)
-    if bookmark:
-        query_string = '?since={}'.format(bookmark)
+    if not bookmark:
+        bookmark = '1970-01-01'
+
+    # Get the set of all commits we have fetched previously
+    fetchedCommits = get_bookmark(state, repo_path, "commits", "fetchedCommits")
+    if not fetchedCommits:
+        fetchedCommits = {}
     else:
-        query_string = ''
+        # We have run previously, so we don't want to use the time-based bookmark becuase it could
+        # skip commits that are pushed after they are committed. So, reset the 'since' bookmark back
+        # to the beginning of time and rely solely on the fetchedCommits bookmark.
+        bookmark = '1970-01-01'
+
+    # We don't want newly fetched commits to update the state if we fail partway through, because
+    # this could lead to commits getting marked as fetched when their parents are never fetched. So,
+    # copy the dict.
+    fetchedCommits = fetchedCommits.copy()
+
+    # Get all of the branch heads to use for querying commits
+    heads = get_all_heads_for_commits(repo_path)
+
+    # Set this here for updating the state when we don't run any queries
+    extraction_time = singer.utils.now()
 
     with metrics.record_counter('commits') as counter:
-        for response in authed_get_all_pages(
-                'commits',
-                'https://api.github.com/repos/{}/commits{}'.format(repo_path, query_string)
-        ):
-            commits = response.json()
-            extraction_time = singer.utils.now()
-            for commit in commits:
-                # Augment each commit with file-level diff data by hitting the commits endpoint with
-                # the individual commit hash.
-                # This is copied from the github documentation:
-                # Note: If there are more than 300 files in the commit diff, the response will
-                # include pagination link headers for the remaining files, up to a limit of 3000
-                # files. Each page contains the static commit information, and the only changes are
-                # to the file listing.
-                # TODO: if the changed file count exceeds 3000, then use the raw checkout to fetch
-                # this data.
+        for head in heads:
+            # If the head commit has already been synced, then skip.
+            if head in fetchedCommits:
+                continue
 
-                # Hash of file addition that's too large, for testing
-                #if commit['sha'] != '836f0c47362e2f92f57ddee977df0f5c0da6d53b':
-                #    continue
-                # Hash of commit with file change that's too large, for testing
-                #if commit['sha'] != '1961e1b44e7c15b1f62f6da99b0e284b71d64048':
-                #    continue
+            # Maintain a list of parents we are waiting to see
+            missingParents = {}
 
-                commit['files'] = []
-                for commit_detail in authed_get_all_pages(
-                    'commits',
-                    'https://api.github.com/repos/{}/commits/{}'.format(repo_path, commit['sha'])
-                ):
-                    # TODO: test fetching multiple pages of changed files if the changed file count
-                    # exceeds 300.
-                    detail_json = commit_detail.json()
-                    commit['stats'] = detail_json['stats']
-                    commit['files'].extend(detail_json['files'])
-
-                # Iterate through each of the file changes and fetch the raw patch if it is missing
-                # because it is too big of a change
-                for commitFile in commit['files']:
-                    commitFile['isBinary'] = False
-                    commitFile['isLargeFile'] = False
-
-                    # Skip if there's already a patch
-                    if 'patch' in commitFile:
+            cururl = 'https://api.github.com/repos/{}/commits?per_page=100&sha={}&since={}' \
+                .format(repo_path, head, bookmark)
+            while True:
+                # Get commits one page at a time
+                response = list(authed_get_yield('commits', cururl))[0]
+                commits = response.json()
+                extraction_time = singer.utils.now()
+                for commit in commits:
+                    # Skip commits we've already imported
+                    if commit['sha'] in fetchedCommits:
                         continue
-                    # If no changes are showing, this is probably a binary file
-                    if commitFile['changes'] == 0 and commitFile['additions'] == 0 and \
-                            commitFile['deletions'] == 0:
-                        # Indicate that this file is binary if it's "modified" and the change
-                        # counts are zero. Change counts can be zero for other reasons with renames
-                        # and additions/deletions of empty files
-                        if commitFile['status'] == 'modified':
-                            commitFile['isBinary'] = True
-                        continue
+                    get_commit_detail(commit, repo_path)
+                    commit['_sdc_repository'] = repo_path
+                    with singer.Transformer() as transformer:
+                        rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
+                    singer.write_record('commits', rec, time_extracted=extraction_time)
 
-                    # Patch is missing for large file, get the urls of the current and previous
-                    # raw change blobs
-                    currentContentsUrl = commitFile['contents_url']
+                    # Record that we have now fetched this commit
+                    fetchedCommits[commit['sha']] = 1
+                    # No longer a missing parent
+                    missingParents.pop(commit['sha'], None)
 
-                    for currentContents in authed_get_all_pages(
-                        'file_contents',
-                        currentContentsUrl
-                    ):
-                        currentContentsJson = currentContents.json()
-                        fileContent = currentContentsJson['content']
-                            # TODO: do we need to catch base64 decode errors in case file is binary?
-                        decodedFileContent = base64.b64decode(fileContent).decode("utf-8")
-                        # Will only be one page
-                        break
+                    # Keep track of new missing parents
+                    for parent in commit['parents']:
+                        if not parent['sha'] in fetchedCommits:
+                            missingParents[parent['sha']] = 1
+                    counter.increment()
 
-                    # Get the previous contents if the file existed before (not added)
-                    decodedPreviousFileContent = ''
-                    if commitFile['status'] != 'added':
-                        contentPath = currentContentsUrl.split('?ref=')[0]
-                        # First parent is base, second parent is head
-                        baseSha = commit['parents'][0]['sha']
-                        previousContentsUrl = contentPath + '?ref=' + baseSha
+                # If there are no missing parents, then we are done prior to reaching the lst page
+                if not missingParents:
+                    break
+                elif 'next' in response.links:
+                    cururl = response.links['next']['url']
+                # Else if we have reached the end of our data but not found the parents, then we
+                # have a problem
+                else:
+                    raise GithubException('Some commit parents never found: ' + \
+                        ','.join(missingParents.keys()))
 
-                        for previousContents in authed_get_all_pages(
-                            'file_contents',
-                            previousContentsUrl
-                        ):
-                            previousContentsJson = previousContents.json()
-                            previousFileContent = previousContentsJson['content']
-                            # TODO: do we need to catch base64 decode errors in case file is binary?
-                            decodedPreviousFileContent = base64.b64decode(previousFileContent).decode("utf-8")
-                            # Will only be one page
-                            break
-
-                    patch = create_patch_for_files(decodedFileContent, decodedPreviousFileContent)
-                    if len(patch) > LARGE_FILE_DIFF_THRESHOLD:
-                        commitFile['isLargeFile'] = True
-                    else:
-                        commitFile['patch'] = patch
-
-                commit['_sdc_repository'] = repo_path
-                with singer.Transformer() as transformer:
-                    rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
-                singer.write_record('commits', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'commits', {'since': singer.utils.strftime(extraction_time)})
-                counter.increment()
+    # Don't write until the end so that we don't record fetchedCommits if we fail and never get
+    # their parents.
+    singer.write_bookmark(state, repo_path, 'commits', {
+        'since': singer.utils.strftime(extraction_time),
+        'fetchedCommits': fetchedCommits
+    })
 
     return state
 
@@ -1219,7 +1326,7 @@ SYNC_FUNCTIONS = {
 }
 
 SUB_STREAMS = {
-    'pull_requests': ['reviews', 'review_comments', 'pr_commits'],
+    'pull_requests': ['reviews', 'review_comments'],
     'projects': ['project_cards', 'project_columns'],
     'teams': ['team_members', 'team_memberships']
 }
@@ -1238,6 +1345,16 @@ def do_sync(config, state, catalog):
     state = translate_state(state, catalog, repositories)
     singer.write_state(state)
 
+    # Put branches and then pull requests before commits, which have a data dependency on them.
+    def schemaSortFunc(val):
+        if val['tap_stream_id'] == 'branches':
+            return 'aa'
+        elif val['tap_stream_id'] == 'pull_requests':
+            return 'bb'
+        else:
+            return val['tap_stream_id']
+    catalog['streams'].sort(key=schemaSortFunc)
+
     #pylint: disable=too-many-nested-blocks
     for repo in repositories:
         logger.info("Starting sync of repository: %s", repo)
@@ -1252,6 +1369,7 @@ def do_sync(config, state, catalog):
 
             # if stream is selected, write schema and sync
             if stream_id in selected_stream_ids:
+                logger.info("Syncing stream: %s", stream_id)
                 singer.write_schema(stream_id, stream_schema, stream['key_properties'])
 
                 # get sync function and any sub streams

@@ -4,8 +4,14 @@
     "_sdc_repository": {
       "type": ["string"]
     },
+    "repo_name": {
+      "type": ["string"]
+    },
     "name": {
       "type": ["string"]
+    },
+    "isdefault": {
+      "type": ["boolean"]
     },
     "commit": {
       "type": ["null", "object"],

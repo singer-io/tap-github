@@ -92,6 +92,34 @@
         }
       }
     },
+    "head": {
+      "type": ["null", "object"],
+      "properties": {
+        "ref": {
+          "type": ["null", "string"]
+        },
+        "label": {
+          "type": ["null", "string"]
+        },
+        "repo": {
+          "type": ["null", "object"],
+          "properties": {
+            "id": {
+              "type": [ "null", "integer" ]
+            },
+            "name": {
+              "type": [ "null", "string" ]
+            },
+            "url": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "sha": {
+          "type": ["null", "string"]
+        }
+      }
+    },
     "merged_at": {
       "type": ["null", "string"],
       "format": "date-time"
