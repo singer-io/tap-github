@@ -1109,7 +1109,7 @@ def get_commit_detail(commit, repo_path):
                 # Will only be one page
                 break
 
-        patch = create_patch_for_files(decodedFileContent, decodedPreviousFileContent)
+        patch = create_patch_for_files(decodedPreviousFileContent, decodedFileContent)
         if len(patch) > LARGE_FILE_DIFF_THRESHOLD:
             commitFile['isLargeFile'] = True
         else:
