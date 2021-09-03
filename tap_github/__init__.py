@@ -310,6 +310,11 @@ def get_catalog():
         }
         streams.append(catalog_entry)
 
+    # This minimizes diffs when there are changes
+    def sortFunc(val):
+        return val['stream']
+    streams.sort(sortFunc)
+
     return {'streams': streams}
 
 def verify_repo_access(url_for_repo, repo):
