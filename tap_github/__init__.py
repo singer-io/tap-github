@@ -313,7 +313,7 @@ def get_catalog():
     # This minimizes diffs when there are changes
     def sortFunc(val):
         return val['stream']
-    streams.sort(sortFunc)
+    streams.sort(key=sortFunc)
 
     return {'streams': streams}
 
