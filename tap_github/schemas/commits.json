@@ -40,19 +40,19 @@
         "total": {
           "type": [
             "null",
-            "number"
+            "integer"
           ]
         },
         "additions": {
           "type": [
             "null",
-            "number"
+            "integer"
           ]
         },
         "deletions": {
           "type": [
             "null",
-            "number"
+            "integer"
           ]
         }
       }
@@ -89,19 +89,19 @@
           "additions": {
             "type": [
               "null",
-              "number"
+              "integer"
             ]
           },
           "deletions": {
             "type": [
               "null",
-              "number"
+              "integer"
             ]
           },
           "changes": {
             "type": [
               "null",
-              "number"
+              "integer"
             ]
           },
           "status": {
