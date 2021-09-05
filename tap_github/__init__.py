@@ -193,9 +193,9 @@ def rate_throttling(response):
     if int(response.headers['X-RateLimit-Remaining']) == 0:
         seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
-        if seconds_to_sleep > 600:
-            message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
-            raise RateLimitExceeded(message) from None
+        #if seconds_to_sleep > 600:
+        #    message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
+        #    raise RateLimitExceeded(message) from None
 
         logger.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
         time.sleep(seconds_to_sleep)
