@@ -138,6 +138,10 @@
     "updated_at": {
       "type": ["null", "string"],
       "format": "date-time"
+    },
+    "merge_commit_sha": {
+      "type": ["null", "string"],
+      "description": "Hash of the merge commit if the PR has been"
     }
   }
 }
