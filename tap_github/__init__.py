@@ -190,7 +190,7 @@ def calculate_seconds(epoch):
     return int(round((epoch - current), 0))
 
 def rate_throttling(response):
-    if int(response.headers['X-RateLimit-Remaining']) == 0:
+    if int(response.headers['X-RateLimit-Remaining']) < 10:
         seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
         #if seconds_to_sleep > 600:
@@ -198,7 +198,7 @@ def rate_throttling(response):
         #    raise RateLimitExceeded(message) from None
 
         logger.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
-        time.sleep(seconds_to_sleep)
+        time.sleep(seconds_to_sleep + 10)
 
 # pylint: disable=dangerous-default-value
 def authed_get(source, url, headers={}):
