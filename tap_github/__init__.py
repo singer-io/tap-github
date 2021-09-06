@@ -201,12 +201,29 @@ def rate_throttling(response):
         time.sleep(seconds_to_sleep + 10)
 
 # pylint: disable=dangerous-default-value
+MAX_RETRY_TIME = 3600   # Retry for up to an hour, then die
+RETRY_WAIT = 30 # Wait 30 seconds between requests when the server is struggling
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
-        resp = session.request(method='get', url=url)
-        if resp.status_code != 200:
-            raise_for_error(resp, source)
+        retry_time = 0
+        while True:
+            resp = session.request(method='get', url=url)
+            if resp.status_code >= 500:
+                if retry_time >= MAX_RETRY_TIME:
+                    raise InternalServerError('Internal server error {} persisted after '\
+                        'attempting to retry for {} seconds.'.format(resp.status_code,
+                        MAX_RETRY_TIME))
+                else:
+                    logger.info('Encountered internal server error code {}, waiting {} seconds ' \
+                        'and then retrying.'.format(resp.status_code, RETRY_WAIT))
+                    retry_time += RETRY_WAIT
+                    time.sleep(RETRY_WAIT)
+            elif resp.status_code != 200:
+                raise_for_error(resp, source)
+            else:
+                break
+
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         rate_throttling(resp)
         return resp
@@ -857,19 +874,24 @@ def get_all_collaborators(schema, repo_path, state, mdata, _start_date):
     https://developer.github.com/v3/repos/collaborators/#list-collaborators
     '''
     with metrics.record_counter('collaborators') as counter:
-        for response in authed_get_all_pages(
-                'collaborators',
-                'https://api.github.com/repos/{}/collaborators'.format(repo_path)
-        ):
-            collaborators = response.json()
-            extraction_time = singer.utils.now()
-            for collaborator in collaborators:
-                collaborator['_sdc_repository'] = repo_path
-                with singer.Transformer() as transformer:
-                    rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
-                singer.write_record('collaborators', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'collaborator', {'since': singer.utils.strftime(extraction_time)})
-                counter.increment()
+        try:
+            for response in authed_get_all_pages(
+                    'collaborators',
+                    'https://api.github.com/repos/{}/collaborators'.format(repo_path)
+            ):
+                collaborators = response.json()
+                extraction_time = singer.utils.now()
+                for collaborator in collaborators:
+                    collaborator['_sdc_repository'] = repo_path
+                    with singer.Transformer() as transformer:
+                        rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
+                    singer.write_record('collaborators', rec, time_extracted=extraction_time)
+                    singer.write_bookmark(state, repo_path, 'collaborator', {'since': singer.utils.strftime(extraction_time)})
+                    counter.increment()
+        except AuthException:
+            logger.info('Received 403 unauthorized while trying to access collaborators. You must' \
+                    ' have push access to load collaborators, skipping stream for repo {}.'\
+                    .format(repo_path))
 
     return state
 
