@@ -202,7 +202,7 @@ def rate_throttling(response):
 
 # pylint: disable=dangerous-default-value
 MAX_RETRY_TIME = 3600   # Retry for up to an hour, then die
-RETRY_WAIT = 30 # Wait 30 seconds between requests when the server is struggling
+RETRY_WAIT = 15  # Wait between requests when the server is struggling
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
@@ -449,7 +449,7 @@ def get_all_issue_events(schemas, repo_path, state, mdata, start_date):
     with metrics.record_counter('issue_events') as counter:
         for response in authed_get_all_pages(
                 'issue_events',
-                'https://api.github.com/repos/{}/issues/events?sort=created_at&direction=desc'.format(repo_path)
+                'https://api.github.com/repos/{}/issues/events?per_page=100&sort=created_at&direction=desc'.format(repo_path)
         ):
             events = response.json()
             extraction_time = singer.utils.now()
@@ -487,7 +487,7 @@ def get_all_events(schemas, repo_path, state, mdata, start_date):
     with metrics.record_counter('events') as counter:
         for response in authed_get_all_pages(
                 'events',
-                'https://api.github.com/repos/{}/events?sort=created_at&direction=desc'.format(repo_path)
+                'https://api.github.com/repos/{}/events?per_page=100&sort=created_at&direction=desc'.format(repo_path)
         ):
             events = response.json()
             extraction_time = singer.utils.now()
@@ -524,7 +524,7 @@ def get_all_issue_milestones(schemas, repo_path, state, mdata, start_date):
     with metrics.record_counter('issue_milestones') as counter:
         for response in authed_get_all_pages(
                 'milestones',
-                'https://api.github.com/repos/{}/milestones?direction=desc'.format(repo_path)
+                'https://api.github.com/repos/{}/milestones?per_page=100&direction=desc'.format(repo_path)
         ):
             milestones = response.json()
             extraction_time = singer.utils.now()
@@ -555,7 +555,7 @@ def get_all_issue_labels(schemas, repo_path, state, mdata, _start_date):
     with metrics.record_counter('issue_labels') as counter:
         for response in authed_get_all_pages(
                 'issue_labels',
-                'https://api.github.com/repos/{}/labels'.format(repo_path)
+                'https://api.github.com/repos/{}/labels?per_page=100'.format(repo_path)
         ):
             issue_labels = response.json()
             extraction_time = singer.utils.now()
@@ -584,7 +584,7 @@ def get_all_commit_comments(schemas, repo_path, state, mdata, start_date):
     with metrics.record_counter('commit_comments') as counter:
         for response in authed_get_all_pages(
                 'commit_comments',
-                'https://api.github.com/repos/{}/comments?sort=created_at&direction=desc'.format(repo_path)
+                'https://api.github.com/repos/{}/comments?per_page=100&sort=created_at&direction=desc'.format(repo_path)
         ):
             commit_comments = response.json()
             extraction_time = singer.utils.now()
@@ -618,7 +618,7 @@ def get_all_projects(schemas, repo_path, state, mdata, start_date):
         #pylint: disable=too-many-nested-blocks
         for response in authed_get_all_pages(
                 'projects',
-                'https://api.github.com/repos/{}/projects?sort=created_at&direction=desc'.format(repo_path),
+                'https://api.github.com/repos/{}/projects?per_page=100&sort=created_at&direction=desc'.format(repo_path),
                 { 'Accept': 'application/vnd.github.inertia-preview+json' }
         ):
             projects = response.json()
@@ -669,7 +669,7 @@ def get_all_project_cards(column_id, schemas, repo_path, state, mdata, start_dat
     with metrics.record_counter('project_cards') as counter:
         for response in authed_get_all_pages(
                 'project_cards',
-                'https://api.github.com/projects/columns/{}/cards?sort=created_at&direction=desc'.format(column_id)
+                'https://api.github.com/projects/columns/{}/cards?per_page=100&sort=created_at&direction=desc'.format(column_id)
         ):
             project_cards = response.json()
             for r in project_cards:
@@ -700,7 +700,7 @@ def get_all_project_columns(project_id, schemas, repo_path, state, mdata, start_
     with metrics.record_counter('project_columns') as counter:
         for response in authed_get_all_pages(
                 'project_columns',
-                'https://api.github.com/projects/{}/columns?sort=created_at&direction=desc'.format(project_id)
+                'https://api.github.com/projects/{}/columns?per_page=100&sort=created_at&direction=desc'.format(project_id)
         ):
             project_columns = response.json()
             for r in project_columns:
@@ -729,7 +729,7 @@ def get_all_releases(schemas, repo_path, state, mdata, _start_date):
     with metrics.record_counter('releases') as counter:
         for response in authed_get_all_pages(
                 'releases',
-                'https://api.github.com/repos/{}/releases?sort=created_at&direction=desc'.format(repo_path)
+                'https://api.github.com/repos/{}/releases?per_page=100&sort=created_at&direction=desc'.format(repo_path)
         ):
             releases = response.json()
             extraction_time = singer.utils.now()
@@ -821,7 +821,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
 def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata):
     for response in authed_get_all_pages(
             'reviews',
-            'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path,pr_number)
+            'https://api.github.com/repos/{}/pulls/{}/reviews?per_page=100'.format(repo_path,pr_number)
     ):
         reviews = response.json()
         for review in reviews:
@@ -836,7 +836,7 @@ def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata):
 def get_review_comments_for_pr(pr_number, schema, repo_path, state, mdata):
     for response in authed_get_all_pages(
             'comments',
-            'https://api.github.com/repos/{}/pulls/{}/comments'.format(repo_path,pr_number)
+            'https://api.github.com/repos/{}/pulls/{}/comments?per_page=100'.format(repo_path,pr_number)
     ):
         review_comments = response.json()
         for comment in review_comments:
@@ -851,11 +851,14 @@ def get_review_comments_for_pr(pr_number, schema, repo_path, state, mdata):
 def get_all_assignees(schema, repo_path, state, mdata, _start_date):
     '''
     https://developer.github.com/v3/issues/assignees/#list-assignees
+
+    No "since" parameter available, so have to get all of them each time, which can be a lot
+    (thousands) for very large repositories with a lot of contributors.
     '''
     with metrics.record_counter('assignees') as counter:
         for response in authed_get_all_pages(
                 'assignees',
-                'https://api.github.com/repos/{}/assignees'.format(repo_path)
+                'https://api.github.com/repos/{}/assignees?per_page=100'.format(repo_path)
         ):
             assignees = response.json()
             extraction_time = singer.utils.now()
@@ -877,7 +880,7 @@ def get_all_collaborators(schema, repo_path, state, mdata, _start_date):
         try:
             for response in authed_get_all_pages(
                     'collaborators',
-                    'https://api.github.com/repos/{}/collaborators'.format(repo_path)
+                    'https://api.github.com/repos/{}/collaborators?per_page=100'.format(repo_path)
             ):
                 collaborators = response.json()
                 extraction_time = singer.utils.now()
@@ -1101,41 +1104,53 @@ def get_commit_detail(commit, repo_path):
         # raw change blobs
         currentContentsUrl = commitFile['contents_url']
 
-        for currentContents in authed_get_all_pages(
-            'file_contents',
-            currentContentsUrl
-        ):
-            currentContentsJson = currentContents.json()
-            fileContent = currentContentsJson['content']
-                # TODO: do we need to catch base64 decode errors in case file is binary?
-            decodedFileContent = base64.b64decode(fileContent).decode("utf-8")
-            # Will only be one page
-            break
-
-        # Get the previous contents if the file existed before (not added)
-        decodedPreviousFileContent = ''
-        if commitFile['status'] != 'added':
-            contentPath = currentContentsUrl.split('?ref=')[0]
-            # First parent is base, second parent is head
-            baseSha = commit['parents'][0]['sha']
-            previousContentsUrl = contentPath + '?ref=' + baseSha
-
-            for previousContents in authed_get_all_pages(
+        try:
+            for currentContents in authed_get_all_pages(
                 'file_contents',
-                previousContentsUrl
+                currentContentsUrl
             ):
-                previousContentsJson = previousContents.json()
-                previousFileContent = previousContentsJson['content']
-                # TODO: do we need to catch base64 decode errors in case file is binary?
-                decodedPreviousFileContent = base64.b64decode(previousFileContent).decode("utf-8")
+                currentContentsJson = currentContents.json()
+                fileContent = currentContentsJson['content']
+                    # TODO: do we need to catch base64 decode errors in case file is binary?
+                decodedFileContent = base64.b64decode(fileContent).decode("utf-8")
                 # Will only be one page
                 break
 
-        patch = create_patch_for_files(decodedPreviousFileContent, decodedFileContent)
-        if len(patch) > LARGE_FILE_DIFF_THRESHOLD:
+            # Get the previous contents if the file existed before (not added)
+            decodedPreviousFileContent = ''
+            if commitFile['status'] != 'added':
+                contentPath = currentContentsUrl.split('?ref=')[0]
+                # First parent is base, second parent is head
+                baseSha = commit['parents'][0]['sha']
+                previousContentsUrl = contentPath + '?ref=' + baseSha
+
+                for previousContents in authed_get_all_pages(
+                    'file_contents',
+                    previousContentsUrl
+                ):
+                    previousContentsJson = previousContents.json()
+                    previousFileContent = previousContentsJson['content']
+                    # TODO: do we need to catch base64 decode errors in case file is binary?
+                    decodedPreviousFileContent = base64.b64decode(previousFileContent).decode("utf-8")
+                    # Will only be one page
+                    break
+
+            patch = create_patch_for_files(decodedPreviousFileContent, decodedFileContent)
+            if len(patch) > LARGE_FILE_DIFF_THRESHOLD:
+                commitFile['isLargeFile'] = True
+            else:
+                commitFile['patch'] = patch
+        except AuthException:
+            # Original error:
+            # {'message': 'This API returns blobs up to 1 MB in size. The requested blob is too
+            # large to fetch via the API, but you can use the Git Data API to request blobs up to
+            # 100 MB in size.', 'errors': [{'resource': 'Blob', 'field': 'data', 'code':
+            # 'too_large'}], 'documentation_url':
+            # 'https://docs.github.com/rest/reference/repos#get-repository-content'}
+            logger.info('Encountered 403 while fetching blob, which likely means it is too '\
+                'large. Treating as large file and skipping')
             commitFile['isLargeFile'] = True
-        else:
-            commitFile['patch'] = patch
+
 
 # Diffs over this many bytes of text are dropped and instead replaced with a flag indicating that
 # the file is large.
@@ -1242,7 +1257,7 @@ def get_all_issues(schema, repo_path,  state, mdata, start_date):
     with metrics.record_counter('issues') as counter:
         for response in authed_get_all_pages(
                 'issues',
-                'https://api.github.com/repos/{}/issues?state=all&sort=updated&direction=asc{}'.format(repo_path, query_string)
+                'https://api.github.com/repos/{}/issues?per_page=100&state=all&sort=updated&direction=asc{}'.format(repo_path, query_string)
         ):
             issues = response.json()
             extraction_time = singer.utils.now()
@@ -1269,7 +1284,8 @@ def get_all_comments(schema, repo_path, state, mdata, start_date):
     with metrics.record_counter('comments') as counter:
         for response in authed_get_all_pages(
                 'comments',
-                'https://api.github.com/repos/{}/issues/comments?sort=updated&direction=asc{}'.format(repo_path, query_string)
+                'https://api.github.com/repos/{}/issues/comments?per_page=100&sort=updated' \
+                '&direction=asc{}'.format(repo_path, query_string)
         ):
             comments = response.json()
             extraction_time = singer.utils.now()
@@ -1292,7 +1308,7 @@ def get_all_stargazers(schema, repo_path, state, mdata, _start_date):
     with metrics.record_counter('stargazers') as counter:
         for response in authed_get_all_pages(
                 'stargazers',
-                'https://api.github.com/repos/{}/stargazers'.format(repo_path), stargazers_headers
+                'https://api.github.com/repos/{}/stargazers?per_page=100'.format(repo_path), stargazers_headers
         ):
             stargazers = response.json()
             extraction_time = singer.utils.now()
