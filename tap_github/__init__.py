@@ -166,7 +166,7 @@ def get_bookmark(state, repo, stream_name, bookmark_key, start_date=None):
         return start_date
     return None
 
-def raise_for_error(resp, source):
+def raise_for_error(resp, source, url):
     error_code = resp.status_code
     try:
         response_json = resp.json()
@@ -177,10 +177,11 @@ def raise_for_error(resp, source):
         details = ERROR_CODE_EXCEPTION_MAPPING.get(error_code).get("message")
         if source == "teams":
             details += ' or it is a personal account repository'
-        message = "HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details.".format(details, response_json.get("documentation_url"))
+        message = "HTTP-error-code: 404, URL: {}. Error: {}. Please refer \'{}\' for more details." \
+            .format(url, details, response_json.get("documentation_url"))
     else:
-        message = "HTTP-error-code: {}, Error: {}".format(
-            error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
+        message = "HTTP-error-code: {}, URL: {}. Error: {}".format(
+            error_code, url, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
 
     exc = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception", GithubException)
     raise exc(message) from None
@@ -220,7 +221,7 @@ def authed_get(source, url, headers={}):
                     retry_time += RETRY_WAIT
                     time.sleep(RETRY_WAIT)
             elif resp.status_code != 200:
-                raise_for_error(resp, source)
+                raise_for_error(resp, source, url)
             else:
                 break
 
@@ -1086,6 +1087,7 @@ def get_commit_detail(commit, repo_path):
     for commitFile in commit['files']:
         commitFile['isBinary'] = False
         commitFile['isLargeFile'] = False
+        commitFile['isError'] = False
 
         # Skip if there's already a patch
         if 'patch' in commitFile:
@@ -1140,7 +1142,11 @@ def get_commit_detail(commit, repo_path):
                 commitFile['isLargeFile'] = True
             else:
                 commitFile['patch'] = patch
-        except AuthException:
+        except NotFoundException as err:
+            logger.info('Encountered 404 while fetching blob. Flagging as large file and ' \
+                'skipping. Original exception: ' + repr(err))
+            commitFile['isError'] = True
+        except AuthException as err:
             # Original error:
             # {'message': 'This API returns blobs up to 1 MB in size. The requested blob is too
             # large to fetch via the API, but you can use the Git Data API to request blobs up to
@@ -1148,7 +1154,7 @@ def get_commit_detail(commit, repo_path):
             # 'too_large'}], 'documentation_url':
             # 'https://docs.github.com/rest/reference/repos#get-repository-content'}
             logger.info('Encountered 403 while fetching blob, which likely means it is too '\
-                'large. Treating as large file and skipping')
+                'large. Treating as large file and skipping. Original excpetion: ' + repr(err))
             commitFile['isLargeFile'] = True
 
 

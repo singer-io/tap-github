@@ -141,6 +141,10 @@
           "isLargeFile": {
             "type": ["null", "boolean"],
             "description": "True if there is no patch because the patch was too large to store (> 1 MB)."
+          },
+          "isError": {
+            "type": ["null", "boolean"],
+            "description": "True if there was another error whlie fetching the file."
           }
         }
       }
