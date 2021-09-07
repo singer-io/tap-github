@@ -367,32 +367,40 @@ def do_discover(config):
 def get_all_teams(schemas, repo_path, state, mdata, _start_date):
     org = repo_path.split('/')[0]
     with metrics.record_counter('teams') as counter:
-        for response in authed_get_all_pages(
-                'teams',
-                'https://api.github.com/orgs/{}/teams?sort=created_at&direction=desc'.format(org)
-        ):
-            teams = response.json()
-            extraction_time = singer.utils.now()
+        try:
+            for response in authed_get_all_pages(
+                    'teams',
+                    'https://api.github.com/orgs/{}/teams?sort=created_at&direction=desc'.format(org)
+            ):
+                teams = response.json()
+                extraction_time = singer.utils.now()
 
-            for r in teams:
-                team_slug = r.get('slug')
-                r['_sdc_repository'] = repo_path
+                for r in teams:
+                    team_slug = r.get('slug')
+                    r['_sdc_repository'] = repo_path
 
-                # transform and write release record
-                with singer.Transformer() as transformer:
-                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
-                singer.write_record('teams', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'teams', {'since': singer.utils.strftime(extraction_time)})
-                counter.increment()
+                    # transform and write release record
+                    with singer.Transformer() as transformer:
+                        rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                    singer.write_record('teams', rec, time_extracted=extraction_time)
+                    singer.write_bookmark(state, repo_path, 'teams', {'since': singer.utils.strftime(extraction_time)})
+                    counter.increment()
 
-                if schemas.get('team_members'):
-                    for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata):
-                        singer.write_record('team_members', team_members_rec, time_extracted=extraction_time)
-                        singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
+                    if schemas.get('team_members'):
+                        for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata):
+                            singer.write_record('team_members', team_members_rec, time_extracted=extraction_time)
+                            singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
 
-                if schemas.get('team_memberships'):
-                    for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata):
-                        singer.write_record('team_memberships', team_memberships_rec, time_extracted=extraction_time)
+                    if schemas.get('team_memberships'):
+                        for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata):
+                            singer.write_record('team_memberships', team_memberships_rec, time_extracted=extraction_time)
+        except AuthException as err:
+            # Original error:
+            # {'message': 'Must have admin rights to Repository.', 'documentation_url':
+            # 'https://docs.github.com/rest/reference/teams#list-teams'}
+            logger.info('Received 403 unauthorized while trying to access teams. You must' \
+                    ' have admin access to load teams, skipping stream for repo {}.'\
+                    .format(repo_path))
 
     return state
 
