@@ -115,6 +115,17 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     }
 }
 
+def utf8_hook(data, typ, schema):
+    if typ == 'string':
+        try:
+            # Replace null bytes to make valid utf-8 text
+            decodedStr = bytes(str(data), 'utf-8').decode('utf-8', 'ignore').replace('\u0000','')
+            return decodedStr
+        except UnicodeDecodeError:
+            return None
+    else:
+        return data
+
 def translate_state(state, catalog, repositories):
     '''
     This tap used to only support a single repository, in which case the
@@ -380,7 +391,7 @@ def get_all_teams(schemas, repo_path, state, mdata, _start_date):
                     r['_sdc_repository'] = repo_path
 
                     # transform and write release record
-                    with singer.Transformer() as transformer:
+                    with singer.Transformer(pre_hook=utf8_hook) as transformer:
                         rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                     singer.write_record('teams', rec, time_extracted=extraction_time)
                     singer.write_bookmark(state, repo_path, 'teams', {'since': singer.utils.strftime(extraction_time)})
@@ -416,7 +427,7 @@ def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
                 r['_sdc_repository'] = repo_path
 
                 # transform and write release record
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 counter.increment()
 
@@ -440,7 +451,7 @@ def get_all_team_memberships(team_slug, schemas, repo_path, state, mdata):
                 ):
                     team_membership = res.json()
                     team_membership['_sdc_repository'] = repo_path
-                    with singer.Transformer() as transformer:
+                    with singer.Transformer(pre_hook=utf8_hook) as transformer:
                         rec = transformer.transform(team_membership, schemas, metadata=metadata.to_map(mdata))
                     counter.increment()
                     yield rec
@@ -473,7 +484,7 @@ def get_all_issue_events(schemas, repo_path, state, mdata, start_date):
                     return state
 
                 # transform and write release record
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(event, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('issue_events', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'issue_events', {'since': singer.utils.strftime(extraction_time)})
@@ -512,7 +523,7 @@ def get_all_events(schemas, repo_path, state, mdata, start_date):
                     return state
 
                 # transform and write release record
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('events', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'events', {'since': singer.utils.strftime(extraction_time)})
@@ -548,7 +559,7 @@ def get_all_issue_milestones(schemas, repo_path, state, mdata, start_date):
                     continue
 
                 # transform and write release record
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('issue_milestones', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'issue_milestones', {'since': singer.utils.strftime(extraction_time)})
@@ -572,7 +583,7 @@ def get_all_issue_labels(schemas, repo_path, state, mdata, _start_date):
                 r['_sdc_repository'] = repo_path
 
                 # transform and write release record
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('issue_labels', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'issue_labels', {'since': singer.utils.strftime(extraction_time)})
@@ -608,7 +619,7 @@ def get_all_commit_comments(schemas, repo_path, state, mdata, start_date):
                     return state
 
                 # transform and write release record
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('commit_comments', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'commit_comments', {'since': singer.utils.strftime(extraction_time)})
@@ -643,7 +654,7 @@ def get_all_projects(schemas, repo_path, state, mdata, start_date):
                     return state
 
                 # transform and write release record
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('projects', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'projects', {'since': singer.utils.strftime(extraction_time)})
@@ -692,7 +703,7 @@ def get_all_project_cards(column_id, schemas, repo_path, state, mdata, start_dat
                     return state
 
                 # transform and write release record
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 counter.increment()
                 yield rec
@@ -723,7 +734,7 @@ def get_all_project_columns(project_id, schemas, repo_path, state, mdata, start_
                     return state
 
                 # transform and write release record
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 counter.increment()
                 yield rec
@@ -746,7 +757,7 @@ def get_all_releases(schemas, repo_path, state, mdata, _start_date):
                 r['_sdc_repository'] = repo_path
 
                 # transform and write release record
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('releases', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'releases', {'since': singer.utils.strftime(extraction_time)})
@@ -800,7 +811,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
                     }
 
                     # transform and write pull_request record
-                    with singer.Transformer() as transformer:
+                    with singer.Transformer(pre_hook=utf8_hook) as transformer:
                         rec = transformer.transform(pr, schemas['pull_requests'], metadata=metadata.to_map(mdata))
                     singer.write_record('pull_requests', rec, time_extracted=extraction_time)
                     # BUGBUG? What if there's a failure to load the reviews, review comments, or pr
@@ -835,7 +846,7 @@ def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata):
         reviews = response.json()
         for review in reviews:
             review['_sdc_repository'] = repo_path
-            with singer.Transformer() as transformer:
+            with singer.Transformer(pre_hook=utf8_hook) as transformer:
                 rec = transformer.transform(review, schema, metadata=metadata.to_map(mdata))
             yield rec
 
@@ -850,7 +861,7 @@ def get_review_comments_for_pr(pr_number, schema, repo_path, state, mdata):
         review_comments = response.json()
         for comment in review_comments:
             comment['_sdc_repository'] = repo_path
-            with singer.Transformer() as transformer:
+            with singer.Transformer(pre_hook=utf8_hook) as transformer:
                 rec = transformer.transform(comment, schema, metadata=metadata.to_map(mdata))
             yield rec
 
@@ -873,7 +884,7 @@ def get_all_assignees(schema, repo_path, state, mdata, _start_date):
             extraction_time = singer.utils.now()
             for assignee in assignees:
                 assignee['_sdc_repository'] = repo_path
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(assignee, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('assignees', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'assignees', {'since': singer.utils.strftime(extraction_time)})
@@ -895,7 +906,7 @@ def get_all_collaborators(schema, repo_path, state, mdata, _start_date):
                 extraction_time = singer.utils.now()
                 for collaborator in collaborators:
                     collaborator['_sdc_repository'] = repo_path
-                    with singer.Transformer() as transformer:
+                    with singer.Transformer(pre_hook=utf8_hook) as transformer:
                         rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
                     singer.write_record('collaborators', rec, time_extracted=extraction_time)
                     singer.write_bookmark(state, repo_path, 'collaborator', {'since': singer.utils.strftime(extraction_time)})
@@ -1277,7 +1288,7 @@ def get_all_issues(schema, repo_path,  state, mdata, start_date):
             extraction_time = singer.utils.now()
             for issue in issues:
                 issue['_sdc_repository'] = repo_path
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(issue, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('issues', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'issues', {'since': singer.utils.strftime(extraction_time)})
@@ -1287,6 +1298,9 @@ def get_all_issues(schema, repo_path,  state, mdata, start_date):
 def get_all_comments(schema, repo_path, state, mdata, start_date):
     '''
     https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository
+
+    TODO: There seems to a limit of 40,000 commments for this endpoint. Instead, get the comments
+    associated with each individual issues.
     '''
 
     bookmark = get_bookmark(state, repo_path, "comments", "since", start_date)
@@ -1305,7 +1319,7 @@ def get_all_comments(schema, repo_path, state, mdata, start_date):
             extraction_time = singer.utils.now()
             for comment in comments:
                 comment['_sdc_repository'] = repo_path
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(comment, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('comments', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'comments', {'since': singer.utils.strftime(extraction_time)})
@@ -1315,6 +1329,8 @@ def get_all_comments(schema, repo_path, state, mdata, start_date):
 def get_all_stargazers(schema, repo_path, state, mdata, _start_date):
     '''
     https://developer.github.com/v3/activity/starring/#list-stargazers
+
+    NOTE: This endpoint is limited to a maximum of 40,000 rows.
     '''
 
     stargazers_headers = {'Accept': 'application/vnd.github.v3.star+json'}
@@ -1329,7 +1345,7 @@ def get_all_stargazers(schema, repo_path, state, mdata, _start_date):
             for stargazer in stargazers:
                 user_id = stargazer['user']['id']
                 stargazer['_sdc_repository'] = repo_path
-                with singer.Transformer() as transformer:
+                with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(stargazer, schema, metadata=metadata.to_map(mdata))
                 rec['user_id'] = user_id
                 singer.write_record('stargazers', rec, time_extracted=extraction_time)
