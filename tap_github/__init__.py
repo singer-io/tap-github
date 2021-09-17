@@ -74,6 +74,9 @@ class ConflictError(GithubException):
 class RateLimitExceeded(GithubException):
     pass
 
+class HttpException(Exception):
+    pass
+
 ERROR_CODE_EXCEPTION_MAPPING = {
     301: {
         "raise_exception": MovedPermanentlyError,
@@ -200,14 +203,29 @@ def rate_throttling(response):
 
 # pylint: disable=dangerous-default-value
 def authed_get(source, url, headers={}):
-    with metrics.http_request_timer(source) as timer:
-        session.headers.update(headers)
-        resp = session.request(method='get', url=url)
-        if resp.status_code != 200:
-            raise_for_error(resp, source)
-        timer.tags[metrics.Tag.http_status_code] = resp.status_code
-        rate_throttling(resp)
-        return resp
+    for _ in range(0, 3): # 3 attempts
+        with metrics.http_request_timer(source) as timer:
+            session.headers.update(headers)
+            resp = session.request(method='get', url=url)
+
+            # Handle github's rate limited responses
+            remaining = resp.headers.get('X-RateLimit-Remaining')
+            time_to_reset = resp.headers.get('X-RateLimit-Reset', time.time() + 60)
+            if remaining is not None and remaining == '0':
+                time.sleep(float(time_to_reset) - time.time())
+                continue  # next attempt
+
+            # Handle github's possible failures as retries
+            if resp.status_code == 502 or resp.status_code == 503:
+                continue  # next attempt
+
+            if resp.status_code != 200:
+                raise_for_error(resp, source)
+            timer.tags[metrics.Tag.http_status_code] = resp.status_code
+            rate_throttling(resp)
+            return resp
+
+    raise HttpException(resp.text)
 
 def authed_get_all_pages(source, url, headers={}):
     while True:
