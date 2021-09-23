@@ -1049,6 +1049,7 @@ def get_all_heads_for_commits(repo_path):
             'pull_requests',
             'https://api.github.com/repos/{}/pulls?per_page=100&state=all'.format(repo_path)
         ):
+            pull_requests = response.json()
             for pr in pull_requests:
                 pr_num = pr.get('number')
                 cur_cache[str(pr_num)] = {
@@ -1143,6 +1144,9 @@ def get_commit_detail(commit, repo_path):
                 contentPath = currentContentsUrl.split('?ref=')[0]
                 # First parent is base, second parent is head
                 baseSha = commit['parents'][0]['sha']
+                if 'previous_filename' in commitFile:
+                    contentPath = contentPath.replace(commitFile['filename'],
+                        commitFile['previous_filename'])
                 previousContentsUrl = contentPath + '?ref=' + baseSha
 
                 for previousContents in authed_get_all_pages(
