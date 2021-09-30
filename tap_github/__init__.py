@@ -116,15 +116,23 @@ ERROR_CODE_EXCEPTION_MAPPING = {
 }
 
 def utf8_hook(data, typ, schema):
-    if typ == 'string':
-        try:
-            # Replace null bytes to make valid utf-8 text
-            decodedStr = bytes(str(data), 'utf-8').decode('utf-8', 'ignore').replace('\u0000','')
-            return decodedStr
-        except UnicodeDecodeError:
-            return None
-    else:
+    if typ != 'string':
         return data
+
+    # Don't need to handle these either
+    if schema.get('format') == 'date_time' or schema.get('format') == 'singer.decimal':
+        return data
+
+    # Without this, the string 'None' gets passed through
+    if data is None:
+        return data
+
+    try:
+        # Replace null bytes to make valid utf-8 text
+        decodedStr = bytes(str(data), 'utf-8').decode('utf-8', 'ignore').replace('\u0000','')
+        return decodedStr
+    except UnicodeDecodeError:
+        return None
 
 def translate_state(state, catalog, repositories):
     '''
