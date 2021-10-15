@@ -97,3 +97,8 @@ properties.json
 
 # Jetbrains IDE
 .idea
+
+# macOS
+*.DS_Store
+.AppleDouble
+.LSOverride
