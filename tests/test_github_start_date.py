@@ -18,7 +18,7 @@ class GithubStartDateTest(TestGithubBase):
         """Instantiate start date according to the desired data set and run the test"""
 
         self.start_date_1 = '2020-04-01T00:00:00Z'
-        self.start_date_2 = '2021-06-10T00:00:00Z'
+        self.start_date_2 = '2021-10-08T00:00:00Z'
 
         start_date_1_epoch = self.dt_to_ts(self.start_date_1)
         start_date_2_epoch = self.dt_to_ts(self.start_date_2)
