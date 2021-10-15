@@ -46,7 +46,7 @@ class TestGithubBase(unittest.TestCase):
         """
         return_value = {
             'start_date' : dt.strftime(dt.utcnow()-timedelta(days=5), self.START_DATE_FORMAT),
-            'repository': 'singer-io/tap-github'
+            'repository': 'singer-io/test-repo'
         }
         if original:
             return return_value
