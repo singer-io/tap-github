@@ -21,20 +21,26 @@ class TestGithubAutomaticFields(TestGithubBase):
 
         expected_streams = set([
             'assignees',
-            'team_members',
-            'teams',
-            'stargazers',
-            'releases',
+            'collaborators',
+            'comments',
+            'commit_comments',
+            'commits',
+            'events',
+            'issue_labels',
+            'issue_milestones',
+            'issue_events',
+            'issues',
             'pr_commits',
+            'project_cards',
+            'project_columns',
+            'projects',
+            'pull_requests',
+            'releases',
             'review_comments',
             'reviews',
-            'pull_requests',
-            'issues',
-            'issue_milestones',
-            'issue_labels',
-            'events',
-            'comments',
-            'collaborators',
+            'stargazers',
+            'team_members',
+            'teams'
         ])
 
         # instantiate connection
