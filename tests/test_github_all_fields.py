@@ -20,24 +20,7 @@ class TestGithubAllFields(TestGithubBase):
         - Verify that more than just the automatic fields are replicated for each stream.
         """
 
-        expected_streams = set([
-            'assignees',
-            'collaborators',
-            'comments',
-            'events',
-            'issue_labels',
-            'issue_milestones',
-            'issues',
-            'pr_commits',
-            'pull_requests',
-            'releases',
-            'review_comments',
-            'reviews',
-            'stargazers',
-            'team_members',
-            'team_memberships',
-            'teams'
-        ])
+        expected_streams = self.expected_streams()
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
