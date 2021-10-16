@@ -45,7 +45,7 @@ class TestGithubBase(unittest.TestCase):
         :param original: set to false to change the start_date or end_date
         """
         return_value = {
-            'start_date' : dt.strftime(dt.utcnow()-timedelta(days=5), self.START_DATE_FORMAT),
+            'start_date' : '2021-10-01T00:00:00Z',
             'repository': 'singer-io/test-repo'
         }
         if original:
