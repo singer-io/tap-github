@@ -83,7 +83,7 @@ class TestGithubBase(unittest.TestCase):
             'reviews',
             'stargazers',
             'team_members',
-            'team_memberships',
+            # 'team_memberships',
             'teams'
         }
 
