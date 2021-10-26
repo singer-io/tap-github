@@ -15,33 +15,13 @@ class TestGithubAutomaticFields(TestGithubBase):
 
     def test_run(self):
         """
-        Verify that for each stream you can get multiple pages of data
-        when no fields are selected and only the automatic fields are replicated.
+        - Verify that for each stream you can get multiple pages of data
+            when no fields are selected.
+        - Verify that only the automatic fields are sent to the target.
+        - Verify that all replicated records have unique primary key values.
         """
 
-        expected_streams = set([
-            'assignees',
-            'collaborators',
-            'comments',
-            'commit_comments',
-            'commits',
-            'events',
-            'issue_labels',
-            'issue_milestones',
-            'issue_events',
-            'issues',
-            'pr_commits',
-            'project_cards',
-            'project_columns',
-            'projects',
-            'pull_requests',
-            'releases',
-            'review_comments',
-            'reviews',
-            'stargazers',
-            'team_members',
-            'teams'
-        ])
+        expected_streams = self.expected_check_streams()
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
@@ -69,6 +49,11 @@ class TestGithubAutomaticFields(TestGithubBase):
                 # collect actual values
                 data = synced_records.get(stream, {})
                 record_messages_keys = [set(row.get('data').keys()) for row in data.get('messages', {})]
+                primary_keys_list = [
+                    tuple(message.get('data').get(expected_pk) for expected_pk in expected_keys)
+                    for message in data.get('messages')
+                    if message.get('action') == 'upsert']
+                unique_primary_keys_list = set(primary_keys_list)
 
                 # Verify that you get some records for each stream
                 self.assertGreater(
@@ -78,3 +63,9 @@ class TestGithubAutomaticFields(TestGithubBase):
                 # Verify that only the automatic fields are sent to the target
                 for actual_keys in record_messages_keys:
                     self.assertSetEqual(expected_keys, actual_keys)
+
+                # Verify that all replicated records have unique primary key values.
+                self.assertEqual(
+                    len(primary_keys_list), 
+                    len(unique_primary_keys_list), 
+                    msg="Replicated record does not have unique primary key values.") 
