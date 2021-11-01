@@ -60,32 +60,13 @@ class TestGithubBase(unittest.TestCase):
             'access_token': os.getenv("TAP_GITHUB_TOKEN")
         }
 
-    @staticmethod
-    def expected_check_streams():
-        return {
-            'assignees',
-            'collaborators',
-            'comments',
-            'commit_comments',
-            'commits',
-            'events',
-            'issue_labels',
-            'issue_milestones',
-            'issue_events',
-            'issues',
-            'pr_commits',
-            'project_cards',
-            'project_columns',
-            'projects',
-            'pull_requests',
-            'releases',
-            'review_comments',
-            'reviews',
-            'stargazers',
-            'team_members',
-            # 'team_memberships',
-            'teams'
-        }
+    def expected_check_streams(self):
+        """The expected streams without any streams that are not passing due to tap issues with those streams"""
+        excluded_streams = {
+            'team_memberships'
+            }
+
+        return self.expected_streams() - excluded_streams
 
     def expected_metadata(self):
         """The expected streams and metadata about the streams"""
