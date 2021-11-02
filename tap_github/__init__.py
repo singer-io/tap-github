@@ -1,14 +1,12 @@
-import argparse
 import os
 import json
 import collections
 import time
 import requests
 import singer
-import singer.bookmarks as bookmarks
-import singer.metrics as metrics
 
-from singer import metadata
+from singer import (bookmarks, metrics, metadata)
+from simplejson import JSONDecodeError
 
 session = requests.Session()
 logger = singer.get_logger()
@@ -168,7 +166,7 @@ def raise_for_error(resp, source):
     error_code = resp.status_code
     try:
         response_json = resp.json()
-    except Exception:
+    except JSONDecodeError:
         response_json = {}
 
     if error_code == 404:
@@ -242,7 +240,7 @@ def load_schemas():
     for filename in os.listdir(get_abs_path('schemas')):
         path = get_abs_path('schemas') + '/' + filename
         file_raw = filename.replace('.json', '')
-        with open(path) as file:
+        with open(path, encoding='utf-8') as file:
             schemas[file_raw] = json.load(file)
 
     schemas['pr_commits'] = generate_pr_commit_schema(schemas['commits'])
