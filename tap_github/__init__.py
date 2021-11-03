@@ -42,6 +42,9 @@ KEY_PROPERTIES = {
     'team_memberships': ['url']
 }
 
+DEFAULT_SLEEP_SECONDS = 600
+MAX_SLEEP_SECONDS = DEFAULT_SLEEP_SECONDS
+
 class GithubException(Exception):
     pass
 
@@ -192,7 +195,7 @@ def rate_throttling(response):
     if int(response.headers['X-RateLimit-Remaining']) == 0:
         seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
-        if seconds_to_sleep > 600:
+        if seconds_to_sleep > MAX_SLEEP_SECONDS:
             message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
             raise RateLimitExceeded(message) from None
 
@@ -1098,6 +1101,11 @@ def do_sync(config, state, catalog):
 @singer.utils.handle_top_exception(logger)
 def main():
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
+
+    config_max_sleep = args.config.get('max_sleep_seconds')
+
+    global MAX_SLEEP_SECONDS 
+    MAX_SLEEP_SECONDS = config_max_sleep if config_max_sleep else MAX_SLEEP_SECONDS
 
     if args.discover:
         do_discover(args.config)
