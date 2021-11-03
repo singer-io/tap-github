@@ -4,6 +4,7 @@ import json
 import collections
 import time
 import requests
+import backoff
 import singer
 import singer.bookmarks as bookmarks
 import singer.metrics as metrics
@@ -199,6 +200,11 @@ def rate_throttling(response):
         time.sleep(seconds_to_sleep)
 
 # pylint: disable=dangerous-default-value
+@backoff.on_exception(
+    backoff.expo,
+    (RateLimitExceeded, InternalServerError, requests.ConnectionError),
+    max_tries=5,
+    factor=2)
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
