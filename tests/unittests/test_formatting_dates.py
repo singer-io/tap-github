@@ -91,7 +91,7 @@ class TestRateLimit(unittest.TestCase):
 
         final_state = tap_github.get_all_issue_milestones({}, repo_path, init_state, {}, "")
         # as we will get 0 records, initial and final bookmark will be same
-        self.assertEquals(init_bookmark, final_state["bookmarks"][repo_path]["issue_milestones"]["since"])
+        self.assertEqual(init_bookmark, final_state["bookmarks"][repo_path]["issue_milestones"]["since"])
 
     @mock.patch("singer.write_record")
     def test_data_containing_both_values(self, mocked_write_record, mocked_request):
@@ -117,4 +117,4 @@ class TestRateLimit(unittest.TestCase):
         # as we will get 2 record, final bookmark will be greater than initial bookmark
         self.assertGreater(last_bookmark, init_bookmark)
         # as we will get 2 record, write_records will also be called 2 times
-        self.assertEquals(mocked_write_record.call_count, 2)
+        self.assertEqual(mocked_write_record.call_count, 2)
