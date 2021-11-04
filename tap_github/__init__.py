@@ -1102,10 +1102,12 @@ def do_sync(config, state, catalog):
 def main():
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
+    # get optional config key `max_sleep_seconds`
     config_max_sleep = args.config.get('max_sleep_seconds')
 
-    global MAX_SLEEP_SECONDS 
-    MAX_SLEEP_SECONDS = config_max_sleep if config_max_sleep else MAX_SLEEP_SECONDS
+    # set global `MAX_SLEEP_SECONDS` for rate_throttling function or use default
+    global MAX_SLEEP_SECONDS
+    MAX_SLEEP_SECONDS = config_max_sleep if config_max_sleep else DEFAULT_SLEEP_SECONDS
 
     if args.discover:
         do_discover(args.config)
