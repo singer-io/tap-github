@@ -1106,7 +1106,7 @@ def main():
     config_max_sleep = args.config.get('max_sleep_seconds')
 
     # set global `MAX_SLEEP_SECONDS` for rate_throttling function or use default
-    global MAX_SLEEP_SECONDS
+    global MAX_SLEEP_SECONDS #pylint: disable=global-statement
     MAX_SLEEP_SECONDS = config_max_sleep if config_max_sleep else DEFAULT_SLEEP_SECONDS
 
     if args.discover:
