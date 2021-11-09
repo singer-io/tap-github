@@ -3,6 +3,7 @@ import os
 from tap_tester import connections, runner
 
 from base import TestGithubBase
+from datetime import datetime, timedelta
 
 
 class GithubStartDateTest(TestGithubBase):
@@ -15,17 +16,30 @@ class GithubStartDateTest(TestGithubBase):
         return "tap_tester_github_start_date_test"
 
     def test_run(self):
+        self.run_test('2020-04-01T00:00:00Z', '2021-06-10T00:00:00Z', self.expected_streams() - {'events'})
+
+        # As per the Documentation: https://docs.github.com/en/rest/reference/activity#events
+        # the 'events' of past 90 days will only be returned
+        # if there are no events in past 90 days, then there will be '304 Not Modified' error
+        # Assumption:
+        #   there must be event generated in 'singer-io/tap-github' repo in the past 90 days
+        today = datetime.today()
+        date_1 = datetime.strftime(today - timedelta(days=90), "%Y-%m-%dT00:00:00Z")
+        date_2 = datetime.strftime(today - timedelta(days=30), "%Y-%m-%dT00:00:00Z")
+        self.run_test(date_1, date_2, {'events'})
+
+    def run_test(self, date_1, date_2, streams):
         """Instantiate start date according to the desired data set and run the test"""
 
-        self.start_date_1 = '2020-04-01T00:00:00Z'
-        self.start_date_2 = '2021-06-10T00:00:00Z'
+        self.start_date_1 = date_1
+        self.start_date_2 = date_2
 
         start_date_1_epoch = self.dt_to_ts(self.start_date_1)
         start_date_2_epoch = self.dt_to_ts(self.start_date_2)
 
         self.START_DATE = self.start_date_1
 
-        expected_streams = self.expected_streams()
+        expected_streams = streams
 
         ##########################################################################
         ### First Sync
