@@ -16,6 +16,8 @@ class GithubStartDateTest(TestGithubBase):
         return "tap_tester_github_start_date_test"
 
     def test_run(self):
+        # run the test for all the streams excluding 'events' stream
+        # as for 'events' stream we have to use dynamic dates
         self.run_test('2020-04-01T00:00:00Z', '2021-06-10T00:00:00Z', self.expected_streams() - {'events'})
 
         # As per the Documentation: https://docs.github.com/en/rest/reference/activity#events
@@ -26,6 +28,7 @@ class GithubStartDateTest(TestGithubBase):
         today = datetime.today()
         date_1 = datetime.strftime(today - timedelta(days=90), "%Y-%m-%dT00:00:00Z")
         date_2 = datetime.strftime(today - timedelta(days=30), "%Y-%m-%dT00:00:00Z")
+        # run the test for 'events' stream
         self.run_test(date_1, date_2, {'events'})
 
     def run_test(self, date_1, date_2, streams):
