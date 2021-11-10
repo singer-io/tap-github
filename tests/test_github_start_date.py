@@ -1,5 +1,5 @@
 import os
-
+import requests
 from tap_tester import connections, runner
 
 from base import TestGithubBase
@@ -15,7 +15,22 @@ class GithubStartDateTest(TestGithubBase):
     def name():
         return "tap_tester_github_start_date_test"
 
+    def generate_data(self):
+        # get the token
+        token = os.getenv("TAP_GITHUB_TOKEN")
+        url = "https://api.github.com/user/starred/singer-io/tap-github"
+        headers = {"Authorization": "Bearer {}".format(token)}
+
+        # generate a data for 'events' stream: 'watchEvent' ie. star the repo
+        requests.put(url=url, headers=headers)
+        # as per the Documentation: https://docs.github.com/en/developers/webhooks-and-events/events/github-event-types#watchevent
+        # the event is generated when we 'star' a repo, hence 'unstar' it as we can 'star' it next time
+        requests.delete(url=url, headers=headers)
+
     def test_run(self):
+        # generate data for 'events' stream
+        self.generate_data()
+
         # run the test for all the streams excluding 'events' stream
         # as for 'events' stream we have to use dynamic dates
         self.run_test('2020-04-01T00:00:00Z', '2021-06-10T00:00:00Z', self.expected_streams() - {'events'})
@@ -23,11 +38,9 @@ class GithubStartDateTest(TestGithubBase):
         # As per the Documentation: https://docs.github.com/en/rest/reference/activity#events
         # the 'events' of past 90 days will only be returned
         # if there are no events in past 90 days, then there will be '304 Not Modified' error
-        # Assumption:
-        #   there must be event generated in 'singer-io/tap-github' repo in the past 90 days
         today = datetime.today()
-        date_1 = datetime.strftime(today - timedelta(days=90), "%Y-%m-%dT00:00:00Z")
-        date_2 = datetime.strftime(today - timedelta(days=30), "%Y-%m-%dT00:00:00Z")
+        date_1 = datetime.strftime(today - timedelta(days=1), "%Y-%m-%dT00:00:00Z")
+        date_2 = datetime.strftime(today, "%Y-%m-%dT00:00:00Z")
         # run the test for 'events' stream
         self.run_test(date_1, date_2, {'events'})
 
