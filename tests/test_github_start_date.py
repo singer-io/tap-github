@@ -39,8 +39,8 @@ class GithubStartDateTest(TestGithubBase):
         # the 'events' of past 90 days will only be returned
         # if there are no events in past 90 days, then there will be '304 Not Modified' error
         today = datetime.today()
-        date_1 = datetime.strftime(today - timedelta(days=1), "%Y-%m-%dT00:00:00Z")
-        date_2 = datetime.strftime(today, "%Y-%m-%dT00:00:00Z")
+        date_1 = datetime.strftime(today - timedelta(days=4), "%Y-%m-%dT00:00:00Z")
+        date_2 = datetime.strftime(today - timedelta(days=1), "%Y-%m-%dT00:00:00Z")
         # run the test for 'events' stream
         self.run_test(date_1, date_2, {'events'})
 
