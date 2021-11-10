@@ -121,6 +121,7 @@ class GithubStartDateTest(TestGithubBase):
                 # expected values
                 expected_primary_keys = self.expected_primary_keys()[stream]
                 expected_bookmark_keys = self.expected_bookmark_keys()[stream]
+                expected_metadata = self.expected_metadata()[stream]
 
                 # collect information for assertions from syncs 1 & 2 base on expected values
                 record_count_sync_1 = record_count_by_stream_1.get(stream, 0)
@@ -135,7 +136,7 @@ class GithubStartDateTest(TestGithubBase):
                 primary_keys_sync_1 = set(primary_keys_list_1)
                 primary_keys_sync_2 = set(primary_keys_list_2)
 
-                if self.is_incremental(stream):
+                if expected_metadata.get(self.OBEYS_START_DATE):
                     
                     # Sub stream fetch all data for records of related incremental super stream.
                     # Data of commit doesn't contain created_at or updated_at field. 
