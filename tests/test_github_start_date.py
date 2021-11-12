@@ -1,8 +1,9 @@
 import os
-
+import requests
 from tap_tester import connections, runner
 
 from base import TestGithubBase
+from datetime import datetime, timedelta
 
 
 class GithubStartDateTest(TestGithubBase):
@@ -14,18 +15,47 @@ class GithubStartDateTest(TestGithubBase):
     def name():
         return "tap_tester_github_start_date_test"
 
+    def generate_data(self):
+        # get the token
+        token = os.getenv("TAP_GITHUB_TOKEN")
+        url = "https://api.github.com/user/starred/singer-io/tap-github"
+        headers = {"Authorization": "Bearer {}".format(token)}
+
+        # generate a data for 'events' stream: 'watchEvent' ie. star the repo
+        requests.put(url=url, headers=headers)
+        # as per the Documentation: https://docs.github.com/en/developers/webhooks-and-events/events/github-event-types#watchevent
+        # the event is generated when we 'star' a repo, hence 'unstar' it as we can 'star' it next time
+        requests.delete(url=url, headers=headers)
+
     def test_run(self):
+        # generate data for 'events' stream
+        self.generate_data()
+
+        # run the test for all the streams excluding 'events' stream
+        # as for 'events' stream we have to use dynamic dates
+        self.run_test('2020-04-01T00:00:00Z', '2021-06-10T00:00:00Z', self.expected_streams() - {'events'})
+
+        # As per the Documentation: https://docs.github.com/en/rest/reference/activity#events
+        # the 'events' of past 90 days will only be returned
+        # if there are no events in past 90 days, then there will be '304 Not Modified' error
+        today = datetime.today()
+        date_1 = datetime.strftime(today - timedelta(days=4), "%Y-%m-%dT00:00:00Z")
+        date_2 = datetime.strftime(today - timedelta(days=1), "%Y-%m-%dT00:00:00Z")
+        # run the test for 'events' stream
+        self.run_test(date_1, date_2, {'events'})
+
+    def run_test(self, date_1, date_2, streams):
         """Instantiate start date according to the desired data set and run the test"""
 
-        self.start_date_1 = '2020-04-01T00:00:00Z'
-        self.start_date_2 = '2021-06-10T00:00:00Z'
+        self.start_date_1 = date_1
+        self.start_date_2 = date_2
 
         start_date_1_epoch = self.dt_to_ts(self.start_date_1)
         start_date_2_epoch = self.dt_to_ts(self.start_date_2)
 
         self.START_DATE = self.start_date_1
 
-        expected_streams = self.expected_streams()
+        expected_streams = streams
 
         ##########################################################################
         ### First Sync
@@ -91,6 +121,7 @@ class GithubStartDateTest(TestGithubBase):
                 # expected values
                 expected_primary_keys = self.expected_primary_keys()[stream]
                 expected_bookmark_keys = self.expected_bookmark_keys()[stream]
+                expected_metadata = self.expected_metadata()[stream]
 
                 # collect information for assertions from syncs 1 & 2 base on expected values
                 record_count_sync_1 = record_count_by_stream_1.get(stream, 0)
@@ -105,7 +136,7 @@ class GithubStartDateTest(TestGithubBase):
                 primary_keys_sync_1 = set(primary_keys_list_1)
                 primary_keys_sync_2 = set(primary_keys_list_2)
 
-                if self.is_incremental(stream):
+                if expected_metadata.get(self.OBEYS_START_DATE):
                     
                     # Sub stream fetch all data for records of related incremental super stream.
                     # Data of commit doesn't contain created_at or updated_at field. 
