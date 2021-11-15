@@ -7,11 +7,15 @@ import requests
 import singer
 import singer.bookmarks as bookmarks
 import singer.metrics as metrics
+import backoff
 
 from singer import metadata
 
 session = requests.Session()
 logger = singer.get_logger()
+
+# set default timeout of 300 seconds
+REQUEST_TIMEOUT = 300
 
 REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
 
@@ -199,10 +203,14 @@ def rate_throttling(response):
         time.sleep(seconds_to_sleep)
 
 # pylint: disable=dangerous-default-value
+# during 'Timeout' error there is also possibility of 'ConnectionError',
+# hence added backoff for 'ConnectionError' too.
+@backoff.on_exception(backoff.expo, requests.Timeout, max_tries=5, factor=2)
+@backoff.on_exception(backoff.expo, requests.ConnectionError, max_tries=5, factor=2)
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
-        resp = session.request(method='get', url=url)
+        resp = session.request(method='get', url=url, timeout=get_request_timeout())
         if resp.status_code != 200:
             raise_for_error(resp, source)
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
@@ -1009,6 +1017,20 @@ def get_stream_from_catalog(stream_id, catalog):
         if stream['tap_stream_id'] == stream_id:
             return stream
     return None
+
+# return the 'timeout'
+def get_request_timeout():
+    args = singer.utils.parse_args([])
+    # get the value of request timeout from config
+    config_request_timeout = args.config.get('request_timeout')
+
+    if config_request_timeout and float(config_request_timeout):
+        request_timeout = float(config_request_timeout)
+        # return the timeout from config
+        return request_timeout
+
+    # return default timeout
+    return REQUEST_TIMEOUT
 
 SYNC_FUNCTIONS = {
     'commits': get_all_commits,

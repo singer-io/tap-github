@@ -48,7 +48,8 @@ This tap:
     ```json
     {"access_token": "your-access-token",
      "repository": "singer-io/tap-github singer-io/getting-started",
-     "start_date": "2021-01-01T00:00:00Z"}
+     "start_date": "2021-01-01T00:00:00Z",
+     "request_timeout": 300}
     ```
 4. Run the tap in discovery mode to get properties.json file
 
