@@ -1,6 +1,5 @@
 {
   "type": ["null", "object"],
-  "additionalProperties": false,
   "properties": {
     "_sdc_repository": {
       "type": ["string"]
@@ -8,9 +7,6 @@
     "sha": {
       "type": ["null", "string"],
       "description": "The git commit hash"
-    },
-    "url": {
-      "type": ["null", "string"]
     },
     "parents": {
       "type": ["null", "array"],
@@ -21,158 +17,17 @@
           "sha": {
             "type": ["null", "string"],
             "description": "The git hash of the parent commit"
-          },
-          "url": {
-            "type": ["null", "string"],
-            "description": "The URL to the parent commit"
-          },
-          "html_url": {
-            "type": ["null", "string"],
-            "description": "The HTML URL to the parent commit"
           }
         }
       }
-    },
-    "stats": {
-      "type": ["null", "object"],
-      "additionalProperties": false,
-      "properties": {
-        "total": {
-          "type": [
-            "null",
-            "integer"
-          ]
-        },
-        "additions": {
-          "type": [
-            "null",
-            "integer"
-          ]
-        },
-        "deletions": {
-          "type": [
-            "null",
-            "integer"
-          ]
-        }
-      }
-    },
-    "files": {
-      "type": [
-        "null",
-        "array"
-      ],
-      "items": {
-        "type": [
-          "null",
-          "object"
-        ],
-        "properties": {
-          "sha": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "filename": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "previous_filename": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "additions": {
-            "type": [
-              "null",
-              "integer"
-            ]
-          },
-          "deletions": {
-            "type": [
-              "null",
-              "integer"
-            ]
-          },
-          "changes": {
-            "type": [
-              "null",
-              "integer"
-            ]
-          },
-          "status": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "raw_url": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "blob_url": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "contents_url": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "patch": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "isBinary": {
-            "type": ["null", "boolean"],
-            "description": "True if there is no patch because the file is binary (this may be false for renaming binary files because the file isn't inspected in that scenario)."
-          },
-          "isLargeFile": {
-            "type": ["null", "boolean"],
-            "description": "True if there is no patch because the patch was too large to store (> 1 MB)."
-          },
-          "isError": {
-            "type": ["null", "boolean"],
-            "description": "True if there was another error whlie fetching the file."
-          }
-        }
-      }
-    },
-    "html_url": {
-      "type": ["null", "string"],
-      "description": "The HTML URL to the commit"
-    },
-    "comments_url": {
-      "type": ["null", "string"],
-      "description": "The URL to the commit's comments page"
     },
     "commit": {
       "type": ["null", "object"],
-      "additionalProperties": false,
       "properties": {
-        "url": {
-          "type": ["null", "string"],
-          "description": "The URL to the commit"
-        },
         "tree": {
           "type": ["null", "object"],
-          "additionalProperties": false,
           "properties": {
             "sha": {
-              "type": ["null", "string"]
-            },
-            "url": {
               "type": ["null", "string"]
             }
           }
@@ -193,10 +48,6 @@
             "email": {
               "type": ["null", "string"],
               "description": "The author's email"
-            },
-            "login": {
-              "type": ["null", "string"],
-              "description": "The author's login"
             }
           }
         },
@@ -220,10 +71,6 @@
             "email": {
               "type": ["null", "string"],
               "description": "The committer's email"
-            },
-            "login": {
-              "type": ["null", "string"],
-              "description": "The committer's login"
             }
           }
         },
@@ -232,7 +79,32 @@
           "description": "The number of comments on the commit"
         }
       }
+    },
+    "author": {
+      "type": ["null", "object"],
+      "properties": {
+        "login": {
+          "type": ["null", "string"],
+          "description": "The author's login"
+        },
+        "id": {
+          "type": ["null", "integer"],
+          "description": "The author's GitHub user ID"
+        }
+      }
+    },
+    "committer": {
+      "type": ["null", "object"],
+      "properties": {
+        "login": {
+          "type": ["null", "string"],
+          "description": "The commiter's GitHub login"
+        },
+        "id": {
+          "type": ["null", "integer"],
+          "description": "The commiter's GitHub user ID"
+        }
+      }
     }
-  },
-  "additionalProperties": false
+  }
 }
