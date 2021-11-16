@@ -23,6 +23,7 @@ class TestGithubBase(unittest.TestCase):
     }
     START_DATE = ""
     FULL_TABLE_SUB_STREAMS = ['reviews', 'review_comments', 'pr_commits', 'team_members', 'team_memberships']
+    OBEYS_START_DATE = "obey-start-date"
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -75,104 +76,126 @@ class TestGithubBase(unittest.TestCase):
             "assignees": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL,
+                self.OBEYS_START_DATE: False
             },
             "collaborators": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL,
+                self.OBEYS_START_DATE: False
             },
             "comments": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
+                self.BOOKMARK: {"updated_at"},
+                self.OBEYS_START_DATE: True
             },
             "commit_comments": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
+                self.BOOKMARK: {"updated_at"},
+                self.OBEYS_START_DATE: True
             },
             "commits": {
                 self.PRIMARY_KEYS: {"sha"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
+                self.BOOKMARK: {"updated_at"},
+                self.OBEYS_START_DATE: True
             },
             "events": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"created_at"}
+                self.BOOKMARK: {"created_at"},
+                self.OBEYS_START_DATE: True
             },
             "issue_labels": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL,
+                self.OBEYS_START_DATE: False
             },
             "issue_milestones": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"due_on"}
+                self.BOOKMARK: {"due_on"},
+                self.OBEYS_START_DATE: True
             },
             "issue_events": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"created_at"}
+                self.BOOKMARK: {"created_at"},
+                self.OBEYS_START_DATE: True
             },
             "issues": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
+                self.BOOKMARK: {"updated_at"},
+                self.OBEYS_START_DATE: True
             },
             "pr_commits": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
+                self.BOOKMARK: {"updated_at"},
+                self.OBEYS_START_DATE: True
             },
             "project_cards": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
+                self.BOOKMARK: {"updated_at"},
+                self.OBEYS_START_DATE: True
             },
             "project_columns": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
+                self.BOOKMARK: {"updated_at"},
+                self.OBEYS_START_DATE: True
             },
             "projects": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
+                self.BOOKMARK: {"updated_at"},
+                self.OBEYS_START_DATE: True
             },
             "pull_requests": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
+                self.BOOKMARK: {"updated_at"},
+                self.OBEYS_START_DATE: True
             },
             "releases": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL,
+                self.OBEYS_START_DATE: False
             },
             "review_comments": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
+                self.BOOKMARK: {"updated_at"},
+                self.OBEYS_START_DATE: True
             },
             "reviews": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"}
+                self.BOOKMARK: {"updated_at"},
+                self.OBEYS_START_DATE: True
             },
             "stargazers": {
                 self.PRIMARY_KEYS: {"user_id"},
                 self.REPLICATION_METHOD: self.FULL,
+                self.OBEYS_START_DATE: False
             },
             "team_members": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL,
+                self.OBEYS_START_DATE: False
             },
             "team_memberships": {
                 self.PRIMARY_KEYS: {"url"},
                 self.REPLICATION_METHOD: self.FULL,
+                self.OBEYS_START_DATE: False
             },
             "teams": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL,
+                self.OBEYS_START_DATE: False
             }
         }
 
