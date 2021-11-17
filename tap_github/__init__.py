@@ -918,6 +918,10 @@ def get_all_collaborators(schema, repo_path, state, mdata, _start_date):
                     singer.write_record('collaborators', rec, time_extracted=extraction_time)
                     singer.write_bookmark(state, repo_path, 'collaborator', {'since': singer.utils.strftime(extraction_time)})
                     counter.increment()
+        except NotFoundException:
+            logger.info('Received 404 not found while trying to access collaborators. You must' \
+                    ' be a repo owner to view maintainers, skipping stream for repo {}.'\
+                    .format(repo_path))
         except AuthException:
             logger.info('Received 403 unauthorized while trying to access collaborators. You must' \
                     ' have push access to load collaborators, skipping stream for repo {}.'\
