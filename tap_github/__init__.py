@@ -205,8 +205,7 @@ def rate_throttling(response):
 # pylint: disable=dangerous-default-value
 # during 'Timeout' error there is also possibility of 'ConnectionError',
 # hence added backoff for 'ConnectionError' too.
-@backoff.on_exception(backoff.expo, requests.Timeout, max_tries=5, factor=2)
-@backoff.on_exception(backoff.expo, requests.ConnectionError, max_tries=5, factor=2)
+@backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError), max_tries=5, factor=2)
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)

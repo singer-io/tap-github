@@ -43,7 +43,7 @@ This tap:
     Create a JSON file containing the start date, access token you just created
     and the path to one or multiple repositories that you want to extract data from. Each repo path should be space delimited. The repo path is relative to
     `https://github.com/`. For example the path for this repository is
-    `singer-io/tap-github`. 
+    `singer-io/tap-github`. You can also add request timeout to set the timeout for requests which is an optional parameter with default value of 300 seconds.
 
     ```json
     {"access_token": "your-access-token",
