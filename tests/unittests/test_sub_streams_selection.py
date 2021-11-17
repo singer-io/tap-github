@@ -12,7 +12,7 @@ class TestSubStreamSelection(unittest.TestCase):
         try:
             tap_github.validate_dependencies(selected_streams)
         except tap_github.DependencyException as e:
-            self.assertEquals(str(e), "Unable to extract 'reviews' data, to receive 'reviews' data, you also need to select 'pull_requests'. Unable to extract 'pr_commits' data, to receive 'pr_commits' data, you also need to select 'pull_requests'.")
+            self.assertEqual(str(e), "Unable to extract 'reviews' data, to receive 'reviews' data, you also need to select 'pull_requests'. Unable to extract 'pr_commits' data, to receive 'pr_commits' data, you also need to select 'pull_requests'.")
 
     def test_teams_sub_streams_selected(self):
         selected_streams = ["teams", "team_members"]
@@ -23,7 +23,7 @@ class TestSubStreamSelection(unittest.TestCase):
         try:
             tap_github.validate_dependencies(selected_streams)
         except tap_github.DependencyException as e:
-            self.assertEquals(str(e), "Unable to extract 'team_members' data, to receive 'team_members' data, you also need to select 'teams'.")
+            self.assertEqual(str(e), "Unable to extract 'team_members' data, to receive 'team_members' data, you also need to select 'teams'.")
 
     def test_projects_sub_streams_selected(self):
         selected_streams = ["projects", "project_cards"]
@@ -34,7 +34,7 @@ class TestSubStreamSelection(unittest.TestCase):
         try:
             tap_github.validate_dependencies(selected_streams)
         except tap_github.DependencyException as e:
-            self.assertEquals(str(e), "Unable to extract 'project_columns' data, to receive 'project_columns' data, you also need to select 'projects'.")
+            self.assertEqual(str(e), "Unable to extract 'project_columns' data, to receive 'project_columns' data, you also need to select 'projects'.")
 
     def test_mixed_streams_positive(self):
         selected_streams = ["pull_requests", "reviews", "collaborators", "team_members", "stargazers", "projects", "teams", "project_cards"]
@@ -45,4 +45,4 @@ class TestSubStreamSelection(unittest.TestCase):
         try:
             tap_github.validate_dependencies(selected_streams)
         except tap_github.DependencyException as e:
-            self.assertEquals(str(e), "Unable to extract 'review_comments' data, to receive 'review_comments' data, you also need to select 'pull_requests'.")
+            self.assertEqual(str(e), "Unable to extract 'review_comments' data, to receive 'review_comments' data, you also need to select 'pull_requests'.")

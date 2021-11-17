@@ -3,6 +3,7 @@ import json
 import collections
 import time
 import requests
+import backoff
 import singer
 
 from singer import (bookmarks, metrics, metadata)
@@ -38,6 +39,9 @@ KEY_PROPERTIES = {
     'team_members': ['id'],
     'team_memberships': ['url']
 }
+
+DEFAULT_SLEEP_SECONDS = 600
+MAX_SLEEP_SECONDS = DEFAULT_SLEEP_SECONDS
 
 class GithubException(Exception):
     pass
@@ -189,7 +193,7 @@ def rate_throttling(response):
     if int(response.headers['X-RateLimit-Remaining']) == 0:
         seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
-        if seconds_to_sleep > 600:
+        if seconds_to_sleep > MAX_SLEEP_SECONDS:
             message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
             raise RateLimitExceeded(message) from None
 
@@ -197,6 +201,11 @@ def rate_throttling(response):
         time.sleep(seconds_to_sleep)
 
 # pylint: disable=dangerous-default-value
+@backoff.on_exception(
+    backoff.expo,
+    (RateLimitExceeded, InternalServerError, requests.ConnectionError),
+    max_tries=5,
+    factor=2)
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
@@ -1141,6 +1150,13 @@ def do_sync(config, state, catalog):
 @singer.utils.handle_top_exception(logger)
 def main():
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
+
+    # get optional config key `max_sleep_seconds`
+    config_max_sleep = args.config.get('max_sleep_seconds')
+
+    # set global `MAX_SLEEP_SECONDS` for rate_throttling function or use default
+    global MAX_SLEEP_SECONDS #pylint: disable=global-statement
+    MAX_SLEEP_SECONDS = config_max_sleep if config_max_sleep else DEFAULT_SLEEP_SECONDS
 
     if args.discover:
         do_discover(args.config)

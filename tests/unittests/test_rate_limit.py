@@ -36,7 +36,7 @@ class TestRateLimit(unittest.TestCase):
         try:
             tap_github.rate_throttling(resp)
         except tap_github.RateLimitExceeded as e:
-            self.assertEquals(str(e), "API rate limit exceeded, please try after 601 seconds.")
+            self.assertEqual(str(e), "API rate limit exceeded, please try after 601 seconds.")
 
 
     def test_rate_limit_not_exceeded(self, mocked_sleep):
