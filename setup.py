@@ -18,6 +18,7 @@ setup(name='tap-github',
               'pylint==2.6.2',
               'ipdb',
               'nose',
+              'requests-mock==1.9.3'
           ]
       },
       entry_points='''

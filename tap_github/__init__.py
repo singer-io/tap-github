@@ -306,6 +306,57 @@ def get_catalog():
 
     return {'streams': streams}
 
+def get_all_repos(organizations: list) -> list:
+    """
+    Retrieves all repositories for the provided organizations and
+        verifies basic access for them.
+
+    Docs: https://docs.github.com/en/rest/reference/repos#list-organization-repositories
+    """
+    repos = []
+
+    for org_path in organizations:
+        org = org_path.split('/')[0]
+        for response in authed_get_all_pages(
+            'get_all_repos',
+            'https://api.github.com/orgs/{}/repos?sort=created&direction=desc'.format(org)
+        ):
+            org_repos = response.json()
+
+            for repo in org_repos:
+                repo_full_name = repo.get('full_name')
+
+                logger.info("Verifying access of repository: %s", repo_full_name)
+                verify_repo_access(
+                    'https://api.github.com/repos/{}/commits'.format(repo_full_name),
+                    repo
+                )
+
+                repos.append(repo_full_name)
+
+    return repos
+
+def extract_repos_from_config(config: dict ) -> list:
+    """
+    Extracts all repositories from the config and calls get_all_repos()
+        for organizations using the wildcard 'org/*' format.
+    """
+    repo_paths = list(filter(None, config['repository'].split(' ')))
+
+    orgs_with_all_repos = list(filter(lambda x: x.split('/')[1] == '*', repo_paths))
+
+    if orgs_with_all_repos:
+        # remove any wildcard "org/*" occurrences from `repo_paths`
+        repo_paths = list(set(repo_paths).difference(set(orgs_with_all_repos)))
+
+        # get all repositores for an org in the config
+        all_repos = get_all_repos(orgs_with_all_repos)
+
+        # update repo_paths
+        repo_paths.extend(all_repos)
+
+    return repo_paths
+
 def verify_repo_access(url_for_repo, repo):
     try:
         authed_get("verifying repository access", url_for_repo)
@@ -319,7 +370,7 @@ def verify_access_for_repo(config):
     access_token = config['access_token']
     session.headers.update({'authorization': 'token ' + access_token, 'per_page': '1', 'page': '1'})
 
-    repositories = list(filter(None, config['repository'].split(' ')))
+    repositories = extract_repos_from_config(config)
 
     for repo in repositories:
         logger.info("Verifying access of repository: %s", repo)
@@ -1041,7 +1092,7 @@ def do_sync(config, state, catalog):
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
 
-    repositories = list(filter(None, config['repository'].split(' ')))
+    repositories = extract_repos_from_config(config)
 
     state = translate_state(state, catalog, repositories)
     singer.write_state(state)
