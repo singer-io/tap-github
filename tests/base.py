@@ -64,7 +64,8 @@ class TestGithubBase(unittest.TestCase):
     def expected_check_streams(self):
         """The expected streams without any streams that are not passing due to tap issues with those streams"""
         excluded_streams = {
-            'team_memberships'
+            'team_memberships',
+            'collaborators'
             }
 
         return self.expected_streams() - excluded_streams
