@@ -1230,6 +1230,7 @@ def get_commit_changes(commit, repo_path, useLocal, gitLocal):
                 commitFile['changetype'] = 'none'
             commitFile['commit_sha'] = commit['sha']
     for f in commit['files']:
+        f['_sdc_repository'] = repo_path
         f['id'] = '{}/{}/{}'.format(f['_sdc_repository'], f['commit_sha'], f['filename'])
     return commit['files']
 
