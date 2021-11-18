@@ -8,6 +8,10 @@ import singer
 import singer.bookmarks as bookmarks
 import singer.metrics as metrics
 import base64
+import difflib
+import asyncio
+
+from .gitlocal import GitLocal
 
 from singer import metadata
 
@@ -19,6 +23,7 @@ REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
 KEY_PROPERTIES = {
     'branches': ['repo_name'],
     'commits': ['sha'],
+    'commit_files': ['id'],
     'comments': ['id'],
     'issues': ['id'],
     'assignees': ['id'],
@@ -929,6 +934,61 @@ def get_all_collaborators(schema, repo_path, state, mdata, _start_date):
 
     return state
 
+
+def create_patch_for_files(old_text, new_text):
+    # Note: this patch may be slightly different from a patch generated with git since the diffing
+    # algorithms aren't the same, but it will at least be correct and in the same format.
+
+    newlineToken = '\\ No newline at end of file'
+    # Add this random data too in the rare case where a file literally ends in the newlineToken but
+    # does have a new line at the end.
+    sentinal = "SDF1G5ALB3YU"
+    newlineMarker = newlineToken + sentinal
+    newlineMarkerLength = len(newlineMarker)
+
+    # Also remove empty lines at end so that they aren't included in the diff output to get the
+    # format to match git's patches.
+
+    oldSplit = old_text.split('\n')
+    if oldSplit[-1] != '':
+        oldSplit[-1] += newlineMarker
+    else:
+        oldSplit = oldSplit[:-1]
+
+    newSplit = new_text.split('\n')
+    if newSplit[-1] != '':
+        newSplit[-1] += newlineMarker
+    else:
+        newSplit = newSplit[:-1]
+
+    # Patches don't use any when coming from the github API, so don't use nay here
+    diff = difflib.unified_diff(oldSplit, newSplit, n=0)
+
+    # Transform this to match the format of git patches coming from the API
+    difflist = list(diff)
+    newDiffList = []
+    firstDiffFound = False
+    for diffLine in difflist:
+        # Skip lines before the first @@
+        if diffLine[0:2] == '@@':
+            firstDiffFound = True
+        if not firstDiffFound:
+            continue
+
+        # Remove extra newlines after each diff line
+        if diffLine[-1:] == '\n':
+            newDiffList.append(diffLine[:-1])
+        # If we found the newline marker at the end, remove it and add the newline token on the next
+        # line like the diff format from github.
+        elif diffLine[-newlineMarkerLength:] == newlineMarker:
+            newDiffList.append(diffLine[:-newlineMarkerLength])
+            newDiffList.append(newlineToken)
+        else:
+            newDiffList.append(diffLine)
+
+    output = '\n'.join(newDiffList)
+    return output
+
 repo_cache = {}
 def get_repo_metadata(repo_path):
     if not repo_path in repo_cache:
@@ -1019,13 +1079,157 @@ def get_all_heads_for_commits(repo_path):
     # Now build a set of all potential heads
     head_set = {}
     for key, val in BRANCH_CACHE[repo_path].items():
-        head_set[val['sha']] = 1
+        head_set[val['sha']] = 'refs/heads/' + val['name']
     for key, val in PR_CACHE[repo_path].items():
-        head_set[val['head_sha']] = 1
+        head_set[val['head_sha']] = 'refs/pull/' + val['pr_num'] + '/head'
         # There could be a PR into a branch that has since been deleted and this is our only record
         # of its head, so include it
-        head_set[val['base_sha']] = 1
-    return head_set.keys()
+        head_set[val['base_sha']] = 'refs/heads/' + val['base_ref']
+    return head_set
+
+# Diffs over this many bytes of text are dropped and instead replaced with a flag indicating that
+# the file is large.
+LARGE_FILE_DIFF_THRESHOLD = 1024 * 1024
+
+def get_commit_detail_api(commit, repo_path):
+    '''
+    # Augment each commit with overall stats and file-level diff data by hitting the commits
+    # endpoint with the individual commit hash.
+    # This is copied from the github documentation:
+    # Note: If there are more than 300 files in the commit diff, the response will
+    # include pagination link headers for the remaining files, up to a limit of 3000
+    # files. Each page contains the static commit information, and the only changes are
+    # to the file listing.
+    # TODO: if the changed file count exceeds 3000, then use the raw checkout to fetch
+    # this data.
+    '''
+
+    # Hash of file addition that's too large, for testing
+    #if commit['sha'] != '836f0c47362e2f92f57ddee977df0f5c0da6d53b':
+    #    continue
+    # Hash of commit with file change that's too large, for testing
+    #if commit['sha'] != '1961e1b44e7c15b1f62f6da99b0e284b71d64048':
+    #    continue
+
+    commit['files'] = []
+    for commit_detail in authed_get_all_pages(
+        'commits',
+        'https://api.github.com/repos/{}/commits/{}'.format(repo_path, commit['sha'])
+    ):
+        # TODO: test fetching multiple pages of changed files if the changed file count
+        # exceeds 300.
+        detail_json = commit_detail.json()
+        commit['stats'] = detail_json['stats']
+        commit['files'].extend(detail_json['files'])
+
+    # Iterate through each of the file changes and fetch the raw patch if it is missing
+    # because it is too big of a change
+    for commitFile in commit['files']:
+        commitFile['is_binary'] = False
+        commitFile['is_large_patch'] = False
+
+        # Skip if there's already a patch
+        if 'patch' in commitFile:
+            continue
+        # If no changes are showing, this is probably a binary file
+        if commitFile['changes'] == 0 and commitFile['additions'] == 0 and \
+                commitFile['deletions'] == 0:
+            # Indicate that this file is binary if it's "modified" and the change
+            # counts are zero. Change counts can be zero for other reasons with renames
+            # and additions/deletions of empty files.
+            # Note: this will be wrong if there is a pure mode change
+            if commitFile['status'] == 'modified':
+                commitFile['is_binary'] = True
+            continue
+
+        # Patch is missing for large file, get the urls of the current and previous
+        # raw change blobs
+        currentContentsUrl = commitFile['contents_url']
+
+        try:
+            for currentContents in authed_get_all_pages(
+                'file_contents',
+                currentContentsUrl
+            ):
+                currentContentsJson = currentContents.json()
+                fileContent = currentContentsJson['content']
+                    # TODO: do we need to catch base64 decode errors in case file is binary?
+                decodedFileContent = base64.b64decode(fileContent).decode("utf-8")
+                # Will only be one page
+                break
+
+            # Get the previous contents if the file existed before (not added)
+            decodedPreviousFileContent = ''
+            if commitFile['status'] != 'added':
+                contentPath = currentContentsUrl.split('?ref=')[0]
+                # First parent is base, second parent is head
+                baseSha = commit['parents'][0]['sha']
+                if 'previous_filename' in commitFile:
+                    contentPath = contentPath.replace(commitFile['filename'],
+                        commitFile['previous_filename'])
+                previousContentsUrl = contentPath + '?ref=' + baseSha
+
+                for previousContents in authed_get_all_pages(
+                    'file_contents',
+                    previousContentsUrl
+                ):
+                    previousContentsJson = previousContents.json()
+                    previousFileContent = previousContentsJson['content']
+                    # TODO: do we need to catch base64 decode errors in case file is binary?
+                    decodedPreviousFileContent = base64.b64decode(previousFileContent).decode("utf-8")
+                    # Will only be one page
+                    break
+
+            patch = create_patch_for_files(decodedPreviousFileContent, decodedFileContent)
+            if len(patch) > LARGE_FILE_DIFF_THRESHOLD:
+                commitFile['is_large_patch'] = True
+            else:
+                commitFile['patch'] = patch
+        except NotFoundException as err:
+            logger.info('Encountered 404 while fetching blob. Flagging as large file and ' \
+                'skipping. Original exception: ' + repr(err))
+            commitFile['is_large_patch'] = True
+        except AuthException as err:
+            # Original error:
+            # {'message': 'This API returns blobs up to 1 MB in size. The requested blob is too
+            # large to fetch via the API, but you can use the Git Data API to request blobs up to
+            # 100 MB in size.', 'errors': [{'resource': 'Blob', 'field': 'data', 'code':
+            # 'too_large'}], 'documentation_url':
+            # 'https://docs.github.com/rest/reference/repos#get-repository-content'}
+            logger.info('Encountered 403 while fetching blob, which likely means it is too '\
+                'large. Treating as large file and skipping. Original excpetion: ' + repr(err))
+            commitFile['is_large_patch'] = True
+
+def get_commit_detail_local(commit, repo_path, gitLocal):
+    try:
+        changes = gitLocal.getCommitDiff(repo_path, commit['sha'])
+        commit['files'] = changes
+    except Exception as e:
+        # This generally shouldn't happen since we've already fetched and checked out the head
+        # commit successfully, so it probably indicates some sort of system error. Just let it
+        # bubbl eup for now.
+        raise e
+
+def get_commit_changes(commit, repo_path, useLocal, gitLocal):
+    if useLocal:
+        get_commit_detail_local(commit, repo_path, gitLocal)
+    else:
+        get_commit_detail_api(commit, repo_path)
+
+        for commitFile in commit['files']:
+            if 'added' == commitFile['status']:
+                commitFile['changetype'] = 'add'
+            elif 'removed' == commitFile['status']:
+                commitFile['changetype'] = 'delete'
+            # 'renamed' takes precedence over 'modified' in github, so we need to determine if there
+            # was actually a change by looking at other fields.
+            elif commitFile['additions'] > 0 or commitFile['deletions'] > 0 or \
+                    commitFile['is_binary'] or commitFile['is_large_patch']:
+                commitFile['changetype'] = 'edit'
+            else:
+                commitFile['changetype'] = 'none'
+            commitFile['commit_sha'] = commit['sha']
+    return commit['files']
 
 def get_all_commits(schema, repo_path,  state, mdata, start_date):
     '''
@@ -1058,7 +1262,7 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
     extraction_time = singer.utils.now()
 
     with metrics.record_counter('commits') as counter:
-        for head in heads:
+        for head, headRef in heads:
             # If the head commit has already been synced, then skip.
             if head in fetchedCommits:
                 continue
@@ -1107,6 +1311,131 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
     # Don't write until the end so that we don't record fetchedCommits if we fail and never get
     # their parents.
     singer.write_bookmark(state, repo_path, 'commits', {
+        'since': singer.utils.strftime(extraction_time),
+        'fetchedCommits': fetchedCommits
+    })
+
+    return state
+
+async def get_commit_changes_async(commit, repo_path, hasLocal, gitLocal):
+    changedFiles = get_commit_changes(commit, repo_path, hasLocal, gitLocal)
+    return changedFiles
+
+async def getChangedfilesForCommits(commits, repo_path, hasLocal, gitLocal):
+    coros = []
+    for commit in commits:
+        changesCoro = asyncio.to_thread(get_commit_changes, commit, repo_path, hasLocal, gitLocal)
+        #changesCoro = get_commit_changes_async(commit, repo_path, hasLocal, gitLocal)
+        coros.append(changesCoro)
+    results = await asyncio.gather(*coros)
+    return results
+
+async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, gitLocal):
+    bookmark = get_bookmark(state, repo_path, "commit_files", "since", start_date)
+    if not bookmark:
+        bookmark = '1970-01-01'
+
+    # Get the set of all commits we have fetched previously
+    fetchedCommits = get_bookmark(state, repo_path, "commit_files", "fetchedCommits")
+    if not fetchedCommits:
+        fetchedCommits = {}
+    else:
+        # We have run previously, so we don't want to use the time-based bookmark becuase it could
+        # skip commits that are pushed after they are committed. So, reset the 'since' bookmark back
+        # to the beginning of time and rely solely on the fetchedCommits bookmark.
+        bookmark = '1970-01-01'
+
+    # We don't want newly fetched commits to update the state if we fail partway through, because
+    # this could lead to commits getting marked as fetched when their parents are never fetched. So,
+    # copy the dict.
+    fetchedCommits = fetchedCommits.copy()
+
+    # Get all of the branch heads to use for querying commits
+    heads = get_all_heads_for_commits(repo_path)
+
+    # Set this here for updating the state when we don't run any queries
+    extraction_time = singer.utils.now()
+
+    with metrics.record_counter('commit_files') as counter:
+        for head in heads:
+            headRef = heads[head]
+            # If the head commit has already been synced, then skip.
+            if head in fetchedCommits:
+                continue
+
+            logger.info('Getting files for head {} {}'.format(headRef, head))
+
+            # Maintain a list of parents we are waiting to see
+            missingParents = {}
+
+            # Attempt to checkout the head ref
+            # NOTE: This doesn't use our rate limit at all, which is nice!
+            FORCE_API = False
+            if FORCE_API:
+                hasLocal = False
+            else:
+                hasLocal = gitLocal.fetchRef(repo_path, headRef, head)
+                if not hasLocal:
+                    # Will fall back to using github's API
+                    logger.info('FAILED to fetch ref {}/{}/{}'.format(repo_path, headRef, head))
+
+            cururl = 'https://api.github.com/repos/{}/commits?per_page=100&sha={}&since={}' \
+                .format(repo_path, head, bookmark)
+            while True:
+                # Get commits one page at a time
+                if hasLocal:
+                    commits = gitLocal.getCommitsFromHead(repo_path, head)
+                else:
+                    response = list(authed_get_yield('commits', cururl))[0]
+                    commits = response.json()
+                extraction_time = singer.utils.now()
+                logger.info('Processing {} commits'.format(len(commits)))
+                commitQ = []
+                for commit in commits:
+                    # Skip commits we've already imported
+                    if commit['sha'] in fetchedCommits:
+                        continue
+
+                    commitQ.append(commit)
+
+                    # Record that we have now fetched this commit
+                    fetchedCommits[commit['sha']] = 1
+                    # No longer a missing parent
+                    missingParents.pop(commit['sha'], None)
+
+                    # Keep track of new missing parents
+                    for parent in commit['parents']:
+                        if not parent['sha'] in fetchedCommits:
+                            missingParents[parent['sha']] = 1
+                    counter.increment()
+
+                # Run in batches
+                i = 0
+                BATCH_SIZE = 32
+                while i * BATCH_SIZE < len(commitQ):
+                    curQ = commitQ[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
+                    changedFileList = await getChangedfilesForCommits(curQ, repo_path, hasLocal, gitLocal)
+                    for changedFiles in changedFileList:
+                        for changedFile in changedFiles:
+                            with singer.Transformer() as transformer:
+                                rec = transformer.transform(changedFile, schema, metadata=metadata.to_map(mdata))
+                            singer.write_record('commit_files', rec, time_extracted=extraction_time)
+                    i += 1
+
+                # If there are no missing parents, then we are done prior to reaching the lst page
+                if not missingParents:
+                    break
+                elif not hasLocal and 'next' in response.links:
+                    cururl = response.links['next']['url']
+                # Else if we have reached the end of our data but not found the parents, then we
+                # have a problem
+                else:
+                    raise GithubException('Some commit parents never found: ' + \
+                        ','.join(missingParents.keys()))
+
+    # Don't write until the end so that we don't record fetchedCommits if we fail and never get
+    # their parents.
+    singer.write_bookmark(state, repo_path, 'commit_files', {
         'since': singer.utils.strftime(extraction_time),
         'fetchedCommits': fetchedCommits
     })
@@ -1227,6 +1556,7 @@ def get_stream_from_catalog(stream_id, catalog):
 SYNC_FUNCTIONS = {
     'branches': get_all_branches,
     'commits': get_all_commits,
+    'commit_files': get_all_commit_files,
     'comments': get_all_comments,
     'issues': get_all_issues,
     'assignees': get_all_assignees,
@@ -1249,9 +1579,14 @@ SUB_STREAMS = {
     'teams': ['team_members', 'team_memberships']
 }
 
-def do_sync(config, state, catalog):
+async def do_sync(config, state, catalog):
     access_token = config['access_token']
     session.headers.update({'authorization': 'token ' + access_token})
+
+    gitLocal = GitLocal({
+        'access_token': access_token,
+        'workingDir': '/tmp'
+    })
 
     start_date = config['start_date'] if 'start_date' in config else None
     # get selected streams, make sure stream dependencies are met
@@ -1296,7 +1631,10 @@ def do_sync(config, state, catalog):
 
                 # sync stream
                 if not sub_stream_ids:
-                    state = sync_func(stream_schema, repo, state, mdata, start_date)
+                    if stream_id == 'commit_files':
+                        state = await sync_func(stream_schema, repo, state, mdata, start_date, gitLocal)
+                    else:
+                        state = sync_func(stream_schema, repo, state, mdata, start_date)
 
                 # handle streams with sub streams
                 else:
@@ -1323,7 +1661,10 @@ def main():
         do_discover(args.config)
     else:
         catalog = args.properties if args.properties else get_catalog()
-        do_sync(args.config, args.state, catalog)
+        asyncio.run(do_sync(args.config, args.state, catalog))
 
-if __name__ == '__main__':
+async def main2():
+    sys.stderr.write('asdf\n')
+
+if __name__ == "__main__":
     main()

@@ -1,0 +1,50 @@
+{
+  "type": ["null", "object"],
+  "properties": {
+    "id": {
+      "type": ["string"],
+      "description": "Unique identifier of the commit change '{_sdc_repository}/{commit_sha}/{file_path}'."
+    },
+    "_sdc_repository": {
+      "type": ["string"],
+      "description": "The repository of the commit for this commit file."
+    },
+    "commit_sha": {
+      "type": ["string"],
+      "description": "The hash of the commit. May not be unique if there are multiple forked repos of the same base repo, potentially in different orgs or different sources for the same org."
+    },
+    "filename": {
+      "type": ["string"],
+      "description": "The full name of the file including its directory path."
+    },
+
+    "previous_filename": {
+      "type": ["null", "string"],
+      "description": "If the file was renamed, this was its full name in the parent commit"
+    },
+    "patch": {
+      "type": ["null", "string"],
+      "description": "A patch representing the changes to the file in this commit."
+    },
+    "is_binary": {
+      "type": ["boolean"],
+      "description": "The file is binary, so no patch is included and change counts are zero. Binary is determined by the presence of null bytes or sequences that cause UTF-8 decoding errors. This flag will not be set when adding binary files becuase those are indiscernable from adding zero-length files in the github api."
+    },
+    "is_large_patch": {
+      "type": ["boolean"],
+      "description": "The file is text, but the current patch was too large to include (> 1 MB). Change counts may or may not be non-zero."
+    },
+    "changetype": {
+      "type": ["string"],
+      "description": "The type of change -- one of: add, delete, edit, none. None means no change to the file, which may be the case if there's a rename."
+    },
+    "additions": {
+      "type": ["integer"],
+      "description": "The number of lines added by this change (0 for binary or large patch)."
+    },
+    "deletions": {
+      "type": ["integer"],
+      "description": "The number of lines deleted by this change (0 for binary or large patch)."
+    }
+  }
+}
