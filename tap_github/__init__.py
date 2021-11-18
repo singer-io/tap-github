@@ -1262,7 +1262,7 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
     extraction_time = singer.utils.now()
 
     with metrics.record_counter('commits') as counter:
-        for head, headRef in heads:
+        for head in heads:
             # If the head commit has already been synced, then skip.
             if head in fetchedCommits:
                 continue
