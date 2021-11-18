@@ -1229,6 +1229,8 @@ def get_commit_changes(commit, repo_path, useLocal, gitLocal):
             else:
                 commitFile['changetype'] = 'none'
             commitFile['commit_sha'] = commit['sha']
+    for f in commit['files']:
+        f['id'] = '{}/{}/{}'.format(f['_sdc_repository'], f['commit_sha'], f['filename'])
     return commit['files']
 
 def get_all_commits(schema, repo_path,  state, mdata, start_date):
@@ -1412,6 +1414,8 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
                 # Run in batches
                 i = 0
                 BATCH_SIZE = 32
+                if not hasLocal:
+                    BATCH_SIZE = 1
                 while i * BATCH_SIZE < len(commitQ):
                     curQ = commitQ[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
                     changedFileList = await getChangedfilesForCommits(curQ, repo_path, hasLocal, gitLocal)
