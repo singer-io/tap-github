@@ -1353,15 +1353,17 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
     # Set this here for updating the state when we don't run any queries
     extraction_time = singer.utils.now()
 
+    count = 0
     with metrics.record_counter('commit_files') as counter:
         for head in heads:
+            count += 1
             headRef = heads[head]
             # If the head commit has already been synced, then skip.
             if head in fetchedCommits:
                 logger.info('Head already fetched {} {}'.format(headRef, head))
                 continue
 
-            logger.info('Getting files for head {} {}'.format(headRef, head))
+            logger.info('Getting files for head {} {}, {}/{}'.format(headRef, head, count, len(heads)))
 
             # Maintain a list of parents we are waiting to see
             missingParents = {}
