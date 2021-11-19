@@ -1238,7 +1238,7 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
-
+    logger.info('A2')
     bookmark = get_bookmark(state, repo_path, "commits", "since", start_date)
     if not bookmark:
         bookmark = '1970-01-01'
@@ -1364,6 +1364,7 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
             headRef = heads[head]
             # If the head commit has already been synced, then skip.
             if head in fetchedCommits:
+                logger.info('Head already fetched {} {}'.format(headRef, head))
                 continue
 
             logger.info('Getting files for head {} {}'.format(headRef, head))
@@ -1392,7 +1393,6 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
                     response = list(authed_get_yield('commits', cururl))[0]
                     commits = response.json()
                 extraction_time = singer.utils.now()
-                logger.info('Processing {} commits'.format(len(commits)))
                 commitQ = []
                 for commit in commits:
                     # Skip commits we've already imported
@@ -1412,9 +1412,11 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
                             missingParents[parent['sha']] = 1
                     counter.increment()
 
+                logger.info('Processing {} commits'.format(len(commitQ)))
+
                 # Run in batches
                 i = 0
-                BATCH_SIZE = 32
+                BATCH_SIZE = 64
                 if not hasLocal:
                     BATCH_SIZE = 1
                 while i * BATCH_SIZE < len(commitQ):
@@ -1597,6 +1599,8 @@ async def do_sync(config, state, catalog):
     # get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
+
+    logger.info(selected_stream_ids)
 
     repositories = list(filter(None, config['repository'].split(' ')))
 

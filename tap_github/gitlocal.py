@@ -11,7 +11,6 @@ def parseDiffLines(lines):
   changes = []
   curChange = None
   state = 'start'
-  lastDiffLine = ''
   for line in lines:
     if len(line) == 0:
       # Only happens on last line -- other blank lines at least start with space
@@ -20,14 +19,19 @@ def parseDiffLines(lines):
         curChange = None
       continue
     elif line[0:4] == 'diff': # diff
-      lastDiffLine = line
+      # Start by assuming file names are the same, and then update later if there's a rename.
+      # Unfortunately we can't just do a regex match because " b/" could be in either file name,
+      # which would mess stuff up. So, compute the length of the string
+      fileNameLen = int((len(line) - len('diff --git a/ b/')) / 2)
+      noRenameFname = line[-fileNameLen:]
+
       # For a pure file mode change, the change type will be none without a patch. Convert this to
       # an edit.
       if curChange and (curChange['changetype'] != 'none' or len(curChange['patch']) > 0 or \
           curChange['is_binary'] or curChange['previous_filename']):
         changes.append(curChange)
       curChange = {
-        'filename': '',
+        'filename': noRenameFname,
         'additions': 0,
         'deletions': 0,
         'patch': [],
@@ -61,17 +65,8 @@ def parseDiffLines(lines):
         curChange['changetype'] = 'edit'
       else:
         curChange['changetype'] = 'add'
-      # If the file is empty or binary, this is the way to get the file name. If this is a mode
-      # change with a rename, then this will get overwritten by the rename lines that follow
-      fileNameLen = int((len(lastDiffLine) - len('diff --git a/ b/')) / 2)
-      curChange['filename'] = lastDiffLine[-fileNameLen:]
     elif line[0:3] == 'del': # deleted file
       curChange['changetype'] = 'delete'
-      # We won't have anything to identify the file other than the first diff line. For this line,
-      # the file name will be the same with a/ and b/, so do this trick to figure out its length
-      # (which we need to do because the file name can have " b/" inside of it)
-      fileNameLen = int((len(lastDiffLine) - len('diff --git a/ b/')) / 2)
-      curChange['filename'] = lastDiffLine[-fileNameLen:]
     elif line[0] == 'B': # Binary files dffer
       curChange['is_binary'] = True
       pass
@@ -79,14 +74,10 @@ def parseDiffLines(lines):
       if line[0:12] == 'rename from ':
         curChange['previous_filename'] = line[12:]
       elif line[0:10] == 'rename to ':
-        # Need to save this here becuase a pure rename won't have a +++ line
         curChange['filename'] = line[10:]
     elif line[0] == '-':
       pass # Ignore, will be same as rename from if different from changed file name
     elif line[0] == '+':
-      # May already be set for a delete or add
-      if not curChange['filename']:
-        curChange['filename'] = line.replace('+++ b/', '')
       state = 'inpatch'
     else:
       raise GitLocalException('Unexpected line start: "{}"'.format(line))
@@ -128,17 +119,17 @@ class GitLocal:
   def getRepoWorkingDir(self, repo):
     orgDir = self.getOrgWorkingDir(repo)
     repoDir = repo.split('/')[1]
-    return '{}/{}'.format(orgDir, repoDir)
+    repoWdir = '{}/{}'.format(orgDir, repoDir)
+    self._initRepo(repo, repoWdir)
+    return repoWdir
 
-  def cloneRepo(self, repo, failOnExists=False):
+  def _cloneRepo(self, repo, repoWdir):
     """
     Clones a repository using git clone, throwing an error if the operation does not succeed
     """
-    if os.path.exists(self.getRepoWorkingDir(repo)):
-      if failOnExists:
-        raise GitLocalException("Attempted to clone repo {} that already exists".format(repo))
-      else:
-        return
+    # Bail if directory exists and already cloned
+    if os.path.exists(repoWdir):
+      return
 
     cloneUrl = "https://{}@github.com/{}.git".format(self.token, repo)
     orgDir = self.getOrgWorkingDir(repo)
@@ -149,17 +140,11 @@ class GitLocal:
       raise GitLocalException("Clone of repo {} failed with code {}, message: {}".format(repo,
         completed.returncode, strippedOutput))
 
-  def initRepo(self, repo):
+  def _initRepo(self, repo, repoWdir):
     if repo in self.INIT_REPO:
       return
 
-    self.cloneRepo(repo)
-
-    # In case a previous run was killed in the middle of anything, do a hard reset of the repo
-    # directory
-    repoDir = self.getRepoWorkingDir(repo)
-    subprocess.run(['git', 'clean', '-fd'], cwd=repoDir, capture_output=True)
-    subprocess.run(['git', 'reset', '--hard'], cwd=repoDir, capture_output=True)
+    self._cloneRepo(repo, repoWdir)
 
     self.INIT_REPO[repo] = True
 
@@ -169,7 +154,6 @@ class GitLocal:
     if there's a failure unless raiseOnError is set to False.
     """
     # Clone if necessary
-    self.initRepo(repo)
     repoDir = self.getRepoWorkingDir(repo)
     completed = subprocess.run(['git', 'checkout', sha], cwd=repoDir, capture_output=True)
     if completed.returncode != 0:
@@ -185,7 +169,6 @@ class GitLocal:
     if repo in self.LS_CACHE:
       return self.LS_CACHE[repo]
 
-    self.initRepo(repo)
     repoDir = self.getRepoWorkingDir(repo)
     completed = subprocess.run(['git', 'ls-remote'], cwd=repoDir, capture_output=True)
     if completed.returncode != 0:
@@ -194,7 +177,7 @@ class GitLocal:
       raise GitLocalException("ls-remote of repo {} failed with code {}, message: {}".format(
         repo, completed.returncode, strippedOutput))
 
-    outstr = completed.stdout.decode('utf8')
+    outstr = completed.stdout.decode('utf8', errors='replace')
 
     refmap = {}
     for m in re.finditer( r'([0-9a-f]{40})\s+([^\n]+)(.*?)', outstr):
@@ -206,9 +189,7 @@ class GitLocal:
     return refmap
 
   def fetchRemote(self, repo, ref):
-    self.initRepo(repo)
     repoDir = self.getRepoWorkingDir(repo)
-    sys.stderr.write('fetching remote ref {}\n'.format(ref))
     completed = subprocess.run(['git', 'fetch', 'origin', ref], cwd=repoDir, capture_output=True)
     if completed.returncode != 0:
       # Don't send the acces token through the error logging system
@@ -216,12 +197,25 @@ class GitLocal:
       raise GitLocalException("Fetch from origin of repo {}, ref {} failed with code {}, "\
         "message: {}".format(repo, ref, completed.returncode, strippedOutput))
 
+  def hasLocalCommit(self, repo, sha):
+    repoDir = self.getRepoWorkingDir(repo)
+    completed = subprocess.run(['git', 'log', '-n1', sha], cwd=repoDir, capture_output=True)
+    if completed.stderr.decode('utf-8', errors='replace').find('fatal: bad object') != -1:
+      return False
+    elif completed.returncode != 0:
+      # Don't send the acces token through the error logging system
+      strippedOutput = completed.stderr.replace(self.token.encode('utf8'), b'<TOKEN>')
+      raise GitLocalException("Log of repo {}, sha {} failed with code {}, "\
+        "message: {}".format(repo, sha, completed.returncode, strippedOutput))
+    else:
+      return True
+
   def fetchRef(self, repo, ref, sha):
     """
     Attempt to fetch a named ref that is or was associated with a particular SHA.
     """
-    # First, just try to check out the commit from what we already have
-    success = self.checkoutCommit(repo, sha, False)
+    # First, just check if we already have the commit
+    success = self.hasLocalCommit(repo, sha)
     if success:
       return True
 
@@ -231,8 +225,8 @@ class GitLocal:
     if ref in refmap:
       self.fetchRemote(repo, ref)
 
-    # Now try checking out the sha again
-    success = self.checkoutCommit(repo, sha, False)
+    # Now try checking if we have the commit again
+    success = self.hasLocalCommit(repo, sha)
     return success
 
   def getCommitsFromHead(self, repo, headSha):
@@ -241,7 +235,6 @@ class GitLocal:
     github: (1) it can't fill in the comment count, (2) it doesn't know the github user IDs and
     user names associated wtih the commit.
     """
-    self.checkoutCommit(repo, headSha)
     repoDir = self.getRepoWorkingDir(repo)
     # Since git log can't escape stuff, create unique sentinals
     startTok = 'xstart5147587x'
@@ -249,13 +242,13 @@ class GitLocal:
     completed = subprocess.run(['git', 'log', '--pretty={}{}'.format(
       startTok,
       sepTok.join(['%H','%T','%P','%an','%ae','%ai','%cn','%ce','%ci','%B'])
-    )], cwd=repoDir, capture_output=True)
+    ), headSha], cwd=repoDir, capture_output=True)
     if completed.returncode != 0:
       # Don't send the acces token through the error logging system
       strippedOutput = completed.stderr.replace(self.token.encode('utf8'), b'<TOKEN>')
       raise GitLocalException("Log of repo {}, sha {} failed with code {}, message: {}".format(
         repo, headSha, completed.returncode, strippedOutput))
-    outstr = completed.stdout.decode('utf8')
+    outstr = completed.stdout.decode('utf8', errors='replace')
     commitLines = outstr.split(startTok)
     commits = []
     for rawCommit in commitLines:
@@ -305,9 +298,9 @@ class GitLocal:
 
   def getCommitDiff(self, repo, sha):
     """
-    Gets detailed information about a commit at a particular sha
+    Gets detailed information about a commit at a particular sha. This funcion assumes that the
+    head has already been fetched and this commit is available.
     """
-    #self.checkoutCommit(repo, sha)
     repoDir = self.getRepoWorkingDir(repo)
     completed = subprocess.run(['git', 'diff', sha + '~1', sha], cwd=repoDir, capture_output=True)
     # Special case -- first commit, diff instead with an empty tree
@@ -323,7 +316,10 @@ class GitLocal:
       raise GitLocalException("Diff of repo {}, sha {} failed with code {}, message: {}".format(
         repo, sha, completed.returncode, strippedOutput))
 
-    outstr = completed.stdout.decode('utf8')
+    # Replace any invalid characters
+    # Also, don't allow nulls since we are treating data as strings downstream. (FFFD is unicode
+    # replacement character.)
+    outstr = completed.stdout.decode('utf8', errors='replace').replace('\u0000', '\uFFFD')
     lines = outstr.split('\n')
 
     parsed = parseDiffLines(lines)
