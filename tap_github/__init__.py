@@ -1238,7 +1238,7 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
-    logger.info('A2')
+
     bookmark = get_bookmark(state, repo_path, "commits", "since", start_date)
     if not bookmark:
         bookmark = '1970-01-01'
@@ -1599,8 +1599,6 @@ async def do_sync(config, state, catalog):
     # get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
-
-    logger.info(selected_stream_ids)
 
     repositories = list(filter(None, config['repository'].split(' ')))
 
