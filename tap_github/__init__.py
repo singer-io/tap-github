@@ -1229,10 +1229,9 @@ def get_commit_changes(commit, repo_path, useLocal, gitLocal):
             else:
                 commitFile['changetype'] = 'none'
             commitFile['commit_sha'] = commit['sha']
-    for f in commit['files']:
-        f['_sdc_repository'] = repo_path
-        f['id'] = '{}/{}/{}'.format(f['_sdc_repository'], f['commit_sha'], f['filename'])
-    return commit['files']
+    commit['_sdc_repository'] = repo_path
+    commit['id'] = '{}/{}'.format(repo_path, commit['sha'])
+    return commit
 
 def get_all_commits(schema, repo_path,  state, mdata, start_date):
     '''
@@ -1320,15 +1319,10 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
 
     return state
 
-async def get_commit_changes_async(commit, repo_path, hasLocal, gitLocal):
-    changedFiles = get_commit_changes(commit, repo_path, hasLocal, gitLocal)
-    return changedFiles
-
 async def getChangedfilesForCommits(commits, repo_path, hasLocal, gitLocal):
     coros = []
     for commit in commits:
         changesCoro = asyncio.to_thread(get_commit_changes, commit, repo_path, hasLocal, gitLocal)
-        #changesCoro = get_commit_changes_async(commit, repo_path, hasLocal, gitLocal)
         coros.append(changesCoro)
     results = await asyncio.gather(*coros)
     return results
@@ -1422,11 +1416,10 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
                 while i * BATCH_SIZE < len(commitQ):
                     curQ = commitQ[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
                     changedFileList = await getChangedfilesForCommits(curQ, repo_path, hasLocal, gitLocal)
-                    for changedFiles in changedFileList:
-                        for changedFile in changedFiles:
-                            with singer.Transformer() as transformer:
-                                rec = transformer.transform(changedFile, schema, metadata=metadata.to_map(mdata))
-                            singer.write_record('commit_files', rec, time_extracted=extraction_time)
+                    for commitfiles in changedFileList:
+                        with singer.Transformer() as transformer:
+                            rec = transformer.transform(commitfiles, schema, metadata=metadata.to_map(mdata))
+                        singer.write_record('commit_files', rec, time_extracted=extraction_time)
                     i += 1
 
                 # If there are no missing parents, then we are done prior to reaching the lst page
