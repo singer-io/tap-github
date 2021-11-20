@@ -109,17 +109,17 @@ class GitLocal:
     self.LS_CACHE = {}
     self.INIT_REPO = {}
 
-  def getOrgWorkingDir(self, repo):
+  def _getOrgWorkingDir(self, repo):
     orgName = repo.split('/')[0]
     orgWdir = '{}/{}'.format(self.workingDir, orgName)
     if not os.path.exists(orgWdir):
       os.mkdir(orgWdir)
     return orgWdir
 
-  def getRepoWorkingDir(self, repo):
-    orgDir = self.getOrgWorkingDir(repo)
+  def _getRepoWorkingDir(self, repo):
+    orgDir = self._getOrgWorkingDir(repo)
     repoDir = repo.split('/')[1]
-    repoWdir = '{}/{}'.format(orgDir, repoDir)
+    repoWdir = '{}/{}.git'.format(orgDir, repoDir)
     self._initRepo(repo, repoWdir)
     return repoWdir
 
@@ -127,18 +127,24 @@ class GitLocal:
     """
     Clones a repository using git clone, throwing an error if the operation does not succeed
     """
-    # Bail if directory exists and already cloned
+    # If directory already exists, do an update
     if os.path.exists(repoWdir):
-      return
-
-    cloneUrl = "https://{}@github.com/{}.git".format(self.token, repo)
-    orgDir = self.getOrgWorkingDir(repo)
-    completed = subprocess.run(['git', 'clone', cloneUrl], cwd=orgDir, capture_output=True)
-    if completed.returncode != 0:
-      # Don't send the acces token through the error logging system
-      strippedOutput = completed.stderr.replace(self.token.encode('utf8'), b'<TOKEN>')
-      raise GitLocalException("Clone of repo {} failed with code {}, message: {}".format(repo,
-        completed.returncode, strippedOutput))
+      completed = subprocess.run(['git', 'remote', 'update'], cwd=repoWdir, capture_output=True)
+      if completed.returncode != 0:
+        # Don't send the acces token through the error logging system
+        strippedOutput = completed.stderr.replace(self.token.encode('utf8'), b'<TOKEN>')
+        raise GitLocalException("Remote update of repo {} failed with code {}, message: {}"\
+          .format(repo, completed.returncode, strippedOutput))
+    else:
+      cloneUrl = "https://{}@github.com/{}.git".format(self.token, repo)
+      orgDir = self._getOrgWorkingDir(repo)
+      completed = subprocess.run(['git', 'clone', '--mirror', cloneUrl], cwd=orgDir,
+        capture_output=True)
+      if completed.returncode != 0:
+        # Don't send the acces token through the error logging system
+        strippedOutput = completed.stderr.replace(self.token.encode('utf8'), b'<TOKEN>')
+        raise GitLocalException("Clone of repo {} failed with code {}, message: {}"\
+          .format(repo, completed.returncode, strippedOutput))
 
   def _initRepo(self, repo, repoWdir):
     if repo in self.INIT_REPO:
@@ -148,57 +154,8 @@ class GitLocal:
 
     self.INIT_REPO[repo] = True
 
-  def checkoutCommit(self, repo, sha, raiseOnError=True):
-    """
-    Checks out a commit, returning True if successful and False on failure. Will throw an exception
-    if there's a failure unless raiseOnError is set to False.
-    """
-    # Clone if necessary
-    repoDir = self.getRepoWorkingDir(repo)
-    completed = subprocess.run(['git', 'checkout', sha], cwd=repoDir, capture_output=True)
-    if completed.returncode != 0:
-      if not raiseOnError:
-        return False
-      # Don't send the acces token through the error logging system
-      strippedOutput = completed.stderr.replace(self.token.encode('utf8'), b'<TOKEN>')
-      raise GitLocalException("Checkout of repo {}, sha {} failed with code {}, message: {}".format(
-        repo, sha, completed.returncode, strippedOutput))
-    return True
-
-  def lsRemote(self, repo):
-    if repo in self.LS_CACHE:
-      return self.LS_CACHE[repo]
-
-    repoDir = self.getRepoWorkingDir(repo)
-    completed = subprocess.run(['git', 'ls-remote'], cwd=repoDir, capture_output=True)
-    if completed.returncode != 0:
-      # Don't send the acces token through the error logging system
-      strippedOutput = completed.stderr.replace(self.token.encode('utf8'), b'<TOKEN>')
-      raise GitLocalException("ls-remote of repo {} failed with code {}, message: {}".format(
-        repo, completed.returncode, strippedOutput))
-
-    outstr = completed.stdout.decode('utf8', errors='replace')
-
-    refmap = {}
-    for m in re.finditer( r'([0-9a-f]{40})\s+([^\n]+)(.*?)', outstr):
-      hash = m.group(1)
-      ref = m.group(2)
-      refmap[ref] = hash
-
-    self.LS_CACHE[repo] = refmap
-    return refmap
-
-  def fetchRemote(self, repo, ref):
-    repoDir = self.getRepoWorkingDir(repo)
-    completed = subprocess.run(['git', 'fetch', 'origin', ref], cwd=repoDir, capture_output=True)
-    if completed.returncode != 0:
-      # Don't send the acces token through the error logging system
-      strippedOutput = completed.stderr.replace(self.token.encode('utf8'), b'<TOKEN>')
-      raise GitLocalException("Fetch from origin of repo {}, ref {} failed with code {}, "\
-        "message: {}".format(repo, ref, completed.returncode, strippedOutput))
-
   def hasLocalCommit(self, repo, sha):
-    repoDir = self.getRepoWorkingDir(repo)
+    repoDir = self._getRepoWorkingDir(repo)
     completed = subprocess.run(['git', 'log', '-n1', sha], cwd=repoDir, capture_output=True)
     if completed.stderr.decode('utf-8', errors='replace').find('fatal: bad object') != -1:
       return False
@@ -210,32 +167,13 @@ class GitLocal:
     else:
       return True
 
-  def fetchRef(self, repo, ref, sha):
-    """
-    Attempt to fetch a named ref that is or was associated with a particular SHA.
-    """
-    # First, just check if we already have the commit
-    success = self.hasLocalCommit(repo, sha)
-    if success:
-      return True
-
-    # Now see if the ref is in the remote ref map
-    refmap = self.lsRemote(repo)
-    # If it is, fetch it
-    if ref in refmap:
-      self.fetchRemote(repo, ref)
-
-    # Now try checking if we have the commit again
-    success = self.hasLocalCommit(repo, sha)
-    return success
-
   def getCommitsFromHead(self, repo, headSha):
     """
     This function lists multiple commits, but it has a few limitations based on missing data from
     github: (1) it can't fill in the comment count, (2) it doesn't know the github user IDs and
     user names associated wtih the commit.
     """
-    repoDir = self.getRepoWorkingDir(repo)
+    repoDir = self._getRepoWorkingDir(repo)
     # Since git log can't escape stuff, create unique sentinals
     startTok = 'xstart5147587x'
     sepTok = 'xsep4983782x'
@@ -301,7 +239,7 @@ class GitLocal:
     Gets detailed information about a commit at a particular sha. This funcion assumes that the
     head has already been fetched and this commit is available.
     """
-    repoDir = self.getRepoWorkingDir(repo)
+    repoDir = self._getRepoWorkingDir(repo)
     completed = subprocess.run(['git', 'diff', sha + '~1', sha], cwd=repoDir, capture_output=True)
     # Special case -- first commit, diff instead with an empty tree
     if completed.returncode != 0 and b"~1': unknown revision or path not in the working tree" \

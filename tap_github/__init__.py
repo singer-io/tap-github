@@ -1355,6 +1355,8 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
 
     count = 0
     with metrics.record_counter('commit_files') as counter:
+        # First, walk through all the heads and queue up all the commits that need to be imported
+        commitQ = []
         for head in heads:
             count += 1
             headRef = heads[head]
@@ -1368,16 +1370,13 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
             # Maintain a list of parents we are waiting to see
             missingParents = {}
 
-            # Attempt to checkout the head ref
-            # NOTE: This doesn't use our rate limit at all, which is nice!
-            FORCE_API = False
-            if FORCE_API:
-                hasLocal = False
-            else:
-                hasLocal = gitLocal.fetchRef(repo_path, headRef, head)
-                if not hasLocal:
-                    # Will fall back to using github's API
-                    logger.info('FAILED to fetch ref {}/{}/{}'.format(repo_path, headRef, head))
+            # Verify that this commit exists in our mirrored repo
+            hasLocal = gitLocal.hasLocalCommit(repo_path, head)
+            if not hasLocal:
+                logger.warning('MISSING REF/COMMIT {}/{}/{}'.format(repo_path, headRef, head))
+                # Skip this now that we're mirroring everything. We shouldn't have anything that's
+                # missing from github's API
+                continue
 
             cururl = 'https://api.github.com/repos/{}/commits?per_page=100&sha={}&since={}' \
                 .format(repo_path, head, bookmark)
@@ -1389,7 +1388,6 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
                     response = list(authed_get_yield('commits', cururl))[0]
                     commits = response.json()
                 extraction_time = singer.utils.now()
-                commitQ = []
                 for commit in commits:
                     # Skip commits we've already imported
                     if commit['sha'] in fetchedCommits:
@@ -1406,23 +1404,6 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
                     for parent in commit['parents']:
                         if not parent['sha'] in fetchedCommits:
                             missingParents[parent['sha']] = 1
-                    counter.increment()
-
-                logger.info('Processing {} commits'.format(len(commitQ)))
-
-                # Run in batches
-                i = 0
-                BATCH_SIZE = 64
-                if not hasLocal:
-                    BATCH_SIZE = 1
-                while i * BATCH_SIZE < len(commitQ):
-                    curQ = commitQ[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
-                    changedFileList = await getChangedfilesForCommits(curQ, repo_path, hasLocal, gitLocal)
-                    for commitfiles in changedFileList:
-                        with singer.Transformer() as transformer:
-                            rec = transformer.transform(commitfiles, schema, metadata=metadata.to_map(mdata))
-                        singer.write_record('commit_files', rec, time_extracted=extraction_time)
-                    i += 1
 
                 # If there are no missing parents, then we are done prior to reaching the lst page
                 if not missingParents:
@@ -1434,6 +1415,26 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
                 else:
                     raise GithubException('Some commit parents never found: ' + \
                         ','.join(missingParents.keys()))
+
+        # Now run through all the commits in parallel
+        logger.info('Processing {} commits'.format(len(commitQ)))
+
+        # Run in batches
+        i = 0
+        BATCH_SIZE = 512
+        PRINT_INTERVAL = 1
+        hasLocal = True # Only local now
+        while i * BATCH_SIZE < len(commitQ):
+            curQ = commitQ[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
+            changedFileList = await getChangedfilesForCommits(curQ, repo_path, hasLocal, gitLocal)
+            for commitfiles in changedFileList:
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(commitfiles, schema, metadata=metadata.to_map(mdata))
+                counter.increment()
+                singer.write_record('commit_files', rec, time_extracted=extraction_time)
+            i += 1
+            if i % PRINT_INTERVAL == 0:
+                logger.info('Imported {} commits'.format(i * BATCH_SIZE))
 
     # Don't write until the end so that we don't record fetchedCommits if we fail and never get
     # their parents.
