@@ -167,7 +167,7 @@ class GitLocal:
     else:
       return True
 
-  def getCommitsFromHead(self, repo, headSha):
+  def getCommitsFromHead(self, repo, headSha, limit=False, offset=False):
     """
     This function lists multiple commits, but it has a few limitations based on missing data from
     github: (1) it can't fill in the comment count, (2) it doesn't know the github user IDs and
@@ -177,10 +177,16 @@ class GitLocal:
     # Since git log can't escape stuff, create unique sentinals
     startTok = 'xstart5147587x'
     sepTok = 'xsep4983782x'
-    completed = subprocess.run(['git', 'log', '--pretty={}{}'.format(
+    params = ['git', 'log', '--pretty={}{}'.format(
       startTok,
       sepTok.join(['%H','%T','%P','%an','%ae','%ai','%cn','%ce','%ci','%B'])
-    ), headSha], cwd=repoDir, capture_output=True)
+    )]
+    if limit:
+      params.append('-n{}'.format(int(limit)))
+    if offset:
+      params.append('--skip={}'.format(int(offset)))
+    params.append(headSha)
+    completed = subprocess.run(params, cwd=repoDir, capture_output=True)
     if completed.returncode != 0:
       # Don't send the acces token through the error logging system
       strippedOutput = completed.stderr.replace(self.token.encode('utf8'), b'<TOKEN>')

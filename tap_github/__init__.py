@@ -1354,18 +1354,20 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
     extraction_time = singer.utils.now()
 
     count = 0
+    # The lage majority of PRs are less than this many commits
+    LOG_PAGE_SIZE = 20
     with metrics.record_counter('commit_files') as counter:
         # First, walk through all the heads and queue up all the commits that need to be imported
         commitQ = []
         for head in heads:
             count += 1
+            if count % 10 == 0:
+                logger.info('Processed heads {}/{}'.format(count, len(heads)))
             headRef = heads[head]
             # If the head commit has already been synced, then skip.
             if head in fetchedCommits:
-                logger.info('Head already fetched {} {}'.format(headRef, head))
+                #logger.info('Head already fetched {} {}'.format(headRef, head))
                 continue
-
-            logger.info('Getting files for head {} {}, {}/{}'.format(headRef, head, count, len(heads)))
 
             # Maintain a list of parents we are waiting to see
             missingParents = {}
@@ -1380,10 +1382,12 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
 
             cururl = 'https://api.github.com/repos/{}/commits?per_page=100&sha={}&since={}' \
                 .format(repo_path, head, bookmark)
+            offset = 0
             while True:
                 # Get commits one page at a time
                 if hasLocal:
-                    commits = gitLocal.getCommitsFromHead(repo_path, head)
+                    commits = gitLocal.getCommitsFromHead(repo_path, head, limit = LOG_PAGE_SIZE,
+                        offset = offset)
                 else:
                     response = list(authed_get_yield('commits', cururl))[0]
                     commits = response.json()
@@ -1410,6 +1414,8 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
                     break
                 elif not hasLocal and 'next' in response.links:
                     cururl = response.links['next']['url']
+                elif hasLocal and len(commits) > 0:
+                    offset += LOG_PAGE_SIZE
                 # Else if we have reached the end of our data but not found the parents, then we
                 # have a problem
                 else:
