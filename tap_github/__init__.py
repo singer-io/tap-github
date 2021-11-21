@@ -1373,6 +1373,7 @@ async def get_all_commit_files(schemas, repo_path,  state, mdata, start_date, gi
 
             # Emit the ref record as well
             refRecord = {
+                '_sdc_repository': repo_path,
                 'ref': headRef,
                 'sha': headSha
             }
