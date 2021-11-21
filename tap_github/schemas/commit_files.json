@@ -12,6 +12,74 @@
       "type": ["null", "string"],
       "description": "The git commit hash"
     },
+    "parents": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "additionalProperties": false,
+        "properties": {
+          "sha": {
+            "type": ["null", "string"],
+            "description": "The git hash of the parent commit"
+          }
+        }
+      }
+    },
+    "commit": {
+      "type": ["null", "object"],
+      "properties": {
+        "tree": {
+          "type": ["null", "object"],
+          "properties": {
+            "sha": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "author": {
+          "type": ["null", "object"],
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": ["null", "string"],
+              "format": "date-time",
+              "description": "The date the author committed the change"
+            },
+            "name": {
+              "type": ["null", "string"],
+              "description": "The author's name"
+            },
+            "email": {
+              "type": ["null", "string"],
+              "description": "The author's email"
+            }
+          }
+        },
+        "message": {
+          "type": ["null", "string"],
+          "description": "The commit message"
+        },
+        "committer": {
+          "type": ["null", "object"],
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": ["null", "string"],
+              "format": "date-time",
+              "description": "The date the committer committed the change"
+            },
+            "name": {
+              "type": ["null", "string"],
+              "description": "The committer's name"
+            },
+            "email": {
+              "type": ["null", "string"],
+              "description": "The committer's email"
+            }
+          }
+        }
+      }
+    },
     "files": {
       "type": ["array"],
       "items": {

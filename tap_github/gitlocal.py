@@ -216,24 +216,16 @@ class GitLocal:
           },
           'tree': {
             'sha': split[1],
-            'url': 'https://api.github.com/repos/{}//git/trees/{}'.format(repo, split[1]),
           },
-          'url': 'https://api.github.com/repos/{}/commits/{}'.format(repo, split[0]),
+          'message': split[9]
           # Omit comment_count, since comments are a github thing
           # Omit 'verification' since we don't care about signatures right now
         },
         # Omit node_id, since we strip it out
-        'url': 'https://api.github.com/repos/{}/commits/{}'.format(repo, split[0]),
-        'html_url': 'https://api.github.com/repos/{}/commits/{}'.format(repo, split[0]),
-        'comments_url': 'https://api.github.com/repos/{}/commits/{}/comments'.format(repo, split[0]),
-        # author and committer may also exist here in github along with info about github user IDs.
+        # Author and committer may also exist here in github along with info about github user IDs.
         # We can't include those becuase we don't know them.
-        # TODO: import these somehow, since they are the one and only mapping between github user
-        # IDs and what is in the git log.
-        'parents': [] if split[2] == '' else ({
+        'parents': [] if split[2] == '' else list({
           'sha': p,
-          'url': 'https://api.github.com/repos/{}/commits/{}'.format(repo, p),
-          'html_url': 'https://github.com/{}/commit/{}'.format(repo, p)
         } for p in split[2].split(' ')),
         # Leave stats empty -- it isn't included when listing multiple commits
         # Leave files empty -- it isn't included when listing multiple commits
@@ -271,3 +263,26 @@ class GitLocal:
       diff['commit_sha'] = sha
 
     return parsed
+
+  def getAllHeads(self, repo):
+    repoDir = self._getRepoWorkingDir(repo)
+    completed = subprocess.run(['git', 'show-ref'], cwd=repoDir, capture_output=True)
+    # Special case -- first commit, diff instead with an empty tree
+    if completed.returncode != 0:
+      strippedOutput = '' if not completed.stderr else \
+        completed.stderr.replace(self.token.encode('utf8'), b'<TOKEN>')
+      raise GitLocalException("show-ref of repo {}, failed with code {}, message: {}".format(
+        repo, completed.returncode, strippedOutput))
+
+    outstr = completed.stdout.decode('utf8', errors='replace')
+    headLines = outstr.split('\n')
+    headMap = {}
+    for line in headLines:
+      if len(line) == 0:
+        continue
+      lineSplit = line.split(' ', 1)
+      headSha = lineSplit[0]
+      headRef = lineSplit[1]
+      headMap[headRef] = headSha
+
+    return headMap
