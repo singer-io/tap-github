@@ -41,6 +41,7 @@ KEY_PROPERTIES = {
     'projects': ['id'],
     'project_columns': ['id'],
     'project_cards': ['id'],
+    'refs': ['ref'],
     'repos': ['id'],
     'teams': ['id'],
     'team_members': ['id'],
@@ -1327,7 +1328,7 @@ async def getChangedfilesForCommits(commits, repo_path, hasLocal, gitLocal):
     results = await asyncio.gather(*coros)
     return results
 
-async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, gitLocal):
+async def get_all_commit_files(schemas, repo_path,  state, mdata, start_date, gitLocal):
     bookmark = get_bookmark(state, repo_path, "commit_files", "since", start_date)
     if not bookmark:
         bookmark = '1970-01-01'
@@ -1348,7 +1349,8 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
     fetchedCommits = fetchedCommits.copy()
 
     # Get all of the branch heads to use for querying commits
-    heads = get_all_heads_for_commits(repo_path)
+    #heads = get_all_heads_for_commits(repo_path)
+    heads = gitLocal.getAllHeads(repo_path)
 
     # Set this here for updating the state when we don't run any queries
     extraction_time = singer.utils.now()
@@ -1359,34 +1361,44 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
     with metrics.record_counter('commit_files') as counter:
         # First, walk through all the heads and queue up all the commits that need to be imported
         commitQ = []
-        for head in heads:
+        for headRef in heads:
             count += 1
             if count % 10 == 0:
                 logger.info('Processed heads {}/{}'.format(count, len(heads)))
-            headRef = heads[head]
+            headSha = heads[headRef]
             # If the head commit has already been synced, then skip.
-            if head in fetchedCommits:
-                #logger.info('Head already fetched {} {}'.format(headRef, head))
+            if headSha in fetchedCommits:
+                #logger.info('Head already fetched {} {}'.format(headRef, headSha))
                 continue
+
+            # Emit the ref record as well
+            refRecord = {
+                'ref': headRef,
+                'sha': headSha
+            }
+            with singer.Transformer() as transformer:
+                rec = transformer.transform(refRecord, schemas['refs'],
+                    metadata=metadata.to_map(mdata))
+            singer.write_record('refs', rec, time_extracted=extraction_time)
 
             # Maintain a list of parents we are waiting to see
             missingParents = {}
 
             # Verify that this commit exists in our mirrored repo
-            hasLocal = gitLocal.hasLocalCommit(repo_path, head)
+            hasLocal = gitLocal.hasLocalCommit(repo_path, headSha)
             if not hasLocal:
-                logger.warning('MISSING REF/COMMIT {}/{}/{}'.format(repo_path, headRef, head))
+                logger.warning('MISSING REF/COMMIT {}/{}/{}'.format(repo_path, headRef, headSha))
                 # Skip this now that we're mirroring everything. We shouldn't have anything that's
                 # missing from github's API
                 continue
 
             cururl = 'https://api.github.com/repos/{}/commits?per_page=100&sha={}&since={}' \
-                .format(repo_path, head, bookmark)
+                .format(repo_path, headSha, bookmark)
             offset = 0
             while True:
                 # Get commits one page at a time
                 if hasLocal:
-                    commits = gitLocal.getCommitsFromHead(repo_path, head, limit = LOG_PAGE_SIZE,
+                    commits = gitLocal.getCommitsFromHead(repo_path, headSha, limit = LOG_PAGE_SIZE,
                         offset = offset)
                 else:
                     response = list(authed_get_yield('commits', cururl))[0]
@@ -1430,17 +1442,23 @@ async def get_all_commit_files(schema, repo_path,  state, mdata, start_date, git
         BATCH_SIZE = 512
         PRINT_INTERVAL = 1
         hasLocal = True # Only local now
-        while i * BATCH_SIZE < len(commitQ):
-            curQ = commitQ[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
+        totalCommits = len(commitQ)
+        finishedCount = 0
+        while len(commitQ) > 0:
+            # Slice off the queue to avoid memory leads
+            curQ = commitQ[0:BATCH_SIZE]
+            commitQ = commitQ[BATCH_SIZE:]
             changedFileList = await getChangedfilesForCommits(curQ, repo_path, hasLocal, gitLocal)
             for commitfiles in changedFileList:
                 with singer.Transformer() as transformer:
-                    rec = transformer.transform(commitfiles, schema, metadata=metadata.to_map(mdata))
+                    rec = transformer.transform(commitfiles, schemas['commit_files'],
+                        metadata=metadata.to_map(mdata))
                 counter.increment()
                 singer.write_record('commit_files', rec, time_extracted=extraction_time)
-            i += 1
-            if i % PRINT_INTERVAL == 0:
-                logger.info('Imported {} commits'.format(i * BATCH_SIZE))
+
+            finishedCount += BATCH_SIZE
+            if i % (BATCH_SIZE * PRINT_INTERVAL) == 0:
+                logger.info('Imported {}/{} commits'.format(finishedCount, totalCommits))
 
     # Don't write until the end so that we don't record fetchedCommits if we fail and never get
     # their parents.
@@ -1585,7 +1603,8 @@ SYNC_FUNCTIONS = {
 SUB_STREAMS = {
     'pull_requests': ['reviews', 'review_comments'],
     'projects': ['project_cards', 'project_columns'],
-    'teams': ['team_members', 'team_memberships']
+    'teams': ['team_members', 'team_memberships'],
+    'commit_files': ['refs']
 }
 
 async def do_sync(config, state, catalog):
@@ -1640,10 +1659,7 @@ async def do_sync(config, state, catalog):
 
                 # sync stream
                 if not sub_stream_ids:
-                    if stream_id == 'commit_files':
-                        state = await sync_func(stream_schema, repo, state, mdata, start_date, gitLocal)
-                    else:
-                        state = sync_func(stream_schema, repo, state, mdata, start_date)
+                    state = sync_func(stream_schema, repo, state, mdata, start_date)
 
                 # handle streams with sub streams
                 else:
@@ -1657,8 +1673,12 @@ async def do_sync(config, state, catalog):
                             singer.write_schema(sub_stream_id, sub_stream['schema'],
                                                 sub_stream['key_properties'])
 
-                    # sync stream and it's sub streams
-                    state = sync_func(stream_schemas, repo, state, mdata, start_date)
+                    # sync stream and its sub streams
+                    if stream_id == 'commit_files':
+                        state = await sync_func(stream_schemas, repo, state, mdata, start_date,
+                            gitLocal)
+                    else:
+                        state = sync_func(stream_schemas, repo, state, mdata, start_date)
 
                 singer.write_state(state)
 
