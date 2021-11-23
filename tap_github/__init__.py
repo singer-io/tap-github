@@ -10,6 +10,8 @@ import singer.metrics as metrics
 import base64
 import difflib
 import asyncio
+import psutil
+import gc
 
 from .gitlocal import GitLocal
 
@@ -1328,7 +1330,7 @@ async def getChangedfilesForCommits(commits, repo_path, hasLocal, gitLocal):
     results = await asyncio.gather(*coros)
     return results
 
-async def get_all_commit_files(schemas, repo_path,  state, mdata, start_date, gitLocal):
+def get_all_commit_files(schemas, repo_path,  state, mdata, start_date, gitLocal):
     bookmark = get_bookmark(state, repo_path, "commit_files", "since", start_date)
     if not bookmark:
         bookmark = '1970-01-01'
@@ -1361,10 +1363,13 @@ async def get_all_commit_files(schemas, repo_path,  state, mdata, start_date, gi
     with metrics.record_counter('commit_files') as counter:
         # First, walk through all the heads and queue up all the commits that need to be imported
         commitQ = []
+
         for headRef in heads:
             count += 1
             if count % 10 == 0:
-                logger.info('Processed heads {}/{}'.format(count, len(heads)))
+                process = psutil.Process(os.getpid())
+                logger.info('Processed heads {}/{}, {} bytes'.format(count, len(heads),
+                    process.memory_info().rss))
             headSha = heads[headRef]
             # If the head commit has already been synced, then skip.
             if headSha in fetchedCommits:
@@ -1436,20 +1441,25 @@ async def get_all_commit_files(schemas, repo_path,  state, mdata, start_date, gi
                         ','.join(missingParents.keys()))
 
         # Now run through all the commits in parallel
-        logger.info('Processing {} commits'.format(len(commitQ)))
+        gc.collect()
+        process = psutil.Process(os.getpid())
+        logger.info('Processing {} commits, mem(mb) {}'.format(len(commitQ),
+            process.memory_info().rss / (1024 * 1024)))
 
         # Run in batches
         i = 0
-        BATCH_SIZE = 512
-        PRINT_INTERVAL = 1
+        BATCH_SIZE = 16
+        PRINT_INTERVAL = 16
         hasLocal = True # Only local now
         totalCommits = len(commitQ)
         finishedCount = 0
+
         while len(commitQ) > 0:
-            # Slice off the queue to avoid memory leads
+            # Slice off the queue to avoid memory leaks
             curQ = commitQ[0:BATCH_SIZE]
             commitQ = commitQ[BATCH_SIZE:]
-            changedFileList = await getChangedfilesForCommits(curQ, repo_path, hasLocal, gitLocal)
+            changedFileList = asyncio.run(getChangedfilesForCommits(curQ, repo_path, hasLocal,
+                gitLocal))
             for commitfiles in changedFileList:
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(commitfiles, schemas['commit_files'],
@@ -1459,7 +1469,14 @@ async def get_all_commit_files(schemas, repo_path,  state, mdata, start_date, gi
 
             finishedCount += BATCH_SIZE
             if i % (BATCH_SIZE * PRINT_INTERVAL) == 0:
-                logger.info('Imported {}/{} commits'.format(finishedCount, totalCommits))
+                curQ = None
+                changedFileList = None
+                gc.collect()
+                process = psutil.Process(os.getpid())
+                logger.info('Imported {}/{} commits, {}/{} MB'.format(finishedCount, totalCommits,
+                    process.memory_info().rss / (1024 * 1024),
+                    process.memory_info().data / (1024 * 1024)))
+
 
     # Don't write until the end so that we don't record fetchedCommits if we fail and never get
     # their parents.
@@ -1608,7 +1625,7 @@ SUB_STREAMS = {
     'commit_files': ['refs']
 }
 
-async def do_sync(config, state, catalog):
+def do_sync(config, state, catalog):
     access_token = config['access_token']
     session.headers.update({'authorization': 'token ' + access_token})
 
@@ -1676,7 +1693,7 @@ async def do_sync(config, state, catalog):
 
                     # sync stream and its sub streams
                     if stream_id == 'commit_files':
-                        state = await sync_func(stream_schemas, repo, state, mdata, start_date,
+                        state = sync_func(stream_schemas, repo, state, mdata, start_date,
                             gitLocal)
                     else:
                         state = sync_func(stream_schemas, repo, state, mdata, start_date)
@@ -1691,10 +1708,7 @@ def main():
         do_discover(args.config)
     else:
         catalog = args.properties if args.properties else get_catalog()
-        asyncio.run(do_sync(args.config, args.state, catalog))
-
-async def main2():
-    sys.stderr.write('asdf\n')
+        do_sync(args.config, args.state, catalog)
 
 if __name__ == "__main__":
     main()
