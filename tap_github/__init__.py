@@ -1023,10 +1023,10 @@ def get_request_timeout():
     # get the value of request timeout from config
     config_request_timeout = args.config.get('request_timeout')
 
+    # only return the timeout value if it is passed in the config and the value is not 0, "0" or ""
     if config_request_timeout and float(config_request_timeout):
-        request_timeout = float(config_request_timeout)
         # return the timeout from config
-        return request_timeout
+        return float(config_request_timeout)
 
     # return default timeout
     return REQUEST_TIMEOUT
