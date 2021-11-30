@@ -1,5 +1,8 @@
 # Changelog
 
+# 1.10.1
+  * Add support of object in "parent" field for teams [149](https://github.com/singer-io/tap-github/pull/149)
+
 # 1.10.0
   * Handle rate limiting [#113](https://github.com/singer-io/tap-github/pull/113)
   * Handle `None` date times in the Issue Milestones Stream [#114](https://github.com/singer-io/tap-github/pull/114)
