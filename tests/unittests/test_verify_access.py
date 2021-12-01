@@ -24,9 +24,10 @@ def get_response(status_code, json={}, raise_error=False):
     return Mockresponse(status_code, json, raise_error)
 
 @mock.patch("requests.Session.request")
+@mock.patch("singer.utils.parse_args")
 class TestCredentials(unittest.TestCase):
 
-    def test_repo_not_found(self, mocked_request):
+    def test_repo_not_found(self, mocked_parse_args, mocked_request):
         json = {"message": "Not Found", "documentation_url": "https:/docs.github.com/"}
         mocked_request.return_value = get_response(404, json, True)
 
@@ -35,7 +36,7 @@ class TestCredentials(unittest.TestCase):
         except tap_github.NotFoundException as e:
             self.assertEquals(str(e), "HTTP-error-code: 404, Error: Please check the repository name 'repo' or you do not have sufficient permissions to access this repository.")
 
-    def test_repo_bad_request(self, mocked_request):
+    def test_repo_bad_request(self, mocked_parse_args, mocked_request):
         mocked_request.return_value = get_response(400, raise_error = True)
 
         try:
@@ -43,7 +44,7 @@ class TestCredentials(unittest.TestCase):
         except tap_github.BadRequestException as e:
             self.assertEquals(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
 
-    def test_repo_bad_creds(self, mocked_request):
+    def test_repo_bad_creds(self, mocked_parse_args, mocked_request):
         json = {"message": "Bad credentials", "documentation_url": "https://docs.github.com/"}
         mocked_request.return_value = get_response(401, json, True)
 
@@ -53,7 +54,7 @@ class TestCredentials(unittest.TestCase):
             self.assertEquals(str(e), "HTTP-error-code: 401, Error: {}".format(json))
 
     @mock.patch("tap_github.get_catalog")
-    def test_discover_valid_creds(self, mocked_get_catalog, mocked_request):
+    def test_discover_valid_creds(self, mocked_get_catalog, mocked_parse_args, mocked_request):
         mocked_request.return_value = get_response(200)
         mocked_get_catalog.return_value = {}
 
@@ -62,7 +63,7 @@ class TestCredentials(unittest.TestCase):
         self.assertTrue(mocked_get_catalog.call_count, 1)
 
     @mock.patch("tap_github.get_catalog")
-    def test_discover_not_found(self, mocked_get_catalog, mocked_request):
+    def test_discover_not_found(self, mocked_get_catalog, mocked_parse_args, mocked_request):
         json = {"message": "Not Found", "documentation_url": "https:/docs.github.com/"}
         mocked_request.return_value = get_response(404, json, True)
         mocked_get_catalog.return_value = {}
@@ -74,7 +75,7 @@ class TestCredentials(unittest.TestCase):
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
     @mock.patch("tap_github.get_catalog")
-    def test_discover_bad_request(self, mocked_get_catalog, mocked_request):
+    def test_discover_bad_request(self, mocked_get_catalog, mocked_parse_args, mocked_request):
         mocked_request.return_value = get_response(400, raise_error = True)
         mocked_get_catalog.return_value = {}
 
@@ -85,7 +86,7 @@ class TestCredentials(unittest.TestCase):
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
     @mock.patch("tap_github.get_catalog")
-    def test_discover_bad_creds(self, mocked_get_catalog, mocked_request):
+    def test_discover_bad_creds(self, mocked_get_catalog, mocked_parse_args, mocked_request):
         json = {"message":"Bad credentials","documentation_url":"https://docs.github.com/"}
         mocked_request.return_value = get_response(401, json, True)
         mocked_get_catalog.return_value = {}
@@ -97,7 +98,7 @@ class TestCredentials(unittest.TestCase):
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
     @mock.patch("tap_github.get_catalog")
-    def test_discover_forbidden(self, mocked_get_catalog, mocked_request):
+    def test_discover_forbidden(self, mocked_get_catalog, mocked_parse_args, mocked_request):
         json = {'message': 'Must have admin rights to Repository.', 'documentation_url': 'https://docs.github.com/'}
         mocked_request.return_value = get_response(403, json, True)
         mocked_get_catalog.return_value = {}
