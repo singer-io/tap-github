@@ -1,5 +1,8 @@
 # Changelog
 
+# 1.10.2
+  * Added Request Timeout
+
 # 1.10.1
   * Add support of object in "parent" field for teams [149](https://github.com/singer-io/tap-github/pull/149)
 
