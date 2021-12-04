@@ -414,7 +414,7 @@ def get_all_teams(schemas, repo_path, state, mdata, _start_date):
 
                     # transform and write release record
                     with singer.Transformer(pre_hook=utf8_hook) as transformer:
-                        rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                        rec = transformer.transform(r, schemas['teams'], metadata=metadata.to_map(mdata))
                     singer.write_record('teams', rec, time_extracted=extraction_time)
                     singer.write_bookmark(state, repo_path, 'teams', {'since': singer.utils.strftime(extraction_time)})
                     counter.increment()

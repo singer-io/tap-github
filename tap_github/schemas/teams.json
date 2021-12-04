@@ -76,11 +76,35 @@
         "string"
       ]
     },
+    "organization": {
+      "type": ["null", "object"],
+      "properties": {
+        "id": {
+          "type": ["null", "number"],
+          "description": "The id of the team's organization"
+        },
+        "login": {
+          "type": ["null", "number"],
+          "description": "The Github login of the team's organization"
+        },
+        "name": {
+          "type": ["null", "number"],
+          "description": "The name of the team's organization"
+        }
+      }
+    },
     "parent": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "object"],
+      "properties": {
+        "id": {
+          "type": ["null", "number"],
+          "description": "The id of the parent team"
+        },
+        "name": {
+          "type": ["null", "number"],
+          "description": "The name of the parent team"
+        }
+      }
     }
   }
 }
