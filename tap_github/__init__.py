@@ -235,7 +235,9 @@ def rate_throttling(response):
         time.sleep(seconds_to_sleep + 10)
 
 # pylint: disable=dangerous-default-value
-MAX_RETRY_TIME = 3600   # Retry for up to an hour, then die
+# Retry for up to two minutes, then die. It's important not to spend too long on this since some
+# endpoints will return 500 when they really should return 404 and we need to skip them.
+MAX_RETRY_TIME = 120
 RETRY_WAIT = 15  # Wait between requests when the server is struggling
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
@@ -1290,9 +1292,35 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
 
             cururl = 'https://api.github.com/repos/{}/commits?per_page=100&sha={}&since={}' \
                 .format(repo_path, head, bookmark)
+            pagenum = 0
             while True:
                 # Get commits one page at a time
-                response = list(authed_get_yield('commits', cururl))[0]
+                try:
+                    response = list(authed_get_yield('commits', cururl))[0]
+                except InternalServerError as err:
+                    if pagenum != 0:
+                        raise err
+
+                    # So this can happen when the sha isn't found, but correctly produces a 404
+                    # when stripping off the per-page and since
+                    cururl = 'https://api.github.com/repos/{}/commits?sha={}' \
+                        .format(repo_path, head)
+                    logger.warning('Received internal server error at commits endpoint for sha ' +\
+                        '{}, retrying without bookmark or page limit'.format(head))
+                    continue
+                except NotFoundException as err:
+                    if pagenum != 0:
+                        raise err
+                    # Some commits may just not exist. This has happened for at least one PR base
+                    # sha for a PR that was closed on a deleted branch from a repo that was copied
+                    # over from github enterprise (not sure if the last part has anything to do with
+                    # it). So, just skip this head, mark the commit as fetched, and continue.
+                    fetchedCommits[head] = -1
+                    logger.warning('Commit {} not found for head {}'.format(head, heads[head]))
+                    break
+
+                pagenum += 1
+
                 commits = response.json()
                 extraction_time = singer.utils.now()
                 for commit in commits:
