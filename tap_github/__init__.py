@@ -246,11 +246,11 @@ def authed_get(source, url, headers={}):
             if resp.status_code >= 500:
                 if retry_time >= MAX_RETRY_TIME:
                     raise InternalServerError('Internal server error {} persisted after '\
-                        'attempting to retry for {} seconds.'.format(resp.status_code,
-                        MAX_RETRY_TIME))
+                        'attempting to retry for {} seconds for url {}.'.format(resp.status_code,
+                        MAX_RETRY_TIME, url))
                 else:
                     logger.info('Encountered internal server error code {}, waiting {} seconds ' \
-                        'and then retrying.'.format(resp.status_code, RETRY_WAIT))
+                        'and then retrying url {}.'.format(resp.status_code, RETRY_WAIT, url))
                     retry_time += RETRY_WAIT
                     time.sleep(RETRY_WAIT)
             elif resp.status_code != 200:
