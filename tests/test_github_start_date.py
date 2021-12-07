@@ -18,7 +18,7 @@ class GithubStartDateTest(TestGithubBase):
     def generate_data(self):
         # get the token
         token = os.getenv("TAP_GITHUB_TOKEN")
-        url = "https://api.github.com/user/starred/singer-io/tap-github"
+        url = "https://api.github.com/user/starred/singer-io/test-repo"
         headers = {"Authorization": "Bearer {}".format(token)}
 
         # generate a data for 'events' stream: 'watchEvent' ie. star the repo
@@ -33,7 +33,7 @@ class GithubStartDateTest(TestGithubBase):
 
         # run the test for all the streams excluding 'events' stream
         # as for 'events' stream we have to use dynamic dates
-        self.run_test('2020-04-01T00:00:00Z', '2021-06-10T00:00:00Z', self.expected_streams() - {'events'})
+        self.run_test('2020-04-01T00:00:00Z', '2021-10-08T00:00:00Z', self.expected_streams() - {'events'})
 
         # As per the Documentation: https://docs.github.com/en/rest/reference/activity#events
         # the 'events' of past 90 days will only be returned
