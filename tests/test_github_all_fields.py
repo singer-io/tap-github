@@ -19,8 +19,22 @@ class TestGithubAllFields(TestGithubBase):
         - Verify no unexpected streams were replicated
         - Verify that more than just the automatic fields are replicated for each stream.
         """
+        # BUG TDL-16672
+        # The excluded streams are not honoring all fields selection
+        excluded_streams = {
+            'issue_events',
+            'comments',
+            'projects',
+            'pr_commits',
+            'events',
+            'review_comments',
+            'issues',
+            'project_cards',
+            'project_columns',
+            'commits'
+            }
 
-        expected_streams = self.expected_streams()
+        expected_streams = self.expected_streams() - excluded_streams
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)

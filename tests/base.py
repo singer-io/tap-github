@@ -61,6 +61,8 @@ class TestGithubBase(unittest.TestCase):
             'access_token': os.getenv("TAP_GITHUB_TOKEN")
         }
 
+    # BUG TDL-16571
+    # The folowing streams are not honoring automatic field selection
     def expected_check_streams(self):
         """The expected streams without any streams that are not passing due to tap issues with those streams"""
         excluded_streams = {
