@@ -102,7 +102,7 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     },
     404: {
         "raise_exception": NotFoundException,
-        "message": "The resource you have specified cannot be found"
+        "message": "The resource you have specified cannot be found. Alternatively the access_token is not valid for the resource"
     },
     409: {
         "raise_exception": ConflictError,
@@ -181,6 +181,9 @@ def raise_for_error(resp, source):
         if source == "teams":
             details += ' or it is a personal account repository'
         message = "HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details.".format(details, response_json.get("documentation_url"))
+        logger.info(message)
+        # don't raise a NotFoundException
+        return None
     else:
         message = "HTTP-error-code: {}, Error: {}".format(
             error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
