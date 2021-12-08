@@ -29,6 +29,7 @@ jobs:
             pip install nose coverage
             nosetests --with-coverage --cover-erase --cover-package=tap_github --cover-html-dir=htmlcov tests/unittests
             coverage html
+          when: always
       - store_test_results:
           path: test_output/report.xml
       - store_artifacts:
@@ -40,6 +41,7 @@ jobs:
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-github tests
+          when: always
 
 workflows:
   version: 2
