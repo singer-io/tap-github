@@ -5,9 +5,6 @@ import time
 import requests
 import backoff
 import singer
-import singer.bookmarks as bookmarks
-import singer.metrics as metrics
-import backoff
 
 from singer import (bookmarks, metrics, metadata)
 from simplejson import JSONDecodeError
@@ -931,8 +928,8 @@ def get_all_collaborators(schema, repo_path, state, mdata, _start_date):
                 )
         except NotFoundException as error:
             logger.info(
-                'Unable to retreive collaborators stream, check access_token is valid for {}. See full error message: {}'.format(
-                    repo_path, error)
+                'Unable to retreive collaborators stream, check access_token is valid for %s. See full error message: %s',
+                    repo_path, error
                 )
         else:
             for response in responses:
