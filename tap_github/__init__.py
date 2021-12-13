@@ -184,9 +184,9 @@ def raise_for_error(resp, source):
         logger.info(message)
         # don't raise a NotFoundException
         return None
-    else:
-        message = "HTTP-error-code: {}, Error: {}".format(
-            error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
+
+    message = "HTTP-error-code: {}, Error: {}".format(
+        error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
 
     exc = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception", GithubException)
     raise exc(message) from None
@@ -218,6 +218,9 @@ def authed_get(source, url, headers={}):
             raise_for_error(resp, source)
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         rate_throttling(resp)
+        if resp.status_code == 404:
+            # return an empty response body since we're not raising a NotFoundException
+            resp._content = b'{}' # pylint: disable=protected-access
         return resp
 
 def authed_get_all_pages(source, url, headers={}):
