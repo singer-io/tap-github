@@ -55,7 +55,7 @@ class TestGithubBookmarks(TestGithubBase):
     def test_run(self):
         expected_streams =  self.expected_streams()
 
-        expected_replication_keys = self.expected_primary_keys()
+        expected_replication_keys = self.expected_bookmark_keys()
         expected_replication_methods = self.expected_replication_method()
 
         repo = self.get_properties().get('repository')
@@ -110,10 +110,10 @@ class TestGithubBookmarks(TestGithubBase):
                 first_sync_count = first_sync_record_count.get(stream, 0)
                 second_sync_count = second_sync_record_count.get(stream, 0)
                 first_sync_messages = [record.get('data') for record in
-                                       first_sync_records.get(stream).get('messages')
+                                       first_sync_records.get(stream, {'messages': []}).get('messages')
                                        if record.get('action') == 'upsert']
                 second_sync_messages = [record.get('data') for record in
-                                        second_sync_records.get(stream).get('messages')
+                                        second_sync_records.get(stream, {'messages': []}).get('messages')
                                         if record.get('action') == 'upsert']
                 first_bookmark_key_value = first_sync_bookmarks.get('bookmarks', {}).get(repo, {stream: None}).get(stream)
                 second_bookmark_key_value = second_sync_bookmarks.get('bookmarks', {}).get(repo, {stream: None}).get(stream)
@@ -135,9 +135,8 @@ class TestGithubBookmarks(TestGithubBase):
                     self.assertIsNotNone(second_bookmark_key_value)
                     self.assertIsNotNone(second_bookmark_key_value.get('since'))
 
-                    # Verify the second sync bookmark is Equal to the first sync bookmark
-                    self.assertEqual(second_bookmark_value, first_bookmark_value) # assumes no changes to data during test
-
+                    # Verify the second sync bookmark is Equal or Greater than the first sync bookmark
+                    self.assertGreaterEqual(second_bookmark_value, first_bookmark_value) # the tap uses `since` set at execution for bookmarking
 
                     for record in second_sync_messages:
                         # Verify the second sync bookmark value is the max replication key value for a given stream
