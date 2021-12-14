@@ -127,10 +127,10 @@ class GithubStartDateTest(TestGithubBase):
                 record_count_sync_1 = record_count_by_stream_1.get(stream, 0)
                 record_count_sync_2 = record_count_by_stream_2.get(stream, 0)
                 primary_keys_list_1 = [tuple(message.get('data', {}).get(expected_pk) for expected_pk in expected_primary_keys)
-                                       for message in synced_records_1.get(stream, {}).get('messages')
+                                       for message in synced_records_1.get(stream, {'messages': []}).get('messages')
                                        if message.get('action') == 'upsert']
                 primary_keys_list_2 = [tuple(message.get('data', {}).get(expected_pk) for expected_pk in expected_primary_keys)
-                                       for message in synced_records_2.get(stream, {}).get('messages')
+                                       for message in synced_records_2.get(stream, {'messages': []}).get('messages')
                                        if message.get('action') == 'upsert']
 
                 primary_keys_sync_1 = set(primary_keys_list_1)
