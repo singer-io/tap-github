@@ -31,7 +31,7 @@ class TestGithubBookmarks(TestGithubBase):
 
         If the test data is changed in the future this will break expectations for this test.
         """
-        timedelta_by_stream = {stream: [10,0,0]  # {stream_name: [days, hours, minutes], ...}
+        timedelta_by_stream = {stream: [90,0,0]  # {stream_name: [days, hours, minutes], ...}
                                for stream in self.expected_streams()}
 
         repo = self.get_properties().get('repository')
