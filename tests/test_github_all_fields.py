@@ -31,7 +31,8 @@ class TestGithubAllFields(TestGithubBase):
             'issues',
             'project_cards',
             'project_columns',
-            'commits'
+            'commits',
+            'collaborators'
             }
 
         expected_streams = self.expected_streams() - excluded_streams

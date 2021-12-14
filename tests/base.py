@@ -73,7 +73,8 @@ class TestGithubBase(unittest.TestCase):
             'review_comments',
             'team_members',
             'reviews',
-            'pr_commits'
+            'pr_commits',
+            'collaborators'
             }
 
         return self.expected_streams() - excluded_streams
