@@ -18,6 +18,7 @@ DEBUG = False
 if DEBUG:
     debugpy.listen(("0.0.0.0", 9229))
     debugpy.wait_for_client()
+    breakpoint()
 
 
 from .gitlocal import GitLocal

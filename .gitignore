@@ -93,7 +93,6 @@ ENV/
 config.json
 properties.json
 
-.vscode
 
 # Jetbrains IDE
 .idea

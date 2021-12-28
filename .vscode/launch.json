@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "python",
+      "request": "attach",
+      "name": "Docker: Attach to python",
+      "port": 9229,
+      "address": "localhost",
+      "localRoot": "${workspaceFolder}/",
+      "remoteRoot": "/opt/tap-github/lib/python3.9/site-packages/",
+      "sourceMapPathOverrides": {
+        "/opt/tap-github/lib/python3.9/site-packages//*": "${workspaceFolder}/*"
+      },
+      "justMyCode": false
+    }
+  ]
+}
