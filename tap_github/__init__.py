@@ -12,6 +12,13 @@ import difflib
 import asyncio
 import psutil
 import gc
+import debugpy
+
+DEBUG = False
+if DEBUG:
+    debugpy.listen(("0.0.0.0", 9229))
+    debugpy.wait_for_client()
+
 
 from .gitlocal import GitLocal
 
