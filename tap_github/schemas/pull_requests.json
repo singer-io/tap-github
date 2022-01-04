@@ -509,6 +509,38 @@
         },
         "ref": {
           "type": ["null", "string"]
+        },
+        "repo": {
+          "type": ["null", "object"],
+          "properties": {
+            "id": {
+              "type": ["null", "integer"]
+            },
+            "name": {
+              "type": ["null", "string"]
+            },
+            "full_name": {
+              "type": ["null", "string"]
+            },
+            "size": {
+              "type": ["null", "integer"]
+            },
+            "default_branch": {
+              "type": ["null", "integer"]
+            },
+            "pushed_at": {
+              "type": ["null", "integer"],
+              "format": "date-time"
+            },
+            "created_at": {
+              "type": ["null", "integer"],
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": ["null", "integer"],
+              "format": "date-time"
+            }
+          }
         }
       }
     },
@@ -540,19 +572,19 @@
       "type": ["null", "string"]
     },
     "auto_merge": {
-      "type": ["null", "string"]
+      "type": ["null", "boolean"]
     },
     "draft": {
-      "type": ["null", "string"]
+      "type": ["null", "boolean"]
     },
     "merged": {
-      "type": ["null", "string"]
+      "type": ["null", "boolean"]
     },
     "mergeable": {
-      "type": ["null", "string"]
+      "type": ["null", "boolean"]
     },
     "rebaseable": {
-      "type": ["null", "string"]
+      "type": ["null", "boolean"]
     },
     "mergeable_state": {
       "type": ["null", "string"]
