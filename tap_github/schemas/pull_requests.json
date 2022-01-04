@@ -592,6 +592,9 @@
     "merged_by": {
       "type": ["null", "object"],
       "properties": {
+        "login": {
+          "type": ["null", "string"]
+        },
         "id": {
           "type": ["null", "integer"]
         },
@@ -623,6 +626,9 @@
           "type": ["null", "string"]
         },
         "repositories_url": {
+          "type": ["null", "string"]
+        },
+        "type": {
           "type": ["null", "string"]
         }
       }
