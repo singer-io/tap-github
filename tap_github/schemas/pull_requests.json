@@ -526,7 +526,7 @@
               "type": ["null", "integer"]
             },
             "default_branch": {
-              "type": ["null", "integer"]
+              "type": ["null", "string"]
             },
             "pushed_at": {
               "type": ["null", "string"],
