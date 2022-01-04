@@ -592,10 +592,19 @@
     "merged_by": {
       "type": ["null", "object"],
       "properties": {
+        "login": {
+          "type": ["null", "string"]
+        },
         "id": {
           "type": ["null", "integer"]
         },
         "node_id": {
+          "type": ["null", "string"]
+        },
+        "avatar_url": {
+          "type": ["null", "string"]
+        },
+        "gravatar_id": {
           "type": ["null", "string"]
         },
         "url": {
@@ -604,25 +613,10 @@
         "html_url": {
           "type": ["null", "string"]
         },
-        "name": {
+        "repos_url": {
           "type": ["null", "string"]
         },
-        "slug": {
-          "type": ["null", "string"]
-        },
-        "description": {
-          "type": ["null", "string"]
-        },
-        "privacy": {
-          "type": ["null", "string"]
-        },
-        "permission": {
-          "type": ["null", "string"]
-        },
-        "members_url": {
-          "type": ["null", "string"]
-        },
-        "repositories_url": {
+        "type": {
           "type": ["null", "string"]
         }
       }
