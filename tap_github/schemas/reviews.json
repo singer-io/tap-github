@@ -32,6 +32,9 @@
     "html_url": {
       "type": ["null", "string"]
     },
+    "pull_request_number": {
+      "type": ["null", "integer"]
+    },
     "pull_request_url": {
       "type": ["null", "string"]
     },
