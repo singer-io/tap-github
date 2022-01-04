@@ -601,31 +601,19 @@
         "node_id": {
           "type": ["null", "string"]
         },
+        "avatar_url": {
+          "type": ["null", "string"]
+        },
+        "gravatar_id": {
+          "type": ["null", "string"]
+        },
         "url": {
           "type": ["null", "string"]
         },
         "html_url": {
           "type": ["null", "string"]
         },
-        "name": {
-          "type": ["null", "string"]
-        },
-        "slug": {
-          "type": ["null", "string"]
-        },
-        "description": {
-          "type": ["null", "string"]
-        },
-        "privacy": {
-          "type": ["null", "string"]
-        },
-        "permission": {
-          "type": ["null", "string"]
-        },
-        "members_url": {
-          "type": ["null", "string"]
-        },
-        "repositories_url": {
+        "repos_url": {
           "type": ["null", "string"]
         },
         "type": {
