@@ -529,15 +529,15 @@
               "type": ["null", "integer"]
             },
             "pushed_at": {
-              "type": ["null", "integer"],
+              "type": ["null", "string"],
               "format": "date-time"
             },
             "created_at": {
-              "type": ["null", "integer"],
+              "type": ["null", "string"],
               "format": "date-time"
             },
             "updated_at": {
-              "type": ["null", "integer"],
+              "type": ["null", "string"],
               "format": "date-time"
             }
           }
