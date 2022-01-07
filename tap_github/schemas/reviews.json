@@ -36,7 +36,7 @@
       "type": ["null", "integer"]
     },
     "pull_request_id": {
-      "type": ["null", "integer"]
+      "type": ["null", "string"]
     },
     "pull_request_url": {
       "type": ["null", "string"]
