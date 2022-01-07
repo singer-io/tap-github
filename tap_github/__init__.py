@@ -805,7 +805,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
 
                     # sync reviews if that schema is present (only there if selected)
                     if schemas.get('reviews'):
-                        for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], repo_path, state, mdata):
+                        for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], repo_path, state, mdata, pr_id):
                             singer.write_record('reviews', review_rec, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'reviews', {'since': singer.utils.strftime(extraction_time)})
 
@@ -861,7 +861,7 @@ def get_pr_detail(pull_number, repo_path):
     return pr.json()
 
 
-def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata):
+def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata, pr_id):
     for response in authed_get_all_pages(
             'reviews',
             'https://api.github.com/repos/{}/pulls/{}/reviews'.format(repo_path, pr_number)
@@ -869,6 +869,7 @@ def get_reviews_for_pr(pr_number, schema, repo_path, state, mdata):
         reviews = response.json()
         for review in reviews:
             review['_sdc_repository'] = repo_path
+            review['pull_request_id'] = pr_id
             review['pull_request_number'] = pr_number
             with singer.Transformer() as transformer:
                 rec = transformer.transform(review, schema, metadata=metadata.to_map(mdata))
