@@ -1081,10 +1081,7 @@ def get_all_heads_for_commits(repo_path):
                     'name': branch['name']
                 }
 
-    # This is dangerous becuase if PR import succeeds and the commit import does not, then
-    # subsequent runs may miss PR base/head commits that were never imported.
-    # TODO: fix this https://minware.atlassian.net/browse/MW-213
-    if True: # not repo_path in PR_CACHE:
+    if not repo_path in PR_CACHE:
         cur_cache = {}
         PR_CACHE[repo_path] = cur_cache
         for response in authed_get_all_pages(
@@ -1696,9 +1693,11 @@ def do_sync(config, state, catalog):
     # Put branches and then pull requests before commits, which have a data dependency on them.
     def schemaSortFunc(val):
         if val['tap_stream_id'] == 'branches':
-            return 'aa'
+            return 'a1'
         elif val['tap_stream_id'] == 'pull_requests':
-            return 'bb'
+            return 'a2'
+        elif val['tap_stream_id'] == 'commits':
+            return 'a3'
         else:
             return val['tap_stream_id']
     catalog['streams'].sort(key=schemaSortFunc)
@@ -1747,7 +1746,10 @@ def do_sync(config, state, catalog):
                     else:
                         state = sync_func(stream_schemas, repo, state, mdata, start_date)
 
-                singer.write_state(state)
+                # Don't save the state after branches or pull_requests due to the data dependency
+                # that commits have on them.
+                if stream_id != 'branches' and stream_id != 'pull_requests':
+                    singer.write_state(state)
 
 @singer.utils.handle_top_exception(logger)
 def main():
