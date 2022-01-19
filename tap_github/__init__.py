@@ -418,18 +418,18 @@ def get_all_teams(schemas, repo_path, state, mdata, _start_date):
 
                 # transform and write release record
                 with singer.Transformer() as transformer:
-                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                    rec = transformer.transform(r, schemas['teams'], metadata=metadata.to_map(mdata['teams']))
                 singer.write_record('teams', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'teams', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
                 if schemas.get('team_members'):
-                    for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata):
+                    for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata['team_members']):
                         singer.write_record('team_members', team_members_rec, time_extracted=extraction_time)
                         singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
 
                 if schemas.get('team_memberships'):
-                    for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata):
+                    for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata['team_memberships']):
                         singer.write_record('team_memberships', team_memberships_rec, time_extracted=extraction_time)
 
     return state
@@ -674,7 +674,7 @@ def get_all_projects(schemas, repo_path, state, mdata, start_date):
 
                 # transform and write release record
                 with singer.Transformer() as transformer:
-                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                    rec = transformer.transform(r, schemas['projects'], metadata=metadata.to_map(mdata['projects']))
                 singer.write_record('projects', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'projects', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
@@ -685,14 +685,14 @@ def get_all_projects(schemas, repo_path, state, mdata, start_date):
 
                 # sync project_columns if that schema is present (only there if selected)
                 if schemas.get('project_columns'):
-                    for project_column_rec in get_all_project_columns(project_id, schemas['project_columns'], repo_path, state, mdata, start_date):
+                    for project_column_rec in get_all_project_columns(project_id, schemas['project_columns'], repo_path, state, mdata['project_columns'], start_date):
                         singer.write_record('project_columns', project_column_rec, time_extracted=extraction_time)
                         singer.write_bookmark(state, repo_path, 'project_columns', {'since': singer.utils.strftime(extraction_time)})
 
                         # sync project_cards if that schema is present (only there if selected)
                         if schemas.get('project_cards'):
                             column_id = project_column_rec['id']
-                            for project_card_rec in get_all_project_cards(column_id, schemas['project_cards'], repo_path, state, mdata, start_date):
+                            for project_card_rec in get_all_project_cards(column_id, schemas['project_cards'], repo_path, state, mdata['project_cards'], start_date):
                                 singer.write_record('project_cards', project_card_rec, time_extracted=extraction_time)
                                 singer.write_bookmark(state, repo_path, 'project_cards', {'since': singer.utils.strftime(extraction_time)})
     return state
@@ -819,14 +819,14 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
 
                     # transform and write pull_request record
                     with singer.Transformer() as transformer:
-                        rec = transformer.transform(pr, schemas['pull_requests'], metadata=metadata.to_map(mdata))
+                        rec = transformer.transform(pr, schemas['pull_requests'], metadata=metadata.to_map(mdata['pull_requests']))
                     singer.write_record('pull_requests', rec, time_extracted=extraction_time)
                     singer.write_bookmark(state, repo_path, 'pull_requests', {'since': singer.utils.strftime(extraction_time)})
                     counter.increment()
 
                     # sync reviews if that schema is present (only there if selected)
                     if schemas.get('reviews'):
-                        for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], repo_path, state, mdata):
+                        for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], repo_path, state, mdata['reviews']):
                             singer.write_record('reviews', review_rec, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'reviews', {'since': singer.utils.strftime(extraction_time)})
 
@@ -834,7 +834,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
 
                     # sync review comments if that schema is present (only there if selected)
                     if schemas.get('review_comments'):
-                        for review_comment_rec in get_review_comments_for_pr(pr_num, schemas['review_comments'], repo_path, state, mdata):
+                        for review_comment_rec in get_review_comments_for_pr(pr_num, schemas['review_comments'], repo_path, state, mdata['review_comments']):
                             singer.write_record('review_comments', review_comment_rec, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'review_comments', {'since': singer.utils.strftime(extraction_time)})
 
@@ -845,7 +845,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
                                 schemas['pr_commits'],
                                 repo_path,
                                 state,
-                                mdata
+                                mdata['pr_commits']
                         ):
                             singer.write_record('pr_commits', pr_commit, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'pr_commits', {'since': singer.utils.strftime(extraction_time)})
@@ -1162,17 +1162,19 @@ def do_sync(config, state, catalog):
                 # handle streams with sub streams
                 else:
                     stream_schemas = {stream_id: stream_schema}
+                    stream_mdata = {stream_id: mdata}
 
                     # get and write selected sub stream schemas
                     for sub_stream_id in sub_stream_ids:
                         if sub_stream_id in selected_stream_ids:
                             sub_stream = get_stream_from_catalog(sub_stream_id, catalog)
                             stream_schemas[sub_stream_id] = sub_stream['schema']
+                            stream_mdata[sub_stream_id] =  sub_stream['metadata']
                             singer.write_schema(sub_stream_id, sub_stream['schema'],
                                                 sub_stream['key_properties'])
 
                     # sync stream and it's sub streams
-                    state = sync_func(stream_schemas, repo, state, mdata, start_date)
+                    state = sync_func(stream_schemas, repo, state, stream_mdata, start_date)
 
                 singer.write_state(state)
 
