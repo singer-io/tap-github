@@ -21,8 +21,7 @@ class TestGithubAutomaticFields(TestGithubBase):
         - Verify that all replicated records have unique primary key values.
         """
 
-        # BUG TDL-16137 `team_memberships` stream is not passing run_and_verify_sync()
-        expected_streams = self.expected_check_streams()
+        expected_streams = self.expected_streams()
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
