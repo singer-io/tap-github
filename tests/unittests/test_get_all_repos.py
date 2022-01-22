@@ -5,7 +5,7 @@ import simplejson as json
 
 import tap_github
 
-from itertools import cycle, permutations, chain
+from itertools import cycle
 
 
 SESSION = requests.Session()
@@ -46,16 +46,21 @@ class TestGetAllRepos(unittest.TestCase):
         repos = ['repo1', 'repo2', 'repo3']
 
         mocked_url = 'mock://github.com/orgs/test-org/repos'
-        orgs_repos_permutations = [list(zip(orgs, perm)) for perm in permutations(repos, len(orgs))]
-        mocked_response_body = [
-            {'full_name': ''.join(r).replace('*', '')} for r in set(chain(*orgs_repos_permutations))
-            ]
-        mocked_response_text = json.dumps(mocked_response_body)
-        ADAPTER.register_uri(
-            'GET',
-            mocked_url,
-            text=mocked_response_text)
-        mocked_response = SESSION.get(mocked_url)
+        side_effect = []
+        for org in orgs:
+            mocked_response_body = [
+                {'full_name': ''.join(r).replace('*', '')} for r in zip(cycle([org]), repos)
+                ]
+            ADAPTER.register_uri(
+                'GET',
+                mocked_url,
+                text=json.dumps(mocked_response_body))
+            mocked_response = SESSION.get(mocked_url)
+            mocked_authed_get_all_pages.return_value = [mocked_response]
+
+            call_response = tap_github.get_all_repos([org])
+
+            side_effect.extend(call_response)
 
         expected_repositories = [
             'test-org/repo1',
@@ -65,6 +70,5 @@ class TestGetAllRepos(unittest.TestCase):
             'singer-io/repo2',
             'singer-io/repo3'
             ]
-        mocked_authed_get_all_pages.return_value = [mocked_response]
 
-        self.assertSetEqual(set(expected_repositories), set(tap_github.get_all_repos(orgs)))
+        self.assertListEqual(expected_repositories, side_effect)

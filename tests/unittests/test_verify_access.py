@@ -71,8 +71,8 @@ class TestCredentials(unittest.TestCase):
         try:
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
         except tap_github.NotFoundException as e:
-                self.assertEqual(str(e), "HTTP-error-code: 404, Error: Please check the repository name 'org/repo' or you do not have sufficient permissions to access this repository.")
-        self.assertEqual(mocked_get_catalog.call_count, 0)
+            self.assertEqual(str(e), "HTTP-error-code: 404, Error: Please check the repository name org/repo or you do not have sufficient permissions to access this repository.")
+        self.assertEqual(mocked_get_catalog.call_count, 1)
 
     @mock.patch("tap_github.get_catalog")
     def test_discover_bad_request(self, mocked_get_catalog, mocked_parse_args, mocked_request):
@@ -82,7 +82,7 @@ class TestCredentials(unittest.TestCase):
         try:
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
         except tap_github.BadRequestException as e:
-                self.assertEqual(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
+            self.assertEqual(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
     @mock.patch("tap_github.get_catalog")
@@ -94,7 +94,7 @@ class TestCredentials(unittest.TestCase):
         try:
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
         except tap_github.BadCredentialsException as e:
-                self.assertEqual(str(e), "HTTP-error-code: 401, Error: {}".format(json))
+            self.assertEqual(str(e), "HTTP-error-code: 401, Error: {}".format(json))
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
     @mock.patch("tap_github.get_catalog")
@@ -106,7 +106,7 @@ class TestCredentials(unittest.TestCase):
         try:
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
         except tap_github.AuthException as e:
-                self.assertEqual(str(e), "HTTP-error-code: 403, Error: {}".format(json))
+            self.assertEqual(str(e), "HTTP-error-code: 403, Error: {}".format(json))
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
 
