@@ -420,13 +420,11 @@ def get_all_teams(schemas, repo_path, state, mdata, _start_date):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas['teams'], metadata=metadata.to_map(mdata['teams']))
                 singer.write_record('teams', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'teams', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
                 if schemas.get('team_members'):
                     for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata['team_members']):
                         singer.write_record('team_members', team_members_rec, time_extracted=extraction_time)
-                        singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
 
                 if schemas.get('team_memberships'):
                     for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata['team_memberships']):
@@ -605,7 +603,6 @@ def get_all_issue_labels(schemas, repo_path, state, mdata, _start_date):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('issue_labels', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'issue_labels', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -779,7 +776,6 @@ def get_all_releases(schemas, repo_path, state, mdata, _start_date):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('releases', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'releases', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -917,7 +913,6 @@ def get_all_assignees(schema, repo_path, state, mdata, _start_date):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(assignee, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('assignees', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'assignees', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -946,7 +941,6 @@ def get_all_collaborators(schema, repo_path, state, mdata, _start_date):
                     with singer.Transformer() as transformer:
                         rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
                     singer.write_record('collaborators', rec, time_extracted=extraction_time)
-                    singer.write_bookmark(state, repo_path, 'collaborators', {'since': singer.utils.strftime(extraction_time)})
                     counter.increment()
 
     return state
@@ -1053,7 +1047,6 @@ def get_all_stargazers(schema, repo_path, state, mdata, _start_date):
                     rec = transformer.transform(stargazer, schema, metadata=metadata.to_map(mdata))
                 rec['user_id'] = user_id
                 singer.write_record('stargazers', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'stargazers', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
