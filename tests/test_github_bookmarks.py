@@ -76,7 +76,8 @@ class TestGithubBookmarks(TestGithubBase):
 
 
     def test_run(self):
-        expected_streams =  self.expected_streams()
+        # Exclude collaborators stream due to access issues in circle
+        expected_streams = self.expected_streams() - {'collaborators'}
 
         expected_replication_keys = self.expected_bookmark_keys()
         expected_replication_methods = self.expected_replication_method()

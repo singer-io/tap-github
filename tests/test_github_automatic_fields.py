@@ -20,8 +20,8 @@ class TestGithubAutomaticFields(TestGithubBase):
         - Verify that only the automatic fields are sent to the target.
         - Verify that all replicated records have unique primary key values.
         """
-
-        expected_streams = self.expected_streams()
+        # Exclude collaborators stream due to access issues in circle
+        expected_streams = self.expected_streams() - {'collaborators'}
 
         # instantiate connection
         conn_id = connections.ensure_connection(self)
