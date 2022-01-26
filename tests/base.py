@@ -108,7 +108,7 @@ class TestGithubBase(unittest.TestCase):
             "issue_milestones": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"due_on"},
+                self.BOOKMARK: {"updated_at"},
                 self.OBEYS_START_DATE: True
             },
             "issue_events": {
@@ -167,7 +167,7 @@ class TestGithubBase(unittest.TestCase):
             "reviews": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"},
+                self.BOOKMARK: {"submitted_at"},
                 self.OBEYS_START_DATE: True
             },
             "stargazers": {
