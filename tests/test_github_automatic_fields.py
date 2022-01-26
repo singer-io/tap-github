@@ -64,8 +64,14 @@ class TestGithubAutomaticFields(TestGithubBase):
                 for actual_keys in record_messages_keys:
                     self.assertSetEqual(expected_keys, actual_keys)
 
-                # Verify that all replicated records have unique primary key values.
-                self.assertEqual(
-                    len(primary_keys_list),
-                    len(unique_primary_keys_list),
-                    msg="Replicated record does not have unique primary key values.")
+                # An org can have multiple teams with overlapping membership
+                if stream == 'team_members':
+                    self.assertGreaterEqual(
+                        len(primary_keys_list),
+                        len(unique_primary_keys_list))
+                else:
+                    # Verify that all replicated records have unique primary key values.
+                    self.assertEqual(
+                        len(primary_keys_list),
+                        len(unique_primary_keys_list),
+                        msg="Replicated record does not have unique primary key values.")
