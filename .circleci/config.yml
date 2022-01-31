@@ -66,4 +66,6 @@ workflows:
                 - master
     jobs:
       - build:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tap-tester-user
