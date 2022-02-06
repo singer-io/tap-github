@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='tap-github',
-      version='1.10.0',
+      version='1.10.2',
       description='Singer.io tap for extracting data from the GitHub API',
       author='Stitch',
       url='http://singer.io',
@@ -15,7 +15,7 @@ setup(name='tap-github',
       ],
       extras_require={
           'dev': [
-              'pylint',
+              'pylint==2.6.2',
               'ipdb',
               'nose',
           ]
