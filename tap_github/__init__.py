@@ -1405,7 +1405,7 @@ def get_all_commit_files(schemas, repo_path,  state, mdata, start_date, gitLocal
 
     count = 0
     # The lage majority of PRs are less than this many commits
-    LOG_PAGE_SIZE = 20
+    LOG_PAGE_SIZE = 10000
     with metrics.record_counter('commit_files') as counter:
         # First, walk through all the heads and queue up all the commits that need to be imported
         commitQ = []

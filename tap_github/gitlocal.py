@@ -6,11 +6,15 @@ import sys
 import os
 import re
 import json
+import singer
 
 class GitLocalException(Exception):
   pass
 
+logger = singer.get_logger()
+
 def parseDiffLines(lines):
+  logger.info("parseDiffLines() called for %d lines", len(lines))
   changes = []
   curChange = None
   state = 'start'
@@ -132,6 +136,7 @@ class GitLocal:
     """
     # If directory already exists, do an update
     if os.path.exists(repoWdir):
+      logger.info("Running git remote update")
       completed = subprocess.run(['git', 'remote', 'update'], cwd=repoWdir, capture_output=True)
       if completed.returncode != 0:
         # Don't send the acces token through the error logging system
@@ -139,6 +144,7 @@ class GitLocal:
         raise GitLocalException("Remote update of repo {} failed with code {}, message: {}"\
           .format(repo, completed.returncode, strippedOutput))
     else:
+      logger.info("Running git clone")
       cloneUrl = "https://{}@github.com/{}.git".format(self.token, repo)
       orgDir = self._getOrgWorkingDir(repo)
       completed = subprocess.run(['git', 'clone', '--mirror', cloneUrl], cwd=orgDir,
@@ -159,6 +165,7 @@ class GitLocal:
 
   def hasLocalCommit(self, repo, sha):
     repoDir = self._getRepoWorkingDir(repo)
+    logger.info("Running git log -n1 %s", sha)
     completed = subprocess.run(['git', 'log', '-n1', sha], cwd=repoDir, capture_output=True)
     if completed.stderr.decode('utf-8', errors='replace').find('fatal: bad object') != -1:
       return False
@@ -189,6 +196,7 @@ class GitLocal:
     if offset:
       params.append('--skip={}'.format(int(offset)))
     params.append(headSha)
+    logger.info("Running %s", ' '.join(params))
     completed = subprocess.run(params, cwd=repoDir, capture_output=True)
     if completed.returncode != 0:
       # Don't send the acces token through the error logging system
@@ -241,6 +249,7 @@ class GitLocal:
     head has already been fetched and this commit is available.
     """
     repoDir = self._getRepoWorkingDir(repo)
+    logger.info("Running git diff for %s", sha)
     completed = subprocess.run(['git', 'diff', sha + '~1', sha], cwd=repoDir, capture_output=True)
     # Special case -- first commit, diff instead with an empty tree
     if completed.returncode != 0 and b"~1': unknown revision or path not in the working tree" \
@@ -269,6 +278,7 @@ class GitLocal:
 
   def getAllHeads(self, repo):
     repoDir = self._getRepoWorkingDir(repo)
+    logger.info("Running git show-ref")
     completed = subprocess.run(['git', 'show-ref'], cwd=repoDir, capture_output=True)
     # Special case -- first commit, diff instead with an empty tree
     if completed.returncode != 0:
