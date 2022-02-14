@@ -1,5 +1,9 @@
 # Changelog
 
+# 1.10.3
+  * Implemented wildcard implementation [#145] (https://github.com/singer-io/tap-github/pull/145)
+  * Added additional test coverage [#145] (https://github.com/singer-io/tap-github/pull/145)
+
 # 1.10.2
   * Added Request Timeout
 
