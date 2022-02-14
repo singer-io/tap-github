@@ -1,15 +1,13 @@
-import argparse
 import os
 import json
 import collections
 import time
 import requests
-import singer
-import singer.bookmarks as bookmarks
-import singer.metrics as metrics
 import backoff
+import singer
 
-from singer import metadata
+from singer import (bookmarks, metrics, metadata)
+from simplejson import JSONDecodeError
 
 session = requests.Session()
 logger = singer.get_logger()
@@ -44,6 +42,9 @@ KEY_PROPERTIES = {
     'team_members': ['id'],
     'team_memberships': ['url']
 }
+
+DEFAULT_SLEEP_SECONDS = 600
+MAX_SLEEP_SECONDS = DEFAULT_SLEEP_SECONDS
 
 class GithubException(Exception):
     pass
@@ -101,7 +102,7 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     },
     404: {
         "raise_exception": NotFoundException,
-        "message": "The resource you have specified cannot be found"
+        "message": "The resource you have specified cannot be found. Alternatively the access_token is not valid for the resource"
     },
     409: {
         "raise_exception": ConflictError,
@@ -172,7 +173,7 @@ def raise_for_error(resp, source):
     error_code = resp.status_code
     try:
         response_json = resp.json()
-    except Exception:
+    except JSONDecodeError:
         response_json = {}
 
     if error_code == 404:
@@ -180,9 +181,12 @@ def raise_for_error(resp, source):
         if source == "teams":
             details += ' or it is a personal account repository'
         message = "HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details.".format(details, response_json.get("documentation_url"))
-    else:
-        message = "HTTP-error-code: {}, Error: {}".format(
-            error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
+        logger.info(message)
+        # don't raise a NotFoundException
+        return None
+
+    message = "HTTP-error-code: {}, Error: {}".format(
+        error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
 
     exc = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception", GithubException)
     raise exc(message) from None
@@ -195,7 +199,7 @@ def rate_throttling(response):
     if int(response.headers['X-RateLimit-Remaining']) == 0:
         seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
-        if seconds_to_sleep > 600:
+        if seconds_to_sleep > MAX_SLEEP_SECONDS:
             message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
             raise RateLimitExceeded(message) from None
 
@@ -214,6 +218,9 @@ def authed_get(source, url, headers={}):
             raise_for_error(resp, source)
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         rate_throttling(resp)
+        if resp.status_code == 404:
+            # return an empty response body since we're not raising a NotFoundException
+            resp._content = b'{}' # pylint: disable=protected-access
         return resp
 
 def authed_get_all_pages(source, url, headers={}):
@@ -249,7 +256,7 @@ def load_schemas():
     for filename in os.listdir(get_abs_path('schemas')):
         path = get_abs_path('schemas') + '/' + filename
         file_raw = filename.replace('.json', '')
-        with open(path) as file:
+        with open(path, encoding='utf-8') as file:
             schemas[file_raw] = json.load(file)
 
     schemas['pr_commits'] = generate_pr_commit_schema(schemas['commits'])
@@ -315,6 +322,57 @@ def get_catalog():
 
     return {'streams': streams}
 
+def get_all_repos(organizations: list) -> list:
+    """
+    Retrieves all repositories for the provided organizations and
+        verifies basic access for them.
+
+    Docs: https://docs.github.com/en/rest/reference/repos#list-organization-repositories
+    """
+    repos = []
+
+    for org_path in organizations:
+        org = org_path.split('/')[0]
+        for response in authed_get_all_pages(
+            'get_all_repos',
+            'https://api.github.com/orgs/{}/repos?sort=created&direction=desc'.format(org)
+        ):
+            org_repos = response.json()
+
+            for repo in org_repos:
+                repo_full_name = repo.get('full_name')
+
+                logger.info("Verifying access of repository: %s", repo_full_name)
+                verify_repo_access(
+                    'https://api.github.com/repos/{}/commits'.format(repo_full_name),
+                    repo
+                )
+
+                repos.append(repo_full_name)
+
+    return repos
+
+def extract_repos_from_config(config: dict ) -> list:
+    """
+    Extracts all repositories from the config and calls get_all_repos()
+        for organizations using the wildcard 'org/*' format.
+    """
+    repo_paths = list(filter(None, config['repository'].split(' ')))
+
+    orgs_with_all_repos = list(filter(lambda x: x.split('/')[1] == '*', repo_paths))
+
+    if orgs_with_all_repos:
+        # remove any wildcard "org/*" occurrences from `repo_paths`
+        repo_paths = list(set(repo_paths).difference(set(orgs_with_all_repos)))
+
+        # get all repositores for an org in the config
+        all_repos = get_all_repos(orgs_with_all_repos)
+
+        # update repo_paths
+        repo_paths.extend(all_repos)
+
+    return repo_paths
+
 def verify_repo_access(url_for_repo, repo):
     try:
         authed_get("verifying repository access", url_for_repo)
@@ -328,7 +386,7 @@ def verify_access_for_repo(config):
     access_token = config['access_token']
     session.headers.update({'authorization': 'token ' + access_token, 'per_page': '1', 'page': '1'})
 
-    repositories = list(filter(None, config['repository'].split(' ')))
+    repositories = extract_repos_from_config(config)
 
     for repo in repositories:
         logger.info("Verifying access of repository: %s", repo)
@@ -360,18 +418,16 @@ def get_all_teams(schemas, repo_path, state, mdata, _start_date):
 
                 # transform and write release record
                 with singer.Transformer() as transformer:
-                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                    rec = transformer.transform(r, schemas['teams'], metadata=metadata.to_map(mdata['teams']))
                 singer.write_record('teams', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'teams', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
                 if schemas.get('team_members'):
-                    for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata):
+                    for team_members_rec in get_all_team_members(team_slug, schemas['team_members'], repo_path, state, mdata['team_members']):
                         singer.write_record('team_members', team_members_rec, time_extracted=extraction_time)
-                        singer.write_bookmark(state, repo_path, 'team_members', {'since': singer.utils.strftime(extraction_time)})
 
                 if schemas.get('team_memberships'):
-                    for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata):
+                    for team_memberships_rec in get_all_team_memberships(team_slug, schemas['team_memberships'], repo_path, state, mdata['team_memberships']):
                         singer.write_record('team_memberships', team_memberships_rec, time_extracted=extraction_time)
 
     return state
@@ -547,7 +603,6 @@ def get_all_issue_labels(schemas, repo_path, state, mdata, _start_date):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('issue_labels', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'issue_labels', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -616,7 +671,7 @@ def get_all_projects(schemas, repo_path, state, mdata, start_date):
 
                 # transform and write release record
                 with singer.Transformer() as transformer:
-                    rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
+                    rec = transformer.transform(r, schemas['projects'], metadata=metadata.to_map(mdata['projects']))
                 singer.write_record('projects', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'projects', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
@@ -627,14 +682,14 @@ def get_all_projects(schemas, repo_path, state, mdata, start_date):
 
                 # sync project_columns if that schema is present (only there if selected)
                 if schemas.get('project_columns'):
-                    for project_column_rec in get_all_project_columns(project_id, schemas['project_columns'], repo_path, state, mdata, start_date):
+                    for project_column_rec in get_all_project_columns(project_id, schemas['project_columns'], repo_path, state, mdata['project_columns'], start_date):
                         singer.write_record('project_columns', project_column_rec, time_extracted=extraction_time)
                         singer.write_bookmark(state, repo_path, 'project_columns', {'since': singer.utils.strftime(extraction_time)})
 
                         # sync project_cards if that schema is present (only there if selected)
                         if schemas.get('project_cards'):
                             column_id = project_column_rec['id']
-                            for project_card_rec in get_all_project_cards(column_id, schemas['project_cards'], repo_path, state, mdata, start_date):
+                            for project_card_rec in get_all_project_cards(column_id, schemas['project_cards'], repo_path, state, mdata['project_cards'], start_date):
                                 singer.write_record('project_cards', project_card_rec, time_extracted=extraction_time)
                                 singer.write_bookmark(state, repo_path, 'project_cards', {'since': singer.utils.strftime(extraction_time)})
     return state
@@ -721,7 +776,6 @@ def get_all_releases(schemas, repo_path, state, mdata, _start_date):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('releases', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'releases', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -761,14 +815,14 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
 
                     # transform and write pull_request record
                     with singer.Transformer() as transformer:
-                        rec = transformer.transform(pr, schemas['pull_requests'], metadata=metadata.to_map(mdata))
+                        rec = transformer.transform(pr, schemas['pull_requests'], metadata=metadata.to_map(mdata['pull_requests']))
                     singer.write_record('pull_requests', rec, time_extracted=extraction_time)
                     singer.write_bookmark(state, repo_path, 'pull_requests', {'since': singer.utils.strftime(extraction_time)})
                     counter.increment()
 
                     # sync reviews if that schema is present (only there if selected)
                     if schemas.get('reviews'):
-                        for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], repo_path, state, mdata):
+                        for review_rec in get_reviews_for_pr(pr_num, schemas['reviews'], repo_path, state, mdata['reviews']):
                             singer.write_record('reviews', review_rec, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'reviews', {'since': singer.utils.strftime(extraction_time)})
 
@@ -776,7 +830,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
 
                     # sync review comments if that schema is present (only there if selected)
                     if schemas.get('review_comments'):
-                        for review_comment_rec in get_review_comments_for_pr(pr_num, schemas['review_comments'], repo_path, state, mdata):
+                        for review_comment_rec in get_review_comments_for_pr(pr_num, schemas['review_comments'], repo_path, state, mdata['review_comments']):
                             singer.write_record('review_comments', review_comment_rec, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'review_comments', {'since': singer.utils.strftime(extraction_time)})
 
@@ -787,7 +841,7 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
                                 schemas['pr_commits'],
                                 repo_path,
                                 state,
-                                mdata
+                                mdata['pr_commits']
                         ):
                             singer.write_record('pr_commits', pr_commit, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'pr_commits', {'since': singer.utils.strftime(extraction_time)})
@@ -859,7 +913,6 @@ def get_all_assignees(schema, repo_path, state, mdata, _start_date):
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(assignee, schema, metadata=metadata.to_map(mdata))
                 singer.write_record('assignees', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'assignees', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -869,19 +922,26 @@ def get_all_collaborators(schema, repo_path, state, mdata, _start_date):
     https://developer.github.com/v3/repos/collaborators/#list-collaborators
     '''
     with metrics.record_counter('collaborators') as counter:
-        for response in authed_get_all_pages(
-                'collaborators',
-                'https://api.github.com/repos/{}/collaborators'.format(repo_path)
-        ):
-            collaborators = response.json()
-            extraction_time = singer.utils.now()
-            for collaborator in collaborators:
-                collaborator['_sdc_repository'] = repo_path
-                with singer.Transformer() as transformer:
-                    rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
-                singer.write_record('collaborators', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'collaborator', {'since': singer.utils.strftime(extraction_time)})
-                counter.increment()
+        try:
+            responses = authed_get_all_pages(
+                    'collaborators',
+                    'https://api.github.com/repos/{}/collaborators'.format(repo_path)
+                )
+        except NotFoundException as error:
+            logger.info(
+                'Unable to retreive collaborators stream, check access_token is valid for %s. See full error message: %s',
+                    repo_path, error
+                )
+        else:
+            for response in responses:
+                collaborators = response.json()
+                extraction_time = singer.utils.now()
+                for collaborator in collaborators:
+                    collaborator['_sdc_repository'] = repo_path
+                    with singer.Transformer() as transformer:
+                        rec = transformer.transform(collaborator, schema, metadata=metadata.to_map(mdata))
+                    singer.write_record('collaborators', rec, time_extracted=extraction_time)
+                    counter.increment()
 
     return state
 
@@ -987,7 +1047,6 @@ def get_all_stargazers(schema, repo_path, state, mdata, _start_date):
                     rec = transformer.transform(stargazer, schema, metadata=metadata.to_map(mdata))
                 rec['user_id'] = user_id
                 singer.write_record('stargazers', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'stargazers', {'since': singer.utils.strftime(extraction_time)})
                 counter.increment()
 
     return state
@@ -1064,7 +1123,7 @@ def do_sync(config, state, catalog):
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
 
-    repositories = list(filter(None, config['repository'].split(' ')))
+    repositories = extract_repos_from_config(config)
 
     state = translate_state(state, catalog, repositories)
     singer.write_state(state)
@@ -1096,23 +1155,32 @@ def do_sync(config, state, catalog):
                 # handle streams with sub streams
                 else:
                     stream_schemas = {stream_id: stream_schema}
+                    stream_mdata = {stream_id: mdata}
 
                     # get and write selected sub stream schemas
                     for sub_stream_id in sub_stream_ids:
                         if sub_stream_id in selected_stream_ids:
                             sub_stream = get_stream_from_catalog(sub_stream_id, catalog)
                             stream_schemas[sub_stream_id] = sub_stream['schema']
+                            stream_mdata[sub_stream_id] =  sub_stream['metadata']
                             singer.write_schema(sub_stream_id, sub_stream['schema'],
                                                 sub_stream['key_properties'])
 
                     # sync stream and it's sub streams
-                    state = sync_func(stream_schemas, repo, state, mdata, start_date)
+                    state = sync_func(stream_schemas, repo, state, stream_mdata, start_date)
 
                 singer.write_state(state)
 
 @singer.utils.handle_top_exception(logger)
 def main():
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
+
+    # get optional config key `max_sleep_seconds`
+    config_max_sleep = args.config.get('max_sleep_seconds')
+
+    # set global `MAX_SLEEP_SECONDS` for rate_throttling function or use default
+    global MAX_SLEEP_SECONDS #pylint: disable=global-statement
+    MAX_SLEEP_SECONDS = config_max_sleep if config_max_sleep else DEFAULT_SLEEP_SECONDS
 
     if args.discover:
         do_discover(args.config)

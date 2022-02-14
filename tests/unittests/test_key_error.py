@@ -23,21 +23,22 @@ class TestKeyErrorSlug(unittest.TestCase):
         mocked_request.return_value = get_response(json)
 
         schemas = {"teams": "None", "team_members": "None"}
-        mdata  =[
+        mdata_slug = [
         {
             'breadcrumb': [], 
             'metadata': {'selected': True, 'table-key-properties': ['id']}
-        }, 
+        },
         {
             'breadcrumb': ['properties', 'slug'], 
             'metadata': {'inclusion': 'available'}
-        }, 
+        },
         {
             "breadcrumb": [ "properties", "name"],
             "metadata": {"inclusion": "available"}
         }]
+        mdata  = {"teams": mdata_slug, "team_members": mdata_slug}
         tap_github.get_all_teams(schemas, "tap-github", {}, mdata, "")
-        self.assertEquals(mocked_team_members.call_count, 1)
+        self.assertEqual(mocked_team_members.call_count, 1)
 
     @mock.patch("tap_github.__init__.get_all_team_members")
     def test_slug_sub_stream_not_selected_slug_selected(self, mocked_team_members, mocked_request):
@@ -46,9 +47,9 @@ class TestKeyErrorSlug(unittest.TestCase):
         mocked_request.return_value = get_response(json)
 
         schemas = {"teams": "None"}
-        mdata  =[
+        mdata  = {"teams": [
         {
-            'breadcrumb': [], 
+            'breadcrumb': [],
             'metadata': {'selected': True, 'table-key-properties': ['id']}
         }, 
         {
@@ -58,9 +59,9 @@ class TestKeyErrorSlug(unittest.TestCase):
         {
             "breadcrumb": [ "properties", "name"],
             "metadata": {"inclusion": "available"}
-        }]
+        }]}
         tap_github.get_all_teams(schemas, "tap-github", {}, mdata, "")
-        self.assertEquals(mocked_team_members.call_count, 0)
+        self.assertEqual(mocked_team_members.call_count, 0)
 
     @mock.patch("tap_github.__init__.get_all_team_members")
     def test_slug_sub_stream_selected_slug_not_selected(self, mocked_team_members, mocked_request):
@@ -69,7 +70,7 @@ class TestKeyErrorSlug(unittest.TestCase):
         mocked_request.return_value = get_response(json)
 
         schemas = {"teams": "None", "team_members": "None"}
-        mdata  =[
+        mdata_slug = [
         {
             'breadcrumb': [], 
             'metadata': {'selected': True, 'table-key-properties': ['id']}
@@ -82,8 +83,9 @@ class TestKeyErrorSlug(unittest.TestCase):
             "breadcrumb": [ "properties", "name"],
             "metadata": {"inclusion": "available"}
         }]
+        mdata  = {"teams": mdata_slug, "team_members": mdata_slug}
         tap_github.get_all_teams(schemas, "tap-github", {}, mdata, "")
-        self.assertEquals(mocked_team_members.call_count, 1)
+        self.assertEqual(mocked_team_members.call_count, 1)
 
     @mock.patch("tap_github.__init__.get_all_team_members")
     def test_slug_sub_stream_not_selected_slug_not_selected(self, mocked_team_members, mocked_request):
@@ -92,7 +94,7 @@ class TestKeyErrorSlug(unittest.TestCase):
         mocked_request.return_value = get_response(json)
 
         schemas = {"teams": "None"}
-        mdata  =[
+        mdata  = {"teams": [
         {
             'breadcrumb': [], 
             'metadata': {'selected': True, 'table-key-properties': ['id']}
@@ -104,9 +106,9 @@ class TestKeyErrorSlug(unittest.TestCase):
         {
             "breadcrumb": [ "properties", "name"],
             "metadata": {"inclusion": "available"}
-        }]
+        }]}
         tap_github.get_all_teams(schemas, "tap-github", {}, mdata, "")
-        self.assertEquals(mocked_team_members.call_count, 0)
+        self.assertEqual(mocked_team_members.call_count, 0)
 
 @mock.patch("tap_github.__init__.authed_get_all_pages")
 class TestKeyErrorUser(unittest.TestCase):
@@ -118,7 +120,7 @@ class TestKeyErrorUser(unittest.TestCase):
         mocked_request.return_value = get_response(json)
 
         schemas = {"teams": "None"}
-        mdata  =[
+        mdata  = [
         {
             'breadcrumb': [], 
             'metadata': {'selected': True, 'table-key-properties': ['user_id']}
@@ -132,7 +134,7 @@ class TestKeyErrorUser(unittest.TestCase):
           "metadata": {"inclusion": "available"}
         }]
         tap_github.get_all_stargazers(schemas, "tap-github", {}, mdata, "")
-        self.assertEquals(mocked_write_records.call_count, 1)
+        self.assertEqual(mocked_write_records.call_count, 1)
 
     @mock.patch("singer.write_record")
     def test_user_selected_in_stargazers(self, mocked_write_records, mocked_request):
@@ -141,7 +143,7 @@ class TestKeyErrorUser(unittest.TestCase):
         mocked_request.return_value = get_response(json)
 
         schemas = {"stargazers": "None"}
-        mdata  =[
+        mdata  = [
         {
             'breadcrumb': [], 
             'metadata': {'selected': True, 'table-key-properties': ['user_id']}
@@ -155,4 +157,4 @@ class TestKeyErrorUser(unittest.TestCase):
           "metadata": {"inclusion": "available"}
         }]
         tap_github.get_all_stargazers(schemas, "tap-github", {}, mdata, "")
-        self.assertEquals(mocked_write_records.call_count, 1)
+        self.assertEqual(mocked_write_records.call_count, 1)

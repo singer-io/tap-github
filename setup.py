@@ -11,13 +11,15 @@ setup(name='tap-github',
       py_modules=['tap_github'],
       install_requires=[
           'singer-python==5.12.1',
-          'requests==2.20.0'
+          'requests==2.20.0',
+          'backoff==1.8.0'
       ],
       extras_require={
           'dev': [
               'pylint==2.6.2',
               'ipdb',
               'nose',
+              'requests-mock==1.9.3'
           ]
       },
       entry_points='''

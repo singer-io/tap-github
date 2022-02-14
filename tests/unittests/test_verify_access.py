@@ -34,7 +34,7 @@ class TestCredentials(unittest.TestCase):
         try:
             tap_github.verify_repo_access("", "repo")
         except tap_github.NotFoundException as e:
-            self.assertEquals(str(e), "HTTP-error-code: 404, Error: Please check the repository name 'repo' or you do not have sufficient permissions to access this repository.")
+            self.assertEqual(str(e), "HTTP-error-code: 404, Error: Please check the repository name 'repo' or you do not have sufficient permissions to access this repository.")
 
     def test_repo_bad_request(self, mocked_parse_args, mocked_request):
         mocked_request.return_value = get_response(400, raise_error = True)
@@ -42,7 +42,7 @@ class TestCredentials(unittest.TestCase):
         try:
             tap_github.verify_repo_access("", "repo")
         except tap_github.BadRequestException as e:
-            self.assertEquals(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
+            self.assertEqual(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
 
     def test_repo_bad_creds(self, mocked_parse_args, mocked_request):
         json = {"message": "Bad credentials", "documentation_url": "https://docs.github.com/"}
@@ -51,7 +51,7 @@ class TestCredentials(unittest.TestCase):
         try:
             tap_github.verify_repo_access("", "repo")
         except tap_github.BadCredentialsException as e:
-            self.assertEquals(str(e), "HTTP-error-code: 401, Error: {}".format(json))
+            self.assertEqual(str(e), "HTTP-error-code: 401, Error: {}".format(json))
 
     @mock.patch("tap_github.get_catalog")
     def test_discover_valid_creds(self, mocked_get_catalog, mocked_parse_args, mocked_request):
@@ -71,8 +71,8 @@ class TestCredentials(unittest.TestCase):
         try:
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
         except tap_github.NotFoundException as e:
-                self.assertEquals(str(e), "HTTP-error-code: 404, Error: Please check the repository name 'org/repo' or you do not have sufficient permissions to access this repository.")
-        self.assertEqual(mocked_get_catalog.call_count, 0)
+            self.assertEqual(str(e), "HTTP-error-code: 404, Error: Please check the repository name org/repo or you do not have sufficient permissions to access this repository.")
+        self.assertEqual(mocked_get_catalog.call_count, 1)
 
     @mock.patch("tap_github.get_catalog")
     def test_discover_bad_request(self, mocked_get_catalog, mocked_parse_args, mocked_request):
@@ -82,7 +82,7 @@ class TestCredentials(unittest.TestCase):
         try:
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
         except tap_github.BadRequestException as e:
-                self.assertEquals(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
+            self.assertEqual(str(e), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
     @mock.patch("tap_github.get_catalog")
@@ -94,7 +94,7 @@ class TestCredentials(unittest.TestCase):
         try:
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
         except tap_github.BadCredentialsException as e:
-                self.assertEquals(str(e), "HTTP-error-code: 401, Error: {}".format(json))
+            self.assertEqual(str(e), "HTTP-error-code: 401, Error: {}".format(json))
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
     @mock.patch("tap_github.get_catalog")
@@ -106,7 +106,7 @@ class TestCredentials(unittest.TestCase):
         try:
             tap_github.do_discover({"access_token": "access_token", "repository": "org/repo"})
         except tap_github.AuthException as e:
-                self.assertEquals(str(e), "HTTP-error-code: 403, Error: {}".format(json))
+            self.assertEqual(str(e), "HTTP-error-code: 403, Error: {}".format(json))
         self.assertEqual(mocked_get_catalog.call_count, 0)
 
 
@@ -123,5 +123,5 @@ class TestRepoCallCount(unittest.TestCase):
         config = {"access_token": "access_token", "repository": "org1/repo1 org1/repo2 org2/repo1"}
         tap_github.verify_access_for_repo(config)
 
-        self.assertEquals(mocked_logger_info.call_count, 3)
-        self.assertEquals(mocked_repo.call_count, 3)
+        self.assertEqual(mocked_logger_info.call_count, 3)
+        self.assertEqual(mocked_repo.call_count, 3)

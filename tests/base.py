@@ -46,8 +46,8 @@ class TestGithubBase(unittest.TestCase):
         :param original: set to false to change the start_date or end_date
         """
         return_value = {
-            'start_date' : dt.strftime(dt.utcnow()-timedelta(days=5), self.START_DATE_FORMAT),
-            'repository': 'singer-io/tap-github'
+            'start_date' : '2021-10-01T00:00:00Z',
+            'repository': 'singer-io/test-repo'
         }
         if original:
             return return_value
@@ -61,32 +61,6 @@ class TestGithubBase(unittest.TestCase):
             'access_token': os.getenv("TAP_GITHUB_TOKEN")
         }
 
-    @staticmethod
-    def expected_check_streams():
-        return {
-            'assignees',
-            'collaborators',
-            'comments',
-            'commit_comments',
-            'commits',
-            'events',
-            'issue_labels',
-            'issue_milestones',
-            'issue_events',
-            'issues',
-            'pr_commits',
-            'project_cards',
-            'project_columns',
-            'projects',
-            'pull_requests',
-            'releases',
-            'review_comments',
-            'reviews',
-            'stargazers',
-            'team_members',
-            'team_memberships',
-            'teams'
-        }
 
     def expected_metadata(self):
         """The expected streams and metadata about the streams"""
@@ -134,7 +108,7 @@ class TestGithubBase(unittest.TestCase):
             "issue_milestones": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"due_on"},
+                self.BOOKMARK: {"updated_at"},
                 self.OBEYS_START_DATE: True
             },
             "issue_events": {
@@ -193,7 +167,7 @@ class TestGithubBase(unittest.TestCase):
             "reviews": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.BOOKMARK: {"updated_at"},
+                self.BOOKMARK: {"submitted_at"},
                 self.OBEYS_START_DATE: True
             },
             "stargazers": {

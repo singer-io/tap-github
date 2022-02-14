@@ -1,8 +1,11 @@
-version: 2
+version: 2.1
+orbs:
+  slack: circleci/slack@3.4.2
+
 jobs:
   build:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
     steps:
       - checkout
       - run:
@@ -21,7 +24,7 @@ jobs:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-github/bin/activate
-            pylint tap_github --disable 'broad-except,chained-comparison,empty-docstring,fixme,invalid-name,line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,no-else-raise,no-else-return,too-few-public-methods,too-many-arguments,too-many-branches,too-many-lines,too-many-locals,ungrouped-imports,wrong-spelling-in-comment,wrong-spelling-in-docstring,bad-whitespace'
+            pylint tap_github --disable 'missing-module-docstring,missing-function-docstring,missing-class-docstring,line-too-long,invalid-name,too-many-lines,consider-using-f-string,too-many-arguments,too-many-locals'
       - run:
           name: 'Unit Tests'
           command: |
@@ -29,6 +32,7 @@ jobs:
             pip install nose coverage
             nosetests --with-coverage --cover-erase --cover-package=tap_github --cover-html-dir=htmlcov tests/unittests
             coverage html
+          when: always
       - store_test_results:
           path: test_output/report.xml
       - store_artifacts:
@@ -39,20 +43,19 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            run-test --tap=tap-github \
-                     --target=target-stitch \
-                     --orchestrator=stitch-orchestrator \
-                     --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$SANDBOX_PASSWORD \
-                     --client-id=50 \
-                     --token=$STITCH_API_TOKEN \
-                     tests
+            run-test --tap=tap-github tests
+          when: always
+      - slack/notify-on-failure:
+          only_for_branches: master
+
 workflows:
   version: 2
   commit:
     jobs:
       - build:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tap-tester-user
   build_daily:
     triggers:
       - schedule:
@@ -63,4 +66,6 @@ workflows:
                 - master
     jobs:
       - build:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tap-tester-user
