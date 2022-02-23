@@ -39,7 +39,7 @@ KEY_PROPERTIES = {
     'project_cards': ['id'],
     'repos': ['id'],
     'teams': ['id'],
-    'team_members': ['id'],
+    'team_members': ['id', 'team_slug'],
     'team_memberships': ['url']
 }
 
@@ -442,6 +442,7 @@ def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
             team_members = response.json()
             for r in team_members:
                 r['_sdc_repository'] = repo_path
+                r['team_slug'] = team_slug
 
                 # transform and write release record
                 with singer.Transformer() as transformer:

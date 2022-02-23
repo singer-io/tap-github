@@ -176,7 +176,7 @@ class TestGithubBase(unittest.TestCase):
                 self.OBEYS_START_DATE: False
             },
             "team_members": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "team_slug"},
                 self.REPLICATION_METHOD: self.FULL,
                 self.OBEYS_START_DATE: False
             },

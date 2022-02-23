@@ -117,6 +117,12 @@
           "null",
           "string"
         ]
+      },
+      "team_slug": {
+        "type": [
+          "null",
+          "string"
+        ]
       }
     }
   }
