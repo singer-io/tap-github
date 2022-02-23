@@ -1,5 +1,8 @@
 # Changelog
 
+# 1.10.4
+  * Fix team_members stream primary Key [#157] (https://github.com/singer-io/tap-github/pull/157)
+
 # 1.10.3
   * Implemented wildcard implementation [#145] (https://github.com/singer-io/tap-github/pull/145)
   * Added additional test coverage [#145] (https://github.com/singer-io/tap-github/pull/145)
