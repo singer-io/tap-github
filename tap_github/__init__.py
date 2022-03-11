@@ -26,6 +26,7 @@ KEY_PROPERTIES = {
     'pull_requests':['id'],
     'stargazers': ['user_id'],
     'releases': ['id'],
+    'tags': ['node_id'],
     'reviews': ['id'],
     'review_comments': ['id'],
     'pr_commits': ['id'],
@@ -781,6 +782,28 @@ def get_all_releases(schemas, repo_path, state, mdata, _start_date):
 
     return state
 
+def get_all_tags(schemas, repo_path, state, mdata, _start_date):
+    # The volume of tags can safely be considered low
+
+    with metrics.record_counter('tags') as counter:
+        for response in authed_get_all_pages(
+                'tags',
+                'https://api.github.com/repos/{}/tags?sort=node_id&direction=desc'.format(repo_path)
+        ):
+            tags = response.json()
+            extraction_time = singer.utils.now()
+            for t in tags:
+                t['_sdc_repository'] = repo_path
+
+                # transform and write release record
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(t, schemas, metadata=metadata.to_map(mdata))
+                singer.write_record('tags', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'tags', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
+
 def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
     '''
     https://developer.github.com/v3/pulls/#list-pull-requests
@@ -1099,6 +1122,7 @@ SYNC_FUNCTIONS = {
     'collaborators': get_all_collaborators,
     'pull_requests': get_all_pull_requests,
     'releases': get_all_releases,
+    'tags': get_all_tags,
     'stargazers': get_all_stargazers,
     'events': get_all_events,
     'issue_events': get_all_issue_events,
