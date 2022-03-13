@@ -253,34 +253,15 @@ def generate_pr_commit_schema(commit_schema):
     return pr_commit_schema
 
 def generate_tag_commits_schema(commit_schema):
-    comparison_schema = {
-        "type": ["null", "object"],
-        "additionalProperties": False,
-        "properties": {
-            "id": {
-                "type": ["null", "string"]
-            },
-            "base": {
-                "type": ["null", "string"]
-            },
-            "head": {
-                "type": ["null", "string"]
-            },
-            "total_commits": {
-                "type": ["null", "integer"]
-            },
-            "commits": {
-                "additionalProperties": False,
-                "type": ["null", "array"],
-                "items": commit_schema.copy()
-            },
-            "_sdc_repository": {
-                "type": ["null", "string"]
-            },
-        }
+    tag_commit_schema = commit_schema.copy()
+    tag_commit_schema['properties']['id'] = {
+        "type":  ["null", "string"]
+    }
+    tag_commit_schema['properties']['tag_name'] = {
+        "type": ["null", "string"]
     }
 
-    return comparison_schema
+    return tag_commit_schema
 
 def load_schemas():
     schemas = {}
@@ -836,6 +817,7 @@ def get_all_tags(schemas, repo_path, state, mdata, _start_date):
 
                 if previous_tag != None:
                     for comparison in get_commits_between_tags(
+                        previous_tag,
                         t['name'],
                         previous_tag,
                         schemas['tag_commits'],
@@ -968,7 +950,7 @@ def get_commits_for_pr(pr_number, pr_id, schema, repo_path, state, mdata):
 
         return state
 
-def get_commits_between_tags(base, head, schema, repo_path, state, mdata):
+def get_commits_between_tags(tag_name, base, head, schema, repo_path, state, mdata):
     basehead = '{}...{}'.format(base, head)
 
     for response in authed_get_all_pages(
@@ -976,14 +958,14 @@ def get_commits_between_tags(base, head, schema, repo_path, state, mdata):
             'https://api.github.com/repos/{}/compare/{}'.format(repo_path, basehead)
     ):
 
-        comparison = response.json()
-        comparison['id'] = '{}-{}'.format(repo_path, basehead)
-        comparison['base'] = base
-        comparison['head'] = head
-
-        with singer.Transformer() as transformer:
-            rec = transformer.transform(comparison, schema, metadata=metadata.to_map(mdata))
-        yield rec
+        commit_data = response.json()['commits']
+        for commit in commit_data:
+            commit['_sdc_repository'] = repo_path
+            commit['id'] = '{}-{}'.format(basehead, commit['sha'])
+            commit['tag_name'] = tag_name
+            with singer.Transformer() as transformer:
+                rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
+            yield rec
 
         return state
 
