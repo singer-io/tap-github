@@ -815,22 +815,23 @@ def get_all_tags(schemas, repo_path, state, mdata, _start_date):
                 singer.write_record('tags', rec, time_extracted=extraction_time)
                 singer.write_bookmark(state, repo_path, 'tags', {'since': singer.utils.strftime(extraction_time)})
 
-                if previous_tag != None:
-                    for comparison in get_commits_between_tags(
-                        previous_tag,
-                        t['name'],
-                        previous_tag,
-                        schemas['tag_commits'],
-                        repo_path,
-                        state,
-                        mdata['tag_commits']
-                    ):
-                        singer.write_record('tag_commits', comparison, time_extracted=extraction_time)
-                        singer.write_bookmark(state, repo_path, 'tag_commits', {'since': singer.utils.strftime(extraction_time)})
+                if schemas.get('tag_commits'):
+                    if previous_tag != None:
+                        for comparison in get_commits_between_tags(
+                            previous_tag,
+                            t['name'],
+                            previous_tag,
+                            schemas['tag_commits'],
+                            repo_path,
+                            state,
+                            mdata['tag_commits']
+                        ):
+                            singer.write_record('tag_commits', comparison, time_extracted=extraction_time)
+                            singer.write_bookmark(state, repo_path, 'tag_commits', {'since': singer.utils.strftime(extraction_time)})
+                    previous_tag = t['name']
 
 
                 counter.increment()
-                previous_tag = t['name']
 
     return state
 
