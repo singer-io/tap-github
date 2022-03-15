@@ -12,7 +12,8 @@ setup(name='tap-github',
       install_requires=[
           'singer-python==5.12.1',
           'requests==2.20.0',
-          'backoff==1.8.0'
+          'backoff==1.8.0',
+          'PyJWT[crypto]==2.3.0'
       ],
       extras_require={
           'dev': [

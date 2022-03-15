@@ -5,6 +5,7 @@ import time
 import requests
 import backoff
 import singer
+import jwt
 
 from singer import (bookmarks, metrics, metadata)
 from simplejson import JSONDecodeError
@@ -15,7 +16,7 @@ logger = singer.get_logger()
 # set default timeout of 300 seconds
 REQUEST_TIMEOUT = 300
 
-REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
+REQUIRED_CONFIG_KEYS = ['start_date', 'repository', 'github_app_id', 'github_installation_id', 'github_private_key']
 
 KEY_PROPERTIES = {
     'commits': ['sha'],
@@ -1172,6 +1173,36 @@ def do_sync(config, state, catalog):
 
                 singer.write_state(state)
 
+def generate_jwt_token(github_app_id, github_private_key, expiration_time = 600, algorithm = 'RS256'):
+    actual_time = int(time.time())
+
+    payload = {
+        'iat': actual_time,
+        'exp': actual_time + expiration_time,
+        'iss': github_app_id
+    }
+
+    return jwt.encode(payload, github_private_key, algorithm=algorithm)
+
+def generate_access_token(config):
+    jwt_token = generate_jwt_token(
+        config['github_app_id'],
+        config['github_private_key']
+    )
+
+    headers = {
+        "Authorization": "Bearer {}".format(jwt_token),
+        "Accept": "application/vnd.github.machine-man-preview+json"
+    }
+
+    url = 'https://api.github.com/app/installations/{}/access_tokens'.format(config['github_installation_id'])
+    resp = requests.post(url, headers = headers)
+
+    if resp.status_code != 201:
+        raise_for_error(resp, url)
+
+    return resp.json()['token']
+
 @singer.utils.handle_top_exception(logger)
 def main():
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
@@ -1182,6 +1213,9 @@ def main():
     # set global `MAX_SLEEP_SECONDS` for rate_throttling function or use default
     global MAX_SLEEP_SECONDS #pylint: disable=global-statement
     MAX_SLEEP_SECONDS = config_max_sleep if config_max_sleep else DEFAULT_SLEEP_SECONDS
+
+    # set access token from github app
+    args.config['access_token'] = generate_access_token(args.config)
 
     if args.discover:
         do_discover(args.config)
