@@ -1182,7 +1182,7 @@ def generate_jwt_token(github_app_id, github_private_key, expiration_time = 600,
         'iss': github_app_id
     }
 
-    return jwt.encode(payload, github_private_key, algorithm=algorithm).decode('utf-8')
+    return jwt.encode(payload, github_private_key, algorithm=algorithm)
 
 def generate_access_token(config):
     jwt_token = generate_jwt_token(
