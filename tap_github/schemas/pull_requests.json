@@ -92,6 +92,9 @@
         }
       }
     },
+    "merge_commit_sha": {
+      "type": ["null", "string"]
+    },
     "merged_at": {
       "type": ["null", "string"],
       "format": "date-time"
