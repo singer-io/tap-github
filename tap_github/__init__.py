@@ -828,7 +828,8 @@ def get_all_tags(schemas, repo_path, state, mdata, _start_date):
                         ):
                             singer.write_record('tag_commits', comparison, time_extracted=extraction_time)
                             singer.write_bookmark(state, repo_path, 'tag_commits', {'since': singer.utils.strftime(extraction_time)})
-                    previous_tag = t['name']
+
+                previous_tag = t['name']
 
 
                 counter.increment()
