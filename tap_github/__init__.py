@@ -13,6 +13,7 @@ import asyncio
 import psutil
 import gc
 import debugpy
+import jwt
 
 DEBUG = False
 if DEBUG:
@@ -232,6 +233,8 @@ def calculate_seconds(epoch):
     return int(round((epoch - current), 0))
 
 def rate_throttling(response):
+    if response.headers.get('x-ratelimit-remaining') == None:
+        return
     if int(response.headers['X-RateLimit-Remaining']) < 10:
         seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
@@ -247,26 +250,37 @@ def rate_throttling(response):
 # endpoints will return 500 when they really should return 404 and we need to skip them.
 MAX_RETRY_TIME = 120
 RETRY_WAIT = 15  # Wait between requests when the server is struggling
-def authed_get(source, url, headers={}):
+def authed_get(source, url, headers={}, overrideMethod='get'):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
         retry_time = 0
+        just_refreshed_token = False
         while True:
-            resp = session.request(method='get', url=url)
-            if resp.status_code >= 500:
-                if retry_time >= MAX_RETRY_TIME:
-                    raise InternalServerError('Internal server error {} persisted after '\
-                        'attempting to retry for {} seconds for url {}.'.format(resp.status_code,
-                        MAX_RETRY_TIME, url))
-                else:
-                    logger.info('Encountered internal server error code {}, waiting {} seconds ' \
-                        'and then retrying url {}.'.format(resp.status_code, RETRY_WAIT, url))
-                    retry_time += RETRY_WAIT
-                    time.sleep(RETRY_WAIT)
-            elif resp.status_code != 200:
-                raise_for_error(resp, source, url)
+            resp = session.request(method=overrideMethod, url=url)
+            # If there is another 401 error right after refreshing, then don't try again. Otherwise,
+            # get a new installation token for the github app and try again in case there is a
+            # token expiration
+            if not just_refreshed_token and resp.status_code == 401:
+                refresh_app_token()
+                just_refreshed_token = True
             else:
-                break
+                # Reset this so that we will try to refresh the access token again later if
+                # necessary.
+                just_refreshed_token = False
+                if resp.status_code >= 500:
+                    if retry_time >= MAX_RETRY_TIME:
+                        raise InternalServerError('Internal server error {} persisted after '\
+                            'attempting to retry for {} seconds for url {}.'.format(resp.status_code,
+                            MAX_RETRY_TIME, url))
+                    else:
+                        logger.info('Encountered internal server error code {}, waiting {} seconds ' \
+                            'and then retrying url {}.'.format(resp.status_code, RETRY_WAIT, url))
+                        retry_time += RETRY_WAIT
+                        time.sleep(RETRY_WAIT)
+                elif resp.status_code != 200 and resp.status_code != 201:
+                    raise_for_error(resp, source, url)
+                else:
+                    break
 
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         rate_throttling(resp)
@@ -378,6 +392,138 @@ def get_catalog():
 
     return {'streams': streams}
 
+def generate_jwt(pem, appid):
+    secret = pem
+    algorithm = "RS256"
+    now = int(time.time())
+
+    encoded_jwt = jwt.encode({
+        # issued at time, 60 seconds in the past to allow for clock drift
+        "iat": now - 60,
+        # JWT expiration time (10 minute maximum, so use 8 minutes -- we will use this token
+        # immediately anyway)
+        "exp": now + (8 * 60),
+        # GitHub App's identifier
+        "iss": appid
+    }, secret, algorithm)
+
+    return encoded_jwt
+
+
+def fetch_installations():
+    '''
+    Before this function is called, an authorization header with a JWT bearer token should be set in
+    the session.
+    '''
+    logger.info('Fetching installations')
+
+    # This obviously won't scale. As one step toward scaling, we may want to cache this mapping in
+    # the state file and only fetch new ones. As a long-term solution, we will need to maintain a
+    # table of installations and IDs with the github app web hook and then do an indexed lookup
+    # to provide the installation ID as a config parameter to this script instead of looking it up
+    # this way.
+    account_to_installation = {}
+    for response in authed_get_all_pages(
+        'installations',
+        'https://api.github.com/app/installations'
+    ):
+        installations = response.json()
+        for installation in installations:
+            account_to_installation[installation['account']['login']] = installation['id']
+
+    return account_to_installation
+
+def get_installation_token(installation_id):
+    '''
+    For now, just get a new token here for now instead of caching if one already exists.
+    '''
+    response = authed_get(
+        'installation_token',
+        'https://api.github.com/app/installations/{}/access_tokens'.format(installation_id),
+        overrideMethod='post'
+    )
+    token_info = response.json()
+    return token_info['token']
+
+# Cache the set of installations for the duration of this script so we don't neeed to keep hitting
+# the installation list endpoint.
+cached_installations = False
+last_token_pem=False
+last_token_appid=False
+last_token_org=False
+def refresh_app_token(pem=None, appid=None, org=None):
+    global cached_installations
+
+    # Cache the parameters so this can be called to refresh the token without any new parameters
+    global last_token_pem
+    global last_token_appid
+    global last_token_org
+    if pem == None:
+        pem = last_token_pem
+    else:
+        last_token_pem = pem;
+    if appid == None:
+        appid = last_token_appid
+    else:
+        last_token_appid = appid;
+    if org == None:
+        org = last_token_org
+    else:
+        last_token_org = org;
+
+    # Set HTTP authorization to JWT
+    jwt = generate_jwt(pem, appid)
+    session.headers.update({'authorization': 'Bearer ' + jwt})
+
+    # Get all installations if they haven't been fetched yet
+    if not cached_installations:
+        cached_installations = fetch_installations()
+
+    # And make sure we have an installation for this org
+    if not cached_installations.get(org):
+        raise NotFoundException('No app installation found for org ' + org)
+
+    installation_id = cached_installations[org]
+    installation_token = get_installation_token(installation_id)
+
+    # Now we have a token we can just use the same way that we use a personal access token
+
+    # Update session auth headers to use this token
+    session.headers.update({'authorization': 'token ' + installation_token})
+    return installation_token
+
+def getReposForOrg(org):
+    orgRepos = []
+    for response in authed_get_all_pages(
+        'installation_repositories',
+        'https://api.github.com/installation/repositories?per_page=100'
+    ):
+        repos = response.json()
+        for repo in repos['repositories']:
+            orgRepos.append(repo['full_name'])
+
+    logger.info(orgRepos)
+    return orgRepos
+
+def set_auth_headers(config, repo):
+    access_token = config['access_token']
+
+    # If we don't have a personal access token, use the github app to get an installation access
+    # token
+    if not access_token or len(access_token) == 0:
+        pem = config['app_pem']
+        appid = config['app_id']
+        # Extract github org from repo parameter
+        repoSplit = repo.split('/')
+        org = repoSplit[0]
+
+        access_token = refresh_app_token(pem, appid, org)
+    else:
+        session.headers.update({'authorization': 'token ' + access_token})
+
+    return access_token
+
+
 def verify_repo_access(url_for_repo, repo):
     try:
         authed_get("verifying repository access", url_for_repo)
@@ -387,9 +533,6 @@ def verify_repo_access(url_for_repo, repo):
         raise NotFoundException(message) from None
 
 def verify_access_for_repo(config):
-
-    access_token = config['access_token']
-    session.headers.update({'authorization': 'token ' + access_token, 'per_page': '1', 'page': '1'})
 
     repositories = list(filter(None, config['repository'].split(' ')))
 
@@ -1672,13 +1815,6 @@ SUB_STREAMS = {
 }
 
 def do_sync(config, state, catalog):
-    access_token = config['access_token']
-    session.headers.update({'authorization': 'token ' + access_token})
-
-    gitLocal = GitLocal({
-        'access_token': access_token,
-        'workingDir': '/tmp'
-    })
 
     start_date = config['start_date'] if 'start_date' in config else None
     # get selected streams, make sure stream dependencies are met
@@ -1702,9 +1838,29 @@ def do_sync(config, state, catalog):
             return val['tap_stream_id']
     catalog['streams'].sort(key=schemaSortFunc)
 
-    #pylint: disable=too-many-nested-blocks
+    # Expand org/*
+    allRepos = []
     for repo in repositories:
+        repoSplit = repo.split('/')
+        if repoSplit[1] == '*':
+            access_token = set_auth_headers(config, repo)
+            orgRepos = getReposForOrg(repoSplit[0])
+            allRepos.extend(orgRepos)
+        else:
+            allRepos.append(repo)
+
+
+    #pylint: disable=too-many-nested-blocks
+    for repo in allRepos:
         logger.info("Starting sync of repository: %s", repo)
+
+        access_token = set_auth_headers(config, repo)
+
+        gitLocal = GitLocal({
+            'access_token': access_token,
+            'workingDir': '/tmp'
+        })
+
         for stream in catalog['streams']:
             stream_id = stream['tap_stream_id']
             stream_schema = stream['schema']

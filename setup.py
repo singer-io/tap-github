@@ -13,7 +13,9 @@ setup(name='tap-github',
           'singer-python==5.12.1',
           'requests==2.20.0',
           'psutil==5.8.0',
-          'debugpy==1.5.1'
+          'debugpy==1.5.1',
+          'PyJWT==2.3.0',
+          'cryptography==36.0.2'
       ],
       extras_require={
           'dev': [

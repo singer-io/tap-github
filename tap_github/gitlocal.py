@@ -14,7 +14,7 @@ class GitLocalException(Exception):
 logger = singer.get_logger()
 
 def parseDiffLines(lines):
-  logger.info("parseDiffLines() called for %d lines", len(lines))
+  #ogger.info("parseDiffLines() called for %d lines", len(lines))
   changes = []
   curChange = None
   state = 'start'
@@ -145,7 +145,8 @@ class GitLocal:
           .format(repo, completed.returncode, strippedOutput))
     else:
       logger.info("Running git clone")
-      cloneUrl = "https://{}@github.com/{}.git".format(self.token, repo)
+      cloneUrl = "https://x-access-token:{}@github.com/{}.git".format(self.token, repo)
+      logger.info(cloneUrl);
       orgDir = self._getOrgWorkingDir(repo)
       completed = subprocess.run(['git', 'clone', '--mirror', cloneUrl], cwd=orgDir,
         capture_output=True)
@@ -249,7 +250,7 @@ class GitLocal:
     head has already been fetched and this commit is available.
     """
     repoDir = self._getRepoWorkingDir(repo)
-    logger.info("Running git diff for %s", sha)
+    #ogger.info("Running git diff for %s", sha)
     completed = subprocess.run(['git', 'diff', sha + '~1', sha], cwd=repoDir, capture_output=True)
     # Special case -- first commit, diff instead with an empty tree
     if completed.returncode != 0 and b"~1': unknown revision or path not in the working tree" \
