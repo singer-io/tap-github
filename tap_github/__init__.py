@@ -21,7 +21,6 @@ if DEBUG:
     debugpy.wait_for_client()
     breakpoint()
 
-
 from .gitlocal import GitLocal
 
 from singer import metadata
@@ -1535,6 +1534,8 @@ def get_all_commit_files(schemas, repo_path,  state, mdata, start_date, gitLocal
         # to the beginning of time and rely solely on the fetchedCommits bookmark.
         bookmark = '1970-01-01'
 
+    logger.info('Found {} fetched commits in state.'.format(len(fetchedCommits)))
+
     # We don't want newly fetched commits to update the state if we fail partway through, because
     # this could lead to commits getting marked as fetched when their parents are never fetched. So,
     # copy the dict.
@@ -1824,7 +1825,18 @@ def do_sync(config, state, catalog):
 
     repositories = list(filter(None, config['repository'].split(' ')))
 
-    state = translate_state(state, catalog, repositories)
+    # Expand org/*
+    allRepos = []
+    for repo in repositories:
+        repoSplit = repo.split('/')
+        if repoSplit[1] == '*':
+            access_token = set_auth_headers(config, repo)
+            orgRepos = getReposForOrg(repoSplit[0])
+            allRepos.extend(orgRepos)
+        else:
+            allRepos.append(repo)
+
+    state = translate_state(state, catalog, allRepos)
     singer.write_state(state)
 
     # Put branches and then pull requests before commits, which have a data dependency on them.
@@ -1838,18 +1850,6 @@ def do_sync(config, state, catalog):
         else:
             return val['tap_stream_id']
     catalog['streams'].sort(key=schemaSortFunc)
-
-    # Expand org/*
-    allRepos = []
-    for repo in repositories:
-        repoSplit = repo.split('/')
-        if repoSplit[1] == '*':
-            access_token = set_auth_headers(config, repo)
-            orgRepos = getReposForOrg(repoSplit[0])
-            allRepos.extend(orgRepos)
-        else:
-            allRepos.append(repo)
-
 
     #pylint: disable=too-many-nested-blocks
     for repo in allRepos:
