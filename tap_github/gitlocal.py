@@ -166,7 +166,7 @@ class GitLocal:
 
   def hasLocalCommit(self, repo, sha):
     repoDir = self._getRepoWorkingDir(repo)
-    logger.info("Running git log -n1 %s", sha)
+    #ogger.info("Running git log -n1 %s", sha)
     completed = subprocess.run(['git', 'log', '-n1', sha], cwd=repoDir, capture_output=True)
     if completed.stderr.decode('utf-8', errors='replace').find('fatal: bad object') != -1:
       return False
@@ -197,7 +197,7 @@ class GitLocal:
     if offset:
       params.append('--skip={}'.format(int(offset)))
     params.append(headSha)
-    logger.info("Running %s", ' '.join(params))
+    #ogger.info("Running %s", ' '.join(params))
     completed = subprocess.run(params, cwd=repoDir, capture_output=True)
     if completed.returncode != 0:
       # Don't send the acces token through the error logging system
