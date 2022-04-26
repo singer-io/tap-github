@@ -429,7 +429,7 @@ def fetch_installations():
     ):
         installations = response.json()
         for installation in installations:
-            account_to_installation[installation['account']['login']] = installation['id']
+            account_to_installation[installation['account']['login'].lower()] = installation['id']
 
     return account_to_installation
 
@@ -480,10 +480,10 @@ def refresh_app_token(pem=None, appid=None, org=None):
         cached_installations = fetch_installations()
 
     # And make sure we have an installation for this org
-    if not cached_installations.get(org):
+    if not cached_installations.get(org.lower()):
         raise NotFoundException('No app installation found for org ' + org)
 
-    installation_id = cached_installations[org]
+    installation_id = cached_installations[org.lower()]
     installation_token = get_installation_token(installation_id)
 
     # Now we have a token we can just use the same way that we use a personal access token
@@ -500,9 +500,10 @@ def getReposForOrg(org):
     ):
         repos = response.json()
         for repo in repos['repositories']:
-            orgRepos.append(repo['full_name'])
+            # Preserve the case used for the org name originally
+            namesplit = repo['full_name'].split('/')
+            orgRepos.append(org + '/' + namesplit[1])
 
-    logger.info(orgRepos)
     return orgRepos
 
 def set_auth_headers(config, repo):
