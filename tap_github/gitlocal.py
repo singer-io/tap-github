@@ -281,14 +281,19 @@ class GitLocal:
     repoDir = self._getRepoWorkingDir(repo)
     logger.info("Running git show-ref")
     completed = subprocess.run(['git', 'show-ref'], cwd=repoDir, capture_output=True)
-    # Special case -- first commit, diff instead with an empty tree
+    outstr = completed.stdout.decode('utf8', errors='replace')
+
     if completed.returncode != 0:
       strippedOutput = '' if not completed.stderr else \
         completed.stderr.replace(self.token.encode('utf8'), b'<TOKEN>')
+
+      # Special failure case: empty repository, just return empty map
+      if completed.returncode == 1 and outstr == '' and strippedOutput == '':
+        return {}
+
       raise GitLocalException("show-ref of repo {}, failed with code {}, message: {}".format(
         repo, completed.returncode, strippedOutput))
 
-    outstr = completed.stdout.decode('utf8', errors='replace')
     headLines = outstr.split('\n')
     headMap = {}
     for line in headLines:
