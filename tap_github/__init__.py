@@ -1837,7 +1837,6 @@ def do_sync(config, state, catalog):
             allRepos.append(repo)
 
     state = translate_state(state, catalog, allRepos)
-    singer.write_state(state)
 
     # Put branches and then pull requests before commits, which have a data dependency on them.
     def schemaSortFunc(val):
@@ -1902,11 +1901,19 @@ def do_sync(config, state, catalog):
                             gitLocal)
                     else:
                         state = sync_func(stream_schemas, repo, state, mdata, start_date)
-
-                # Don't save the state after branches or pull_requests due to the data dependency
-                # that commits have on them.
-                if stream_id != 'branches' and stream_id != 'pull_requests':
-                    singer.write_state(state)
+        # Write the state after each repo. There use to be a check for:
+        #   stream_id != 'branches' and stream_id != 'pull_requests'
+        # to avoid saving the state after branches or pull_requests and having a data dependency on
+        # commits reading from their output, but that's no longer necessary that we wait for the
+        # whole repo to process.
+        # The reason for writing only after the whole repo is that the state size can get pretty
+        # big, which will end up exhausting memory in the target due to buffering those state lines
+        # while it is waiting for a certain amount of data to arrive.
+        # In the future, we should take a two-pronged appraoch to fixing this of both (1) reducing
+        # the size of the state itself, and (2) forking and modifying the postgres target to count
+        # the size of the state it is buffering as part of its memory limits, which it's not doing
+        # right now and running out of memory as a result.
+        singer.write_state(state)
 
 @singer.utils.handle_top_exception(logger)
 def main():
