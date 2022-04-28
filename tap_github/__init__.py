@@ -550,8 +550,14 @@ def do_discover(config):
     # dump catalog
     print(json.dumps(catalog, indent=2))
 
+fetched_teams = {}
 def get_all_teams(schemas, repo_path, state, mdata, _start_date):
+    global fetched_teams
     org = repo_path.split('/')[0]
+    # Only fetch this once per org
+    if org in fetched_teams:
+        return state
+    fetched_teams[org] = True
     with metrics.record_counter('teams') as counter:
         try:
             for response in authed_get_all_pages(
