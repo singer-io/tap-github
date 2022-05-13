@@ -593,6 +593,11 @@ def get_all_teams(schemas, repo_path, state, mdata, _start_date):
             logger.info('Received 403 unauthorized while trying to access teams. You must' \
                     ' have admin access to load teams, skipping stream for repo {}.'\
                     .format(repo_path))
+        except NotFoundException as err:
+            # This can happen for individual accounts, so ignore in that case
+            logger.info('Received 404 not found while trying to access teams. This may be a ' \
+                    'personal account without teams. Skipping stream for repo {}.'\
+                    .format(repo_path))
 
     return state
 
