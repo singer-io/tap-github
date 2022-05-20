@@ -32,7 +32,7 @@ REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
 
 KEY_PROPERTIES = {
     'branches': ['repo_name'],
-    'commits': ['sha'],
+    'commits': ['id'],
     'commit_files': ['id'],
     'comments': ['id'],
     'issues': ['id'],
@@ -1487,6 +1487,7 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
                     if commit['sha'] in fetchedCommits:
                         continue
                     commit['_sdc_repository'] = repo_path
+                    commit['id'] = '{}/{}'.format(repo_path, commit['sha'])
                     with singer.Transformer() as transformer:
                         rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
                     singer.write_record('commits', rec, time_extracted=extraction_time)

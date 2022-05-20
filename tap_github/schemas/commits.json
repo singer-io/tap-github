@@ -4,6 +4,10 @@
     "_sdc_repository": {
       "type": ["string"]
     },
+    "id": {
+      "type": ["string"],
+      "description": "Unique identifier of commit, <_sdc_repository>/<sha>"
+    },
     "sha": {
       "type": ["null", "string"],
       "description": "The git commit hash"
