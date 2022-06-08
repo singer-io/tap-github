@@ -254,32 +254,46 @@ def authed_get(source, url, headers={}, overrideMethod='get'):
         session.headers.update(headers)
         retry_time = 0
         just_refreshed_token = False
+        network_retry_count = 0
+        network_max_retries = 5
         while True:
-            resp = session.request(method=overrideMethod, url=url)
-            # If there is another 401 error right after refreshing, then don't try again. Otherwise,
-            # get a new installation token for the github app and try again in case there is a
-            # token expiration
-            if not just_refreshed_token and resp.status_code == 401:
-                refresh_app_token()
-                just_refreshed_token = True
-            else:
-                # Reset this so that we will try to refresh the access token again later if
-                # necessary.
-                just_refreshed_token = False
-                if resp.status_code >= 500:
-                    if retry_time >= MAX_RETRY_TIME:
-                        raise InternalServerError('Internal server error {} persisted after '\
-                            'attempting to retry for {} seconds for url {}.'.format(resp.status_code,
-                            MAX_RETRY_TIME, url))
-                    else:
-                        logger.info('Encountered internal server error code {}, waiting {} seconds ' \
-                            'and then retrying url {}.'.format(resp.status_code, RETRY_WAIT, url))
-                        retry_time += RETRY_WAIT
-                        time.sleep(RETRY_WAIT)
-                elif resp.status_code != 200 and resp.status_code != 201:
-                    raise_for_error(resp, source, url)
+            try:
+                resp = session.request(method=overrideMethod, url=url)
+                # If there is another 401 error right after refreshing, then don't try again. Otherwise,
+                # get a new installation token for the github app and try again in case there is a
+                # token expiration
+                if not just_refreshed_token and resp.status_code == 401:
+                    refresh_app_token()
+                    just_refreshed_token = True
                 else:
-                    break
+                    # Reset this so that we will try to refresh the access token again later if
+                    # necessary.
+                    just_refreshed_token = False
+                    if resp.status_code >= 500:
+                        if retry_time >= MAX_RETRY_TIME:
+                            raise InternalServerError('Internal server error {} persisted after '\
+                                'attempting to retry for {} seconds for url {}.'.format(resp.status_code,
+                                MAX_RETRY_TIME, url))
+                        else:
+                            logger.info('Encountered internal server error code {}, waiting {} seconds ' \
+                                'and then retrying url {}.'.format(resp.status_code, RETRY_WAIT, url))
+                            retry_time += RETRY_WAIT
+                            time.sleep(RETRY_WAIT)
+                    elif resp.status_code != 200 and resp.status_code != 201:
+                        raise_for_error(resp, source, url)
+                    else:
+                        break
+            # requests.exceptions.RequestException is the base class for all exceptions coming out of
+            # the `requests` package, so we can target its errors specifically
+            except requests.exceptions.RequestException as err:
+                if network_retry_count <= network_max_retries:
+                    network_retry_count += 1
+                    logger.warning('Network request error ({}) while requesting URL (attempt {}): {}'.format(type(err).__name__, network_retry_count, url))
+                    logger.info('Retrying in {} seconds'.format(network_retry_count * 30))
+                    time.sleep(network_retry_count * 30) # simple linear back-off
+                else:
+                    logger.error('Max retries reached for network request of URL: {}'.format(url))
+                    raise err
 
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         rate_throttling(resp)
