@@ -137,6 +137,19 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     }
 }
 
+org_cache_flags = {}
+process_globals = True
+
+def has_org_cache(org, stream_name):
+    global org_cache_flags
+    key = '{}.{}'.format(org, stream_name)
+    return org_cache_flags.get(key) == True
+
+def set_has_org_cache(org, stream_name, value = True):
+    global org_cache_flags
+    key = '{}.{}'.format(org, stream_name)
+    org_cache_flags[key] = value
+
 def utf8_hook(data, typ, schema):
     if typ != 'string':
         return data
@@ -564,14 +577,15 @@ def do_discover(config):
     # dump catalog
     print(json.dumps(catalog, indent=2))
 
-fetched_teams = {}
 def get_all_teams(schemas, repo_path, state, mdata, _start_date):
-    global fetched_teams
     org = repo_path.split('/')[0]
+
     # Only fetch this once per org
-    if org in fetched_teams:
+    if process_globals == False or has_org_cache(org, 'teams'):
         return state
-    fetched_teams[org] = True
+    
+    set_has_org_cache(org, 'teams')
+
     with metrics.record_counter('teams') as counter:
         try:
             for response in authed_get_all_pages(
@@ -617,6 +631,13 @@ def get_all_teams(schemas, repo_path, state, mdata, _start_date):
 
 def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
     org = repo_path.split('/')[0]
+
+    # Only fetch this once per org
+    if process_globals == False or has_org_cache(org, 'team_members'):
+        return state
+    
+    set_has_org_cache(org, 'team_members')
+    
     with metrics.record_counter('team_members') as counter:
         for response in authed_get_all_pages(
                 'team_members',
@@ -637,6 +658,13 @@ def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
 
 def get_all_team_memberships(team_slug, schemas, repo_path, state, mdata):
     org = repo_path.split('/')[0]
+
+    # Only fetch this once per org
+    if process_globals == False or has_org_cache(org, 'team_memberships'):
+        return state
+    
+    set_has_org_cache(org, 'team_memberships')
+
     for response in authed_get_all_pages(
             'team_members',
             'https://api.github.com/orgs/{}/teams/{}/members?sort=created_at&direction=desc'.format(org, team_slug)
@@ -1843,8 +1871,13 @@ SUB_STREAMS = {
 }
 
 def do_sync(config, state, catalog):
+    global process_globals
 
     start_date = config['start_date'] if 'start_date' in config else None
+    process_globals = config['process_globals'] if 'process_globals' in config else True
+
+    logger.info('Process globals = {}'.format(str(process_globals)))
+
     # get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
