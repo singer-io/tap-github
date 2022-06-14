@@ -144,9 +144,8 @@ class GitLocal:
         raise GitLocalException("Remote update of repo {} failed with code {}, message: {}"\
           .format(repo, completed.returncode, strippedOutput))
     else:
-      logger.info("Running git clone")
+      logger.info('Running git clone for repo {}'.format(repo))
       cloneUrl = "https://x-access-token:{}@github.com/{}.git".format(self.token, repo)
-      logger.info(cloneUrl);
       orgDir = self._getOrgWorkingDir(repo)
       completed = subprocess.run(['git', 'clone', '--mirror', cloneUrl], cwd=orgDir,
         capture_output=True)
