@@ -32,7 +32,7 @@ REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
 
 KEY_PROPERTIES = {
     'branches': ['repo_name'],
-    'commits': ['sha'],
+    'commits': ['id'],
     'commit_files': ['id'],
     'comments': ['id'],
     'issues': ['id'],
@@ -136,6 +136,19 @@ ERROR_CODE_EXCEPTION_MAPPING = {
         "message": "An error has occurred at Github's end."
     }
 }
+
+org_cache_flags = {}
+process_globals = True
+
+def has_org_cache(org, stream_name):
+    global org_cache_flags
+    key = '{}.{}'.format(org, stream_name)
+    return org_cache_flags.get(key) == True
+
+def set_has_org_cache(org, stream_name, value = True):
+    global org_cache_flags
+    key = '{}.{}'.format(org, stream_name)
+    org_cache_flags[key] = value
 
 def utf8_hook(data, typ, schema):
     if typ != 'string':
@@ -254,32 +267,46 @@ def authed_get(source, url, headers={}, overrideMethod='get'):
         session.headers.update(headers)
         retry_time = 0
         just_refreshed_token = False
+        network_retry_count = 0
+        network_max_retries = 5
         while True:
-            resp = session.request(method=overrideMethod, url=url)
-            # If there is another 401 error right after refreshing, then don't try again. Otherwise,
-            # get a new installation token for the github app and try again in case there is a
-            # token expiration
-            if not just_refreshed_token and resp.status_code == 401:
-                refresh_app_token()
-                just_refreshed_token = True
-            else:
-                # Reset this so that we will try to refresh the access token again later if
-                # necessary.
-                just_refreshed_token = False
-                if resp.status_code >= 500:
-                    if retry_time >= MAX_RETRY_TIME:
-                        raise InternalServerError('Internal server error {} persisted after '\
-                            'attempting to retry for {} seconds for url {}.'.format(resp.status_code,
-                            MAX_RETRY_TIME, url))
-                    else:
-                        logger.info('Encountered internal server error code {}, waiting {} seconds ' \
-                            'and then retrying url {}.'.format(resp.status_code, RETRY_WAIT, url))
-                        retry_time += RETRY_WAIT
-                        time.sleep(RETRY_WAIT)
-                elif resp.status_code != 200 and resp.status_code != 201:
-                    raise_for_error(resp, source, url)
+            try:
+                resp = session.request(method=overrideMethod, url=url)
+                # If there is another 401 error right after refreshing, then don't try again. Otherwise,
+                # get a new installation token for the github app and try again in case there is a
+                # token expiration
+                if not just_refreshed_token and resp.status_code == 401:
+                    refresh_app_token()
+                    just_refreshed_token = True
                 else:
-                    break
+                    # Reset this so that we will try to refresh the access token again later if
+                    # necessary.
+                    just_refreshed_token = False
+                    if resp.status_code >= 500:
+                        if retry_time >= MAX_RETRY_TIME:
+                            raise InternalServerError('Internal server error {} persisted after '\
+                                'attempting to retry for {} seconds for url {}.'.format(resp.status_code,
+                                MAX_RETRY_TIME, url))
+                        else:
+                            logger.info('Encountered internal server error code {}, waiting {} seconds ' \
+                                'and then retrying url {}.'.format(resp.status_code, RETRY_WAIT, url))
+                            retry_time += RETRY_WAIT
+                            time.sleep(RETRY_WAIT)
+                    elif resp.status_code != 200 and resp.status_code != 201:
+                        raise_for_error(resp, source, url)
+                    else:
+                        break
+            # requests.exceptions.RequestException is the base class for all exceptions coming out of
+            # the `requests` package, so we can target its errors specifically
+            except requests.exceptions.RequestException as err:
+                if network_retry_count <= network_max_retries:
+                    network_retry_count += 1
+                    logger.warning('Network request error ({}) while requesting URL (attempt {}): {}'.format(type(err).__name__, network_retry_count, url))
+                    logger.info('Retrying in {} seconds'.format(network_retry_count * 30))
+                    time.sleep(network_retry_count * 30) # simple linear back-off
+                else:
+                    logger.error('Max retries reached for network request of URL: {}'.format(url))
+                    raise err
 
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         rate_throttling(resp)
@@ -550,14 +577,15 @@ def do_discover(config):
     # dump catalog
     print(json.dumps(catalog, indent=2))
 
-fetched_teams = {}
 def get_all_teams(schemas, repo_path, state, mdata, _start_date):
-    global fetched_teams
     org = repo_path.split('/')[0]
+
     # Only fetch this once per org
-    if org in fetched_teams:
+    if process_globals == False or has_org_cache(org, 'teams'):
         return state
-    fetched_teams[org] = True
+    
+    set_has_org_cache(org, 'teams')
+
     with metrics.record_counter('teams') as counter:
         try:
             for response in authed_get_all_pages(
@@ -593,11 +621,23 @@ def get_all_teams(schemas, repo_path, state, mdata, _start_date):
             logger.info('Received 403 unauthorized while trying to access teams. You must' \
                     ' have admin access to load teams, skipping stream for repo {}.'\
                     .format(repo_path))
+        except NotFoundException as err:
+            # This can happen for individual accounts, so ignore in that case
+            logger.info('Received 404 not found while trying to access teams. This may be a ' \
+                    'personal account without teams. Skipping stream for repo {}.'\
+                    .format(repo_path))
 
     return state
 
 def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
     org = repo_path.split('/')[0]
+
+    # Only fetch this once per org
+    if process_globals == False or has_org_cache(org, 'team_members'):
+        return state
+    
+    set_has_org_cache(org, 'team_members')
+    
     with metrics.record_counter('team_members') as counter:
         for response in authed_get_all_pages(
                 'team_members',
@@ -618,6 +658,13 @@ def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
 
 def get_all_team_memberships(team_slug, schemas, repo_path, state, mdata):
     org = repo_path.split('/')[0]
+
+    # Only fetch this once per org
+    if process_globals == False or has_org_cache(org, 'team_memberships'):
+        return state
+    
+    set_has_org_cache(org, 'team_memberships')
+
     for response in authed_get_all_pages(
             'team_members',
             'https://api.github.com/orgs/{}/teams/{}/members?sort=created_at&direction=desc'.format(org, team_slug)
@@ -1482,6 +1529,7 @@ def get_all_commits(schema, repo_path,  state, mdata, start_date):
                     if commit['sha'] in fetchedCommits:
                         continue
                     commit['_sdc_repository'] = repo_path
+                    commit['id'] = '{}/{}'.format(repo_path, commit['sha'])
                     with singer.Transformer() as transformer:
                         rec = transformer.transform(commit, schema, metadata=metadata.to_map(mdata))
                     singer.write_record('commits', rec, time_extracted=extraction_time)
@@ -1823,8 +1871,13 @@ SUB_STREAMS = {
 }
 
 def do_sync(config, state, catalog):
+    global process_globals
 
     start_date = config['start_date'] if 'start_date' in config else None
+    process_globals = config['process_globals'] if 'process_globals' in config else True
+
+    logger.info('Process globals = {}'.format(str(process_globals)))
+
     # get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
