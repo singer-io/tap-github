@@ -116,6 +116,30 @@
             "string"
           ]
         },
+        "head": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "size": {
+          "type": [
+            "null",
+            "number"
+          ]
+        },
+        "distinct_size": {
+          "type": [
+            "null",
+            "number"
+          ]
+        },
+        "push_id": {
+          "type": [
+            "null",
+            "number"
+          ]
+        },
         "action": {
           "type": [
             "null",
@@ -223,36 +247,6 @@
           }
         }
       }
-    },
-    "distinct_size": {
-      "type": [
-        "null",
-        "number"
-      ]
-    },
-    "head": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "push_id": {
-      "type": [
-        "null",
-        "number"
-      ]
-    },
-    "ref": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "size": {
-      "type": [
-        "null",
-        "number"
-      ]
     },
     "public": {
       "type": [

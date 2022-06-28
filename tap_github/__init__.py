@@ -572,7 +572,8 @@ def verify_access_for_repo(config):
         verify_repo_access(url_for_repo, repo)
 
 def do_discover(config):
-    verify_access_for_repo(config)
+    # We don't need repo access if we're just dumping the catalog
+    #verify_access_for_repo(config)
     catalog = get_catalog()
     # dump catalog
     print(json.dumps(catalog, indent=2))
@@ -583,7 +584,7 @@ def get_all_teams(schemas, repo_path, state, mdata, _start_date):
     # Only fetch this once per org
     if process_globals == False or has_org_cache(org, 'teams'):
         return state
-    
+
     set_has_org_cache(org, 'teams')
 
     with metrics.record_counter('teams') as counter:
@@ -635,9 +636,9 @@ def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
     # Only fetch this once per org
     if process_globals == False or has_org_cache(org, 'team_members'):
         return state
-    
+
     set_has_org_cache(org, 'team_members')
-    
+
     with metrics.record_counter('team_members') as counter:
         for response in authed_get_all_pages(
                 'team_members',
@@ -662,7 +663,7 @@ def get_all_team_memberships(team_slug, schemas, repo_path, state, mdata):
     # Only fetch this once per org
     if process_globals == False or has_org_cache(org, 'team_memberships'):
         return state
-    
+
     set_has_org_cache(org, 'team_memberships')
 
     for response in authed_get_all_pages(
@@ -726,8 +727,10 @@ def get_all_events(schemas, repo_path, state, mdata, start_date):
     # https://developer.github.com/v3/issues/events/#list-events-for-a-repository
     # 'https://api.github.com/repos/{}/issues/events?sort=created_at&direction=desc'.format(repo_path)
 
+    CURRENT_EVENTS_VERSION = '1.0'
     bookmark_value = get_bookmark(state, repo_path, "events", "since", start_date)
-    if bookmark_value:
+    bookmark_version = get_bookmark(state, repo_path, "events", "version")
+    if bookmark_value and bookmark_version == CURRENT_EVENTS_VERSION:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
     else:
         bookmark_time = 0
@@ -754,7 +757,10 @@ def get_all_events(schemas, repo_path, state, mdata, start_date):
                 with singer.Transformer(pre_hook=utf8_hook) as transformer:
                     rec = transformer.transform(r, schemas, metadata=metadata.to_map(mdata))
                 singer.write_record('events', rec, time_extracted=extraction_time)
-                singer.write_bookmark(state, repo_path, 'events', {'since': singer.utils.strftime(extraction_time)})
+                singer.write_bookmark(state, repo_path, 'events', {
+                    'since': singer.utils.strftime(extraction_time),
+                    'version': CURRENT_EVENTS_VERSION,
+                })
                 counter.increment()
 
     return state
@@ -1001,7 +1007,6 @@ def get_all_pull_requests(schemas, repo_path, state, mdata, start_date):
     '''
     https://developer.github.com/v3/pulls/#list-pull-requests
     '''
-
     cur_cache = {}
     PR_CACHE[repo_path] = cur_cache
 
