@@ -1043,10 +1043,12 @@ def get_all_stargazers(schema, repo_path, state, mdata, _start_date):
             extraction_time = singer.utils.now()
             for stargazer in stargazers:
                 user_id = stargazer['user']['id']
+                login = stargazer['user']['login']
                 stargazer['_sdc_repository'] = repo_path
                 with singer.Transformer() as transformer:
                     rec = transformer.transform(stargazer, schema, metadata=metadata.to_map(mdata))
                 rec['user_id'] = user_id
+                rec['login'] = login
                 singer.write_record('stargazers', rec, time_extracted=extraction_time)
                 counter.increment()
 

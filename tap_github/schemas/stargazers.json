@@ -20,6 +20,9 @@
     },
     "user_id": {
       "type": ["null", "integer"]
+    },
+    "login": {
+      "type": ["null", "string"]
     }
   }
 }
