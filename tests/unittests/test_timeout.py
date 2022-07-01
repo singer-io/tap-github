@@ -194,3 +194,21 @@ class TestTimeoutAndConnnectionErrorBackoff(unittest.TestCase):
 
         # verify that we backoff 5 times
         self.assertEquals(5, mocked_request.call_count)
+
+    def test_Server5xx_error_backoff(self, mocked_parse_args, mocked_request, mocked_sleep):
+        """Verify the tap retries for 5 times for Server5xx error"""
+        # mock request and raise 'Server5xx' error
+        mocked_request.side_effect = tap_github.Server5xxError
+
+        mock_config = {}
+        # mock parse args
+        mocked_parse_args.return_value = get_args(mock_config)
+
+        try:
+            # function call
+            tap_github.authed_get("test_source", "")
+        except tap_github.Server5xxError:
+            pass
+
+        # verify that we backoff 5 times
+        self.assertEquals(5, mocked_request.call_count)

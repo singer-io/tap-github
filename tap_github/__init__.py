@@ -49,6 +49,9 @@ MAX_SLEEP_SECONDS = DEFAULT_SLEEP_SECONDS
 class GithubException(Exception):
     pass
 
+class Server5xxError(GithubException):
+    pass
+
 class BadCredentialsException(GithubException):
     pass
 
@@ -61,7 +64,7 @@ class NotFoundException(GithubException):
 class BadRequestException(GithubException):
     pass
 
-class InternalServerError(GithubException):
+class InternalServerError(Server5xxError):
     pass
 
 class UnprocessableError(GithubException):
@@ -188,6 +191,9 @@ def raise_for_error(resp, source):
     message = "HTTP-error-code: {}, Error: {}".format(
         error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
 
+    if error_code > 500:
+        raise Server5xxError(message) from None
+
     exc = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception", GithubException)
     raise exc(message) from None
 
@@ -209,7 +215,7 @@ def rate_throttling(response):
 # pylint: disable=dangerous-default-value
 # during 'Timeout' error there is also possibility of 'ConnectionError',
 # hence added backoff for 'ConnectionError' too.
-@backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError), max_tries=5, factor=2)
+@backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError), max_tries=5, factor=2)
 def authed_get(source, url, headers={}):
     with metrics.http_request_timer(source) as timer:
         session.headers.update(headers)
@@ -359,13 +365,21 @@ def extract_repos_from_config(config: dict ) -> list:
     """
     repo_paths = list(filter(None, config['repository'].split(' ')))
 
-    orgs_with_all_repos = list(filter(lambda x: x.split('/')[1] == '*', repo_paths))
+    orgs_with_all_repos = []
+    for each_repo in repo_paths:
+        split_repo_path = each_repo.split('/')
+        if len(split_repo_path) > 1:
+            if split_repo_path[1] == '*':
+                orgs_with_all_repos.append(each_repo)
+        else:
+            raise Exception("Repository name not found.")
+
 
     if orgs_with_all_repos:
         # remove any wildcard "org/*" occurrences from `repo_paths`
         repo_paths = list(set(repo_paths).difference(set(orgs_with_all_repos)))
 
-        # get all repositores for an org in the config
+        # get all repositories for an org in the config
         all_repos = get_all_repos(orgs_with_all_repos)
 
         # update repo_paths

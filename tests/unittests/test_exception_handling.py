@@ -83,6 +83,14 @@ class TestExceptionHandling(unittest.TestCase):
         except tap_github.InternalServerError as e:
             self.assertEqual(str(e), "HTTP-error-code: 500, Error: An error has occurred at Github's end.")
 
+    def test_501_error(self, mocked_parse_args, mocked_request):
+        mocked_request.return_value = get_response(501, raise_error = True)
+
+        try:
+            tap_github.authed_get("", "")
+        except tap_github.Server5xxError as e:
+            self.assertEqual(str(e), "HTTP-error-code: 501, Error: Unknown Error")
+
     def test_301_error(self, mocked_parse_args, mocked_request):
         mocked_request.return_value = get_response(301, raise_error = True)
 

@@ -1,8 +1,9 @@
 import unittest
+from unittest import mock
 import tap_github
 
 
-@unittest.mock.patch('tap_github.get_all_repos')
+@mock.patch('tap_github.get_all_repos')
 class TestExtractReposFromConfig(unittest.TestCase):
 
     def test_single_repo(self, mocked_get_all_repos):
@@ -30,3 +31,16 @@ class TestExtractReposFromConfig(unittest.TestCase):
         ]
 
         self.assertEqual(expected_repositories, tap_github.extract_repos_from_config(config))
+
+    def test_organization_without_repo_in_config(self, mocked_get_all_repos):
+        """
+        Verify that the tap throws an exception with proper error message when just organization is provided in
+        the config without the repository name.
+        """
+        config = {'repository': 'singer-io'}
+        expected_error_message = "Repository name not found."
+        with self.assertRaises(Exception) as exc:
+            tap_github.extract_repos_from_config(config)
+
+        # VErify that we get expected error message
+        self.assertEqual(str(exc.exception), expected_error_message)
