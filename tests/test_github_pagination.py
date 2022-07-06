@@ -40,6 +40,12 @@ class GitHubPaginationTest(TestGithubBase):
         self.run_test({'issue_labels', 'events', 'collaborators', 'issue_events', 'team_members', 'assignees', 'commit_comments', 'projects', 'project_cards', 'project_columns', 'issue_milestones', 'releases'})
     
     def run_test(self, streams):
+        """
+        • Verify that for each stream you can get multiple pages of data.  
+        This requires we ensure more than 1 page of data exists at all times for any given stream.
+        • Verify by pks that the data replicated matches the data we expect.
+        """
+        
         # page size for "pull_requests"
         page_size = 30
         conn_id = connections.ensure_connection(self)

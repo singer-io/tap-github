@@ -107,13 +107,19 @@ class SnapchatInterruptedSyncTest(TestGithubBase):
                 interrupted_records = [record.get('data') for record in
                                        synced_records_interrupted_sync.get(stream, {'messages': []}).get('messages')
                                        if record.get('action') == 'upsert']
+                replication_key = next(iter(expected_replication_keys.get(stream)))
+                interrupted_records_bookmark_value = final_state.get('bookmarks', {}).get(repo, {stream: None}).get(stream, None).get('since', None)
+                interrupted_records_bookmark_value_utc = self.convert_state_to_utc(interrupted_records_bookmark_value, self.DATETIME_FMT[0])
 
                 # Verify that less RECORDS are collected in interrupted sync then full sync
-                self.assertGreater(full_records, interrupted_records, )
+                self.assertGreater(full_records, interrupted_records)
                 
                 if stream == 'projects':
-                    # Verify that for Projects stream 0 RECORDS were collected as it's sync was already completed
-                    self.assertEqual(interrupted_record_count, 0)
+                    # Verify that for Projects stream RECORDS >= Replication-vale were collected as it's sync was already completed 
+                    for record in interrupted_records:
+                        replication_key_value = record.get(replication_key)                       
+                        self.assertGreaterEqual(replication_key_value, interrupted_records_bookmark_value_utc)
+
                 else:
                     # Verify that for other streams RECORDS are collected as expected
                     self.assertEqual(full_records, interrupted_records)

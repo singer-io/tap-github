@@ -372,6 +372,16 @@ class TestGithubBase(unittest.TestCase):
 
         return dt.strftime(return_date, self.START_DATE_FORMAT)
 
+    def convert_state_to_utc(self, date_str, datetime_format):
+        """
+        Convert a saved bookmark value of the form '2020-08-25T13:17:36-07:00' to
+        a string formatted utc datetime,
+        in order to compare against json formatted datetime values
+        """
+        date_object = dateutil.parser.parse(date_str)
+        date_object_utc = date_object.astimezone(tz=pytz.UTC)
+        return datetime.datetime.strftime(date_object_utc, datetime_format)
+
     ##########################################################################
     ### Tap Specific Methods
     ##########################################################################

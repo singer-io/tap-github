@@ -14,17 +14,6 @@ class TestGithubBookmarks(TestGithubBase):
     def name():
         return "tap_tester_github_bookmarks"
 
-    @staticmethod
-    def convert_state_to_utc(date_str):
-        """
-        Convert a saved bookmark value of the form '2020-08-25T13:17:36-07:00' to
-        a string formatted utc datetime,
-        in order to compare against json formatted datetime values
-        """
-        date_object = dateutil.parser.parse(date_str)
-        date_object_utc = date_object.astimezone(tz=pytz.UTC)
-        return datetime.datetime.strftime(date_object_utc, "%Y-%m-%dT%H:%M:%SZ")
-
     def calculated_states_by_stream(self, current_state, synced_records, replication_keys):
         """
         Look at the bookmarks from a previous sync and set a new bookmark
@@ -165,10 +154,10 @@ class TestGithubBookmarks(TestGithubBase):
                     replication_key = next(iter(expected_replication_keys[stream]))
                     first_bookmark_value = first_bookmark_key_value.get('since')
                     second_bookmark_value = second_bookmark_key_value.get('since')
-                    first_bookmark_value_utc = self.convert_state_to_utc(first_bookmark_value)
-                    second_bookmark_value_utc = self.convert_state_to_utc(second_bookmark_value)
+                    first_bookmark_value_utc = self.convert_state_to_utc(first_bookmark_value, self.DATETIME_FMT[0])
+                    second_bookmark_value_utc = self.convert_state_to_utc(second_bookmark_value, self.DATETIME_FMT[0])
 
-                    simulated_bookmark_value = self.convert_state_to_utc(new_states['bookmarks'][repo][stream]['since'])
+                    simulated_bookmark_value = self.convert_state_to_utc(new_states['bookmarks'][repo][stream]['since'], self.DATETIME_FMT[0])
 
                     # Verify the first sync sets a bookmark of the expected form
                     self.assertIsNotNone(first_bookmark_key_value)
