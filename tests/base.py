@@ -234,6 +234,13 @@ class TestGithubBase(unittest.TestCase):
         """
         return {}
 
+    def expected_automatic_fields(self):
+        """return a dictionary with key of table name 
+        and value as a set of automatic key fields
+        """
+        return {table: ((self.expected_primary_keys().get(table) or set()) |
+                        (self.expected_bookmark_keys().get(table) or set()))
+                for table in self.expected_metadata()}
 
      #########################
     #   Helper Methods      #

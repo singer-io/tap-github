@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 
 
 class GithubStartDateTest(TestGithubBase):
+    """Test that the start_date configuration is respected"""
 
     start_date_1 = ""
     start_date_2 = ""
@@ -33,7 +34,8 @@ class GithubStartDateTest(TestGithubBase):
 
         # run the test for all the streams excluding 'events' stream
         # as for 'events' stream we have to use dynamic dates
-        self.run_test('2020-04-01T00:00:00Z', '2021-10-08T00:00:00Z', self.expected_streams() - {'events'})
+        self.run_test('2020-04-01T00:00:00Z', '2022-01-27T00:00:00Z', self.expected_streams() - {'events', 'pull_requests', 'pr_commits', 'review_comments', 'reviews'})
+        self.run_test('2020-04-01T00:00:00Z', '2022-05-06T00:00:00Z', {'pull_requests', 'pr_commits', 'review_comments', 'reviews'})
 
         # As per the Documentation: https://docs.github.com/en/rest/reference/activity#events
         # the 'events' of past 90 days will only be returned
@@ -45,7 +47,15 @@ class GithubStartDateTest(TestGithubBase):
         self.run_test(date_1, date_2, {'events'})
 
     def run_test(self, date_1, date_2, streams):
-        """Instantiate start date according to the desired data set and run the test"""
+        """   
+        - Verify that a sync with a later start date has at least one record synced
+          and less records than the 1st sync with a previous start date
+        - Verify that each stream has less records than the earlier start date sync
+        - Verify all data from later start data has bookmark values >= start_date
+        - Verify that the minimum bookmark sent to the target for the later start_date sync
+          is greater than or equal to the start date
+        - Verify by primary key values, that all records in the 1st sync are included in the 2nd sync.
+        """
 
         self.start_date_1 = date_1
         self.start_date_2 = date_2
@@ -103,19 +113,11 @@ class GithubStartDateTest(TestGithubBase):
         record_count_by_stream_2 = self.run_and_verify_sync(conn_id_2)
         synced_records_2 = runner.get_records_from_target_output()
 
-        # Verify the total number of records replicated in sync 1 is greater than the number
-        # of records replicated in sync 2
+        # verify that sync 2 has at least one record synced and less records than sync 1
+        self.assertGreater(sum(record_count_by_stream_2.values()), 0)
         self.assertGreater(sum(record_count_by_stream_1.values()), sum(record_count_by_stream_2.values()))
 
         for stream in expected_streams:
-
-            # There are no data or not enough data for testing for below streams
-            # commit_comments, releases -> No data in tap-github repositery
-            # issue_milestones -> One data for isuue_milestones so not able to pass incremental cases
-            # projects, projects_columns, project_cards -> One record for project so not able to pass incremental cases
-            if stream in ["commit_comments", "releases", "issue_milestones", "projects", "project_columns", "project_cards"]:
-                continue
-            
             with self.subTest(stream=stream):
 
                 # expected values
@@ -138,10 +140,7 @@ class GithubStartDateTest(TestGithubBase):
 
                 if expected_metadata.get(self.OBEYS_START_DATE):
                     
-                    # Sub stream fetch all data for records of related incremental super stream.
-                    # Data of commit doesn't contain created_at or updated_at field. 
-                    # Data of isuue_milestomes contains bookmark key(due_on) with null value also.
-                    if not self.is_full_table_sub_stream(stream) and stream != 'commits':
+                    if not self.is_full_table_sub_stream(stream):
 
                         # Expected bookmark key is one element in set so directly access it
                         bookmark_keys_list_1 = [message.get('data').get(next(iter(expected_bookmark_keys))) for message in synced_records_1.get(stream).get('messages')
@@ -154,11 +153,22 @@ class GithubStartDateTest(TestGithubBase):
 
                         # Verify bookmark key values are greater than or equal to start date of sync 1
                         for bookmark_key_value in bookmark_key_sync_1:
-                            self.assertGreaterEqual(self.dt_to_ts(bookmark_key_value), start_date_1_epoch)
+                            self.assertGreaterEqual(
+                                bookmark_key_value, self.start_date_1,
+                                msg="Report pertains to a date prior to our start date.\n" +
+                                "Sync start_date: {}\n".format(self.start_date_1) +
+                                    "Record date: {} ".format(bookmark_key_value)
+                            )
+
 
                         # Verify bookmark key values are greater than or equal to start date of sync 2
                         for bookmark_key_value in bookmark_key_sync_2:
-                            self.assertGreaterEqual(self.dt_to_ts(bookmark_key_value), start_date_2_epoch)
+                            self.assertGreaterEqual(
+                                bookmark_key_value, self.start_date_2,
+                                msg="Report pertains to a date prior to our start date.\n" +
+                                "Sync start_date: {}\n".format(self.start_date_2) +
+                                    "Record date: {} ".format(bookmark_key_value)
+                            )
 
                     # Verify the number of records replicated in sync 1 is greater than the number
                     # of records replicated in sync 2 for stream
