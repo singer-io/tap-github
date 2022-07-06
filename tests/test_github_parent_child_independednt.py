@@ -11,7 +11,7 @@ class SnapchatParentChildIndependentTest(TestGithubBase):
             Test case to verify that tap is working fine if only first level child streams are selected
         """
         # select first_level_child_streams only and run test
-        first_level_child_streams = {"commits", "comments", "issues", "assignees", "collaborators", "pull_requests", "releases", "stargazers", "events", "issue_events", "issue_milestones", "issue_labels", "projects", "commit_comments", "teams", "tags"}
+        first_level_child_streams = {"commits", "comments", "issues", "assignees", "collaborators", "pull_requests", "releases", "stargazers", "events", "issue_events", "issue_milestones", "issue_labels", "projects", "commit_comments", "teams"}
         self.run_test(first_level_child_streams)
 
     def test_second_level_child_streams(self):
