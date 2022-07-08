@@ -154,10 +154,8 @@ class TestGithubBookmarks(TestGithubBase):
                     replication_key = next(iter(expected_replication_keys[stream]))
                     first_bookmark_value = first_bookmark_key_value.get('since')
                     second_bookmark_value = second_bookmark_key_value.get('since')
-                    first_bookmark_value_utc = self.convert_state_to_utc(first_bookmark_value, self.DATETIME_FMT[0])
-                    second_bookmark_value_utc = self.convert_state_to_utc(second_bookmark_value, self.DATETIME_FMT[0])
 
-                    simulated_bookmark_value = self.convert_state_to_utc(new_states['bookmarks'][repo][stream]['since'], self.DATETIME_FMT[0])
+                    simulated_bookmark_value = new_states['bookmarks'][repo][stream]['since']
 
                     # Verify the first sync sets a bookmark of the expected form
                     self.assertIsNotNone(first_bookmark_key_value)
@@ -176,7 +174,7 @@ class TestGithubBookmarks(TestGithubBase):
                         replication_key_value = record.get(replication_key)
                         
                         self.assertLessEqual(
-                            replication_key_value, first_bookmark_value_utc,
+                            replication_key_value, first_bookmark_value,
                             msg="First sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
                         )
 
@@ -188,7 +186,7 @@ class TestGithubBookmarks(TestGithubBase):
                                                 msg="Second sync records do not respect the previous bookmark.")
                         
                         self.assertLessEqual(
-                            replication_key_value, second_bookmark_value_utc,
+                            replication_key_value, second_bookmark_value,
                             msg="Second sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
                         )
 
