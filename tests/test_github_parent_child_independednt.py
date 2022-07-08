@@ -1,7 +1,7 @@
 from tap_tester import runner, connections
 from base import TestGithubBase
 
-class SnapchatParentChildIndependentTest(TestGithubBase):
+class GithubParentChildIndependentTest(TestGithubBase):
 
     def name(self):
         return "tap_tester_github_parent_child_test"
