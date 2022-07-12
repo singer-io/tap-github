@@ -5,6 +5,49 @@ from singer import (metrics, bookmarks, metadata)
 
 LOGGER = singer.get_logger()
 
+def get_bookmark(state, repo, stream_name, bookmark_key, start_date):
+    """
+    Return bookmark value if available in the state otherwise return start date
+    """
+    repo_stream_dict = bookmarks.get_bookmark(state, repo, stream_name)
+    if repo_stream_dict:
+        return repo_stream_dict.get(bookmark_key)
+
+    return start_date
+
+def get_schema(catalog, stream_id):
+    """
+    Return catalog of the specified stream.
+    """
+    stream_catalog = [cat for cat in catalog if cat['tap_stream_id'] == stream_id ][0]
+    return stream_catalog
+
+def get_child_full_url(child_object, repo_path, parent_id, grand_parent_id):
+    """
+    Build the child stream's URL based on the parent and the grandparent's ids.
+    """
+
+    if child_object.is_repository:
+        # The `is_repository` represents that the url contains /repos and the repository name.
+        full_url = '{}/repos/{}/{}'.format(
+            child_object.url,
+            repo_path,
+            child_object.path).format(*parent_id)
+
+    elif child_object.is_organization:
+        # The `is_organization` represents that the url contains the organization name.
+        org = repo_path.split('/')[0]
+        full_url = '{}/{}'.format(
+            child_object.url,
+            child_object.path).format(org, *parent_id, *grand_parent_id)
+
+    else:
+        full_url = '{}/{}'.format(
+            child_object.url,
+            child_object.path).format(*grand_parent_id)
+
+    return full_url
+
 
 class Stream:
     tap_stream_id = None
@@ -23,17 +66,6 @@ class Stream:
 
     def add_fields_at_1st_level(self, rec, parent_record):
         pass
-
-    def get_bookmark(self, state, repo, stream_name, bookmark_key, start_date):
-        repo_stream_dict = bookmarks.get_bookmark(state, repo, stream_name)
-        if repo_stream_dict:
-            return repo_stream_dict.get(bookmark_key)
-        else:
-            return start_date
-
-    def get_schema(self, catalog, stream_id):
-        stream_catalog = [cat for cat in catalog if cat['tap_stream_id'] == stream_id ][0]
-        return stream_catalog
 
     def build_url(self, repo_path, bookmark):
         """
@@ -68,7 +100,7 @@ class Stream:
         stream_obj = STREAMS[stream]()
         min_bookmark = bookmark
         if stream in selected_streams:
-            min_bookmark = min(min_bookmark, self.get_bookmark(state, repo_path, stream, "since", start_date))
+            min_bookmark = min(min_bookmark, get_bookmark(state, repo_path, stream, "since", start_date))
 
         for child in stream_obj.children:
             min_bookmark = min(min_bookmark, self.get_min_bookmark(child, selected_streams, min_bookmark, repo_path, start_date, state))
@@ -86,31 +118,6 @@ class Stream:
         # For the each child, write the bookmark if it is selected.
         for child in stream_obj.children:
             self.write_bookmarks(child, selected_streams, bookmark_value, repo_path, state)
-
-
-    def get_child_full_url(self, child_object, repo_path, parent_id, grand_parent_id):
-        """Build the child url based on the parent and the grandparent ids."""
-
-        if child_object.is_repository:
-            # The `is_repository` represents that the url contains /repos and the repository name.
-            full_url = '{}/repos/{}/{}'.format(
-                child_object.url,
-                repo_path,
-                child_object.path).format(*parent_id)
-
-        elif child_object.is_organization:
-            # The `is_organization` represents that the url contains the organization name.
-            org = repo_path.split('/')[0]
-            full_url = '{}/{}'.format(
-                child_object.url,
-                child_object.path).format(org, *parent_id, *grand_parent_id)
-
-        else:
-            full_url = '{}/{}'.format(
-                child_object.url,
-                child_object.path).format(*grand_parent_id)
-
-        return full_url
 
     def get_child_records(self,
                           client,
@@ -133,8 +140,8 @@ class Stream:
         if not parent_id:
             parent_id = grand_parent_id
 
-        full_url = self.get_child_full_url(child_object, repo_path, parent_id, grand_parent_id)
-        stream_catalog = self.get_schema(catalog, child_object.tap_stream_id)
+        full_url = get_child_full_url(child_object, repo_path, parent_id, grand_parent_id)
+        stream_catalog = get_schema(catalog, child_object.tap_stream_id)
 
         with metrics.record_counter(child_object.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
@@ -195,7 +202,7 @@ class FullTableStream(Stream):
         if self.headers:
             headers = self.headers
 
-        stream_catalog = self.get_schema(catalog, self.tap_stream_id)
+        stream_catalog = get_schema(catalog, self.tap_stream_id)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
@@ -266,7 +273,7 @@ class IncrementalStream(Stream):
         if self.headers:
             headers = self.headers
 
-        stream_catalog = self.get_schema(catalog, self.tap_stream_id)
+        stream_catalog = get_schema(catalog, self.tap_stream_id)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
@@ -341,7 +348,7 @@ class IncrementalOrderedStream(Stream):
         A sync function for streams that have records in the descending order of replication key value. For such streams,
         iterate only the latest records.
         """
-        bookmark_value = self.get_bookmark(state, repo_path, self.tap_stream_id, "since", start_date)
+        bookmark_value = get_bookmark(state, repo_path, self.tap_stream_id, "since", start_date)
         current_time = datetime.today().strftime('%Y-%m-%dT%H:%M:%SZ')
 
         max_bookmark_value = self.get_min_bookmark(self.tap_stream_id, selected_stream_ids, current_time, repo_path, start_date, state)
@@ -350,7 +357,7 @@ class IncrementalOrderedStream(Stream):
         # Build full url
         full_url = self.build_url(repo_path, bookmark_value)
         synced_all_records = False
-        stream_catalog = self.get_schema(catalog, self.tap_stream_id)
+        stream_catalog = get_schema(catalog, self.tap_stream_id)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
