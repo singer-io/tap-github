@@ -24,7 +24,7 @@ class TestGithubDiscovery(TestGithubBase):
         • verify that all other fields have inclusion of available metadata.
         """
         expected_streams = self.expected_streams()
-        
+
         conn_id = connections.ensure_connection(self)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
@@ -44,7 +44,7 @@ class TestGithubDiscovery(TestGithubBase):
 
                 # collecting expected values
                 expected_primary_keys = self.expected_primary_keys()[stream]
-                expected_automatic_fields = self.expected_automatic_fields().get(stream)
+                expected_automatic_keys = self.expected_automatic_keys().get(stream)
 
                 # collecting actual values...
                 schema_and_metadata = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
@@ -84,7 +84,7 @@ class TestGithubDiscovery(TestGithubBase):
                 )
 
                 # verify that primary keys and replication keys are given the inclusion of automatic in metadata.
-                self.assertSetEqual(expected_automatic_fields, actual_automatic_fields)
+                self.assertSetEqual(expected_automatic_keys, actual_automatic_fields)
 
                 # verify the actual replication matches our expected replication method
                 self.assertEqual(

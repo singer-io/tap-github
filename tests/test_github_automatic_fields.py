@@ -41,7 +41,7 @@ class TestGithubAutomaticFields(TestGithubBase):
                 
                 # expected values
                 expected_primary_keys = self.expected_primary_keys()[stream]
-                expected_keys = self.expected_automatic_fields().get(stream)
+                expected_keys = self.expected_automatic_keys().get(stream)
 
                 # collect actual values
                 data = synced_records.get(stream, {})
@@ -50,6 +50,7 @@ class TestGithubAutomaticFields(TestGithubBase):
                     tuple(message.get('data').get(expected_pk) for expected_pk in expected_primary_keys)
                     for message in data.get('messages')
                     if message.get('action') == 'upsert']
+                unique_primary_keys_list = set(primary_keys_list)
 
                 # Verify that you get some records for each stream
                 self.assertGreater(
@@ -62,6 +63,6 @@ class TestGithubAutomaticFields(TestGithubBase):
 
                 # Verify that all replicated records have unique primary key values.
                 self.assertEqual(
-                    primary_keys_list,
-                    set(primary_keys_list),
+                    len(primary_keys_list),
+                    len(unique_primary_keys_list),
                     msg="Replicated record does not have unique primary key values.")

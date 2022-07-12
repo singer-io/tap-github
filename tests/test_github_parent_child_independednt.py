@@ -11,22 +11,16 @@ class GithubParentChildIndependentTest(TestGithubBase):
             Test case to verify that tap is working fine if only first level child streams are selected
         """
         # select first_level_child_streams only and run test
-        first_level_child_streams = {"commits", "comments", "issues", "assignees", "collaborators", "pull_requests", "releases", "stargazers", "events", "issue_events", "issue_milestones", "issue_labels", "projects", "commit_comments", "teams"}
+        first_level_child_streams = {"team_members", "project_cards", "reviews", "review_comments", "pr_commits"}
         self.run_test(first_level_child_streams)
-
+    
     def test_second_level_child_streams(self):
         """
             Test case to verify that tap is working fine if only second level child streams are selected
         """
         # select second_level_child_streams only and run test
-        second_level_child_streams = {"team_members", "project_cards", "reviews", "review_comments", "pr_commits"}
-    
-    def test_third_level_child_streams(self):
-        """
-            Test case to verify that tap is working fine if only third level child streams are selected
-        """
-        # select third_level_child_streams only and run test
-        third_level_child_streams = {"team_memberships", "project_columns"}
+        second_level_child_streams = {"team_memberships", "project_columns"}
+        self.run_test(second_level_child_streams)
         
     def run_test(self, child_streams):
         """

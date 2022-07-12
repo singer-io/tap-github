@@ -17,9 +17,6 @@ KNOWN_MISSING_FIELDS = {
         'cards_url'
     },
     'commits': {
-        'id',
-        'pr_number',
-        'pr_id',
         'files'
     },
     'review_comments': {
@@ -44,9 +41,6 @@ KNOWN_MISSING_FIELDS = {
     },
     'comments': {
         'home_url'
-    },
-    'pr_commits': {
-        'files'
     }
 }
 

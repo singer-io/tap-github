@@ -234,7 +234,7 @@ class TestGithubBase(unittest.TestCase):
         """
         return {}
 
-    def expected_automatic_fields(self):
+    def expected_automatic_keys(self):
         """return a dictionary with key of table name 
         and value as a set of automatic key fields
         """
@@ -333,9 +333,9 @@ class TestGithubBase(unittest.TestCase):
                     self.assertTrue(field_selected, msg="Field not selected.")
             else:
                 # Verify only automatic fields are selected
-                expected_automatic_fields = self.expected_primary_keys().get(cat['stream_name'])
+                expected_automatic_keys = self.expected_automatic_keys().get(cat['stream_name'])
                 selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
-                self.assertEqual(expected_automatic_fields, selected_fields)
+                self.assertEqual(expected_automatic_keys, selected_fields)
 
     @staticmethod
     def get_selected_fields_from_metadata(metadata):

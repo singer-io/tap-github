@@ -21,23 +21,16 @@ class GitHubPaginationTest(TestGithubBase):
         return return_value
 
     def test_run(self):
-        # Pagination is not supported for team_memberships by Github API
-        # https://docs.github.com/en/rest/teams/members#get-team-membership-for-a-user
-        unsupported_pagination_streams = {
-            'team_memberships'
-        }
-        
-        # For the below streams RECORD count is <= 30
-        unexpected_stream = {
-            'teams'
-        }
-        
         # For some streams RECORD count were not > 30 in same test-repo. So, separated streams on the basis of RECORD count 
+        # Pagination is not supported for "team_memberships" by Github API
+        # Skipping "teams" stream as it's RECORD count is <= 30
         self.repository_name = 'singer-io/tap-github'
-        self.run_test({'comments', 'stargazers', 'commits', 'pull_requests', 'reviews', 'review_comments', 'pr_commits', 'issues'})
+        expected_stream_1 = {'comments', 'stargazers', 'commits', 'pull_requests', 'reviews', 'review_comments', 'pr_commits', 'issues'} 
+        self.run_test(expected_stream_1)
         
         self.repository_name = 'singer-io/test-repo'
-        self.run_test({'issue_labels', 'events', 'collaborators', 'issue_events', 'team_members', 'assignees', 'commit_comments', 'projects', 'project_cards', 'project_columns', 'issue_milestones', 'releases'})
+        expected_stream_2 = {'issue_labels', 'events', 'collaborators', 'issue_events', 'team_members', 'assignees', 'commit_comments', 'projects', 'project_cards', 'project_columns', 'issue_milestones', 'releases'}
+        self.run_test(expected_stream_2)
     
     def run_test(self, streams):
         """
@@ -49,7 +42,7 @@ class GitHubPaginationTest(TestGithubBase):
         # page size for "pull_requests"
         page_size = 30
         conn_id = connections.ensure_connection(self)
-        
+
         expected_streams = streams
         
         found_catalogs = self.run_and_verify_check_mode(conn_id)
