@@ -235,7 +235,7 @@ class TestGithubBase(unittest.TestCase):
         return {}
 
     def expected_automatic_keys(self):
-        """return a dictionary with key of table name 
+        """Return a dictionary with key of table name 
         and value as a set of automatic key fields
         """
         return {table: ((self.expected_primary_keys().get(table) or set()) |
