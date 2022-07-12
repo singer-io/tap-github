@@ -119,6 +119,7 @@ class Stream:
         for child in stream_obj.children:
             self.write_bookmarks(child, selected_streams, bookmark_value, repo_path, state)
 
+    # pylint: disable=no-self-use
     def get_child_records(self,
                           client,
                           catalog,
