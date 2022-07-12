@@ -347,7 +347,7 @@ class IncrementalOrderedStream(Stream):
         max_bookmark_value = self.get_min_bookmark(self.tap_stream_id, selected_stream_ids, current_time, repo_path, start_date, state)
         bookmark_time = singer.utils.strptime_to_utc(max_bookmark_value)
 
-        # build full url
+        # Build full url
         full_url = self.build_url(repo_path, bookmark_value)
         synced_all_records = False
         stream_catalog = self.get_schema(catalog, self.tap_stream_id)
@@ -381,7 +381,7 @@ class IncrementalOrderedStream(Stream):
 
                         if self.tap_stream_id in selected_stream_ids:
 
-                            # transform and write record
+                            # Transform and write record
                             with singer.Transformer() as transformer:
                                 rec = transformer.transform(record, stream_catalog['schema'], metadata=metadata.to_map(stream_catalog['metadata']))
                                 singer.write_record(self.tap_stream_id, rec, time_extracted=extraction_time)
@@ -640,7 +640,7 @@ class StarGazers(FullTableStream):
         rec['user_id'] = rec['user']['id']
 
 
-# dictionary of the stream classes
+# Dictionary of the stream classes
 STREAMS = {
     "commits": Commits,
     "comments": Comments,

@@ -18,7 +18,7 @@ def get_selected_streams(catalog):
             selected_streams.append(stream['tap_stream_id'])
         else:
             for entry in stream_metadata:
-                # stream metadata will have empty breadcrumb
+                # Stream metadata will have an empty breadcrumb
                 if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
                     selected_streams.append(stream['tap_stream_id'])
 
@@ -112,7 +112,7 @@ def sync(client, config, state, catalog):
 
     start_date = config['start_date']
 
-    # get selected streams, make sure stream dependencies are met
+    # Get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
 
     streams_to_sync = get_stream_to_sync(catalog)
@@ -130,7 +130,7 @@ def sync(client, config, state, catalog):
             stream_id = stream['tap_stream_id']
             stream_obj = STREAMS[stream_id]()
 
-            # if it is a "sub_stream", it will be synced as part of parent stream
+            # If it is a "sub_stream", it will be synced as part of parent stream
             if stream_id in streams_to_sync and not stream_obj.parent:
                 write_schemas(stream_id, catalog, selected_stream_ids)
 

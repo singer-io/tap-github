@@ -14,7 +14,7 @@ def do_discover():
     Call the discovery function.
     """
     catalog = _discover()
-    # dump catalog
+    # Dump catalog
     json.dump(catalog, sys.stdout, indent=2)
 
 @singer.utils.handle_top_exception(LOGGER)
