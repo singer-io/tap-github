@@ -5,6 +5,11 @@
     "_sdc_repository": {
       "type": ["string"]
     },
+    "updated_at": {
+      "type": ["null", "string"],
+      "format": "date-time",
+      "description": "The date the committer committed the change"
+    },
     "sha": {
       "type": ["null", "string"],
       "description": "The git commit hash"
