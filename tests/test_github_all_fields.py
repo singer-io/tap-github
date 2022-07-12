@@ -4,6 +4,45 @@ from tap_tester import runner, connections, menagerie
 
 from base import TestGithubBase
 
+KNOWN_MISSING_FIELDS = {
+    'events': {
+        'ref',
+        'head',
+        'push_id',
+        'distinct_size',
+        'size'
+    },
+    'project_cards': {
+        'name',
+        'cards_url'
+    },
+    'commits': {
+        'files'
+    },
+    'review_comments': {
+        'assignees',
+        'commits_url',
+        'diff_url',
+        'head',
+        'review_comments_url',
+        'comments_url',
+        'issue_url',
+        'assignee',
+        'requested_teams',
+        'patch_url',
+        'milestone',
+        'review_comment_url',
+        'statuses_url',
+        'requested_reviewers',
+        'labels',
+        'base',
+        'merge_commit_sha',
+        'locked'
+    },
+    'comments': {
+        'home_url'
+    }
+}
 
 class TestGithubAllFields(TestGithubBase):
     """Test that with all fields selected for a stream automatic and available fields are  replicated"""
@@ -14,29 +53,12 @@ class TestGithubAllFields(TestGithubBase):
 
     def test_run(self):
         """
-        Ensure running the tap with all streams and fields selected results in the
-        replication of all fields.
-        - Verify no unexpected streams were replicated
-        - Verify that more than just the automatic fields are replicated for each stream.
+        • Verify no unexpected streams were replicated
+        • Verify that more than just the automatic fields are replicated for each stream. 
+        • verify all fields for each stream are replicated
         """
-        # BUG TDL-16672
-        # The excluded streams are not honoring all fields selection
-        excluded_streams = {
-            'issue_events',
-            'comments',
-            'projects',
-            'pr_commits',
-            'events',
-            'review_comments',
-            'issues',
-            'project_cards',
-            'project_columns',
-            'commits',
-            'collaborators'
-            }
 
-        expected_streams = self.expected_streams() - excluded_streams
-
+        expected_streams = self.expected_streams()
         # instantiate connection
         conn_id = connections.ensure_connection(self)
 
@@ -71,18 +93,19 @@ class TestGithubAllFields(TestGithubBase):
         for stream in expected_streams:
             with self.subTest(stream=stream):
                 # expected values
-                expected_automatic_keys = self.expected_primary_keys().get(stream)
+                expected_automatic_keys = self.expected_automatic_keys().get(stream)
 
                 # get all expected keys
                 expected_all_keys = stream_to_all_catalog_fields[stream]
 
-                # collect actual values
                 messages = synced_records.get(stream)
-                actual_all_keys = [set(message['data'].keys()) for message in messages['messages']
-                                   if message['action'] == 'upsert'][0]
-
-                # Verify that you get some records for each stream
-                self.assertGreater(record_count_by_stream.get(stream, -1), 0)
+                # collect actual values
+                actual_all_keys = set()
+                for message in messages['messages']:
+                    if message['action'] == 'upsert':
+                        actual_all_keys.update(message['data'].keys())
+                    
+                expected_all_keys = expected_all_keys - KNOWN_MISSING_FIELDS.get(stream, set())
 
                 # verify all fields for a stream were replicated
                 self.assertGreater(len(expected_all_keys), len(expected_automatic_keys))

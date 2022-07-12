@@ -11,7 +11,7 @@ class GitHubPaginationTest(TestGithubBase):
     def get_properties(self, original: bool = True):
         return_value = {
             'start_date' : '2020-01-01T00:00:00Z',
-            'repository': 'singer-io/tap-github'
+            'repository': self.repository_name
         }
         if original:
             return return_value
@@ -21,12 +21,30 @@ class GitHubPaginationTest(TestGithubBase):
         return return_value
 
     def test_run(self):
+        # For some streams RECORD count were not > 30 in same test-repo. So, separated streams on the basis of RECORD count 
+        # Pagination is not supported for "team_memberships" by Github API
+        # Skipping "teams" stream as it's RECORD count is <= 30
+        self.repository_name = 'singer-io/tap-github'
+        expected_stream_1 = {'comments', 'stargazers', 'commits', 'pull_requests', 'reviews', 'review_comments', 'pr_commits', 'issues'} 
+        self.run_test(expected_stream_1)
+        
+        self.repository_name = 'singer-io/test-repo'
+        expected_stream_2 = {'issue_labels', 'events', 'collaborators', 'issue_events', 'team_members', 'assignees', 'commit_comments', 'projects', 'project_cards', 'project_columns', 'issue_milestones', 'releases'}
+        self.run_test(expected_stream_2)
+    
+    def run_test(self, streams):
+        """
+        • Verify that for each stream you can get multiple pages of data.  
+        This requires we ensure more than 1 page of data exists at all times for any given stream.
+        • Verify by pks that the data replicated matches the data we expect.
+        """
+        
         # page size for "pull_requests"
         page_size = 30
         conn_id = connections.ensure_connection(self)
 
-        # Checking pagination for "pull_requests" stream
-        expected_streams = ["pull_requests"]
+        expected_streams = streams
+        
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # table and field selection
@@ -38,6 +56,10 @@ class GitHubPaginationTest(TestGithubBase):
         record_count_by_stream = self.run_and_verify_sync(conn_id)
 
         synced_records = runner.get_records_from_target_output()
+
+        # Verify no unexpected streams were replicated
+        synced_stream_names = set(synced_records.keys())
+        self.assertSetEqual(expected_streams, synced_stream_names)
 
         for stream in expected_streams:
             with self.subTest(stream=stream):

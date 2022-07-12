@@ -1,0 +1,20 @@
+{
+    "type": ["null", "object"],
+    "properties": {
+        "commit": {"$ref": "commits.json#/"},
+        "pr_number": {
+            "type": ["null", "integer"]
+        },
+        "pr_id": {
+            "type": ["null", "string"]
+        },
+        "id": {
+            "type": ["null", "string"]
+        },
+        "updated_at": {
+            "type": ["null", "string"],
+            "format": "date-time",
+            "description": "The date the committer committed the change"
+        }
+    }
+}
