@@ -91,7 +91,7 @@ class TestExceptionHandling(unittest.TestCase):
         # Verifying the message formed for the custom exception
         self.assertEqual(str(e.exception), "HTTP-error-code: 403, Error: User doesn't have permission to access the resource.")
     
-    @mock.patch("tap_github.client.logger.info")
+    @mock.patch("tap_github.client.LOGGER.warning")
     def test_404_error(self, mock_logger,  mocked_parse_args, mocked_request, mock_verify_access):
         """
         Verify that `authed_get` skip 404 error and print the log message with the proper message.

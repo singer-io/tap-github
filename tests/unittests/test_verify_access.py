@@ -38,7 +38,7 @@ class TestCredentials(unittest.TestCase):
 
     config = {"access_token": "", "repository": "singer-io/tap-github"}
 
-    @mock.patch("tap_github.client.logger.info")
+    @mock.patch("tap_github.client.LOGGER.warning")
     def test_repo_not_found(self, mock_logger, mocked_parse_args, mocked_request, mock_verify_access):
         """Verify if 404 error arises"""
         test_client = GithubClient(self.config)
@@ -75,7 +75,7 @@ class TestCredentials(unittest.TestCase):
         self.assertEqual(str(e.exception), "HTTP-error-code: 401, Error: {}".format(json))
 
 
-@mock.patch("tap_github.client.logger.info")
+@mock.patch("tap_github.client.LOGGER.warning")
 @mock.patch("tap_github.client.GithubClient.verify_repo_access", return_value = None)
 class TestRepoCallCount(unittest.TestCase):
     def test_repo_call_count(self, mocked_repo, mocked_logger_info):
@@ -87,5 +87,4 @@ class TestRepoCallCount(unittest.TestCase):
         config = {"access_token": "access_token", "repository": "org1/repo1 org1/repo2 org2/repo1"}
         GithubClient(config)
 
-        self.assertEqual(mocked_logger_info.call_count, 3)
         self.assertEqual(mocked_repo.call_count, 3)
