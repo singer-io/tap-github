@@ -25,7 +25,7 @@ class GithubParentChildIndependentTest(TestGithubBase):
     def run_test(self, child_streams):
         """
             Testing that tap is working fine if only child streams are selected
-            • Verify that if only child streams are selected then only child stream are replicated.
+            • Verify that if only child streams are selected then only child streams are replicated.
         """
         # Instantiate connection
         conn_id = connections.ensure_connection(self)

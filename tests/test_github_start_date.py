@@ -73,6 +73,9 @@ class GithubStartDateTest(TestGithubBase):
         self.start_date_1 = date_1
         self.start_date_2 = date_2
 
+        start_date_1_epoch = self.dt_to_ts(self.start_date_1, self.START_DATE_FORMAT)
+        start_date_2_epoch = self.dt_to_ts(self.start_date_2, self.START_DATE_FORMAT)
+
         self.START_DATE = self.start_date_1
 
         expected_streams = streams
@@ -163,20 +166,26 @@ class GithubStartDateTest(TestGithubBase):
                         bookmark_key_sync_1 = set(bookmark_keys_list_1)
                         bookmark_key_sync_2 = set(bookmark_keys_list_2)
 
+                        REPLICATION_KEY_FORMAT = ""
+                        # For events stream replication key value is coming in different format
+                        if stream == 'events':
+                            REPLICATION_KEY_FORMAT = self.EVENTS_RECORD_REPLICATION_KEY_FORMAT
+                        else:
+                            REPLICATION_KEY_FORMAT = self.RECORD_REPLICATION_KEY_FORMAT
+
                         # Verify bookmark key values are greater than or equal to start date of sync 1
                         for bookmark_key_value in bookmark_key_sync_1:
                             self.assertGreaterEqual(
-                                bookmark_key_value, self.start_date_1,
+                                self.dt_to_ts(bookmark_key_value, REPLICATION_KEY_FORMAT), start_date_1_epoch,
                                 msg="Report pertains to a date prior to our start date.\n" +
                                 "Sync start_date: {}\n".format(self.start_date_1) +
                                     "Record date: {} ".format(bookmark_key_value)
                             )
 
-
                         # Verify bookmark key values are greater than or equal to start date of sync 2
                         for bookmark_key_value in bookmark_key_sync_2:
                             self.assertGreaterEqual(
-                                bookmark_key_value, self.start_date_2,
+                                self.dt_to_ts(bookmark_key_value, REPLICATION_KEY_FORMAT), start_date_2_epoch,
                                 msg="Report pertains to a date prior to our start date.\n" +
                                 "Sync start_date: {}\n".format(self.start_date_2) +
                                     "Record date: {} ".format(bookmark_key_value)

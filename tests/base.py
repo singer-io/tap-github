@@ -16,6 +16,9 @@ class TestGithubBase(unittest.TestCase):
     FULL = "FULL_TABLE"
     BOOKMARK = "bookmark"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z" # %H:%M:%SZ
+    BOOKMARK_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+    RECORD_REPLICATION_KEY_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+    EVENTS_RECORD_REPLICATION_KEY_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
     DATETIME_FMT = {
         "%Y-%m-%dT%H:%M:%SZ",
         "%Y-%m-%d %H:%M:%S",
@@ -387,10 +390,7 @@ class TestGithubBase(unittest.TestCase):
     def is_incremental_sub_stream(self, stream):
         return stream in self.INCREMENTAL_SUB_STREAMS
 
-    def dt_to_ts(self, dtime):
-        for date_format in self.DATETIME_FMT:
-            try:
-                date_stripped = int(time.mktime(dt.strptime(dtime, date_format).timetuple()))
-                return date_stripped
-            except ValueError:
-                continue
+    def dt_to_ts(self, dtime, format):
+        """Convert datetime with a format to timestamp"""
+        date_stripped = int(time.mktime(dt.strptime(dtime, format).timetuple()))
+        return date_stripped
