@@ -21,15 +21,20 @@ class GitHubPaginationTest(TestGithubBase):
         return return_value
 
     def test_run(self):
-        # For some streams RECORD count were not > 30 in same test-repo. So, separated streams on the basis of RECORD count 
+        
+        streams_to_test = self.expected_streams()
+
         # Pagination is not supported for "team_memberships" by Github API
         # Skipping "teams" stream as it's RECORD count is <= 30
+        untestable_streams = {'team_memberships', 'teams'}
+
+        # For some streams RECORD count were not > 30 in same test-repo. So, separated streams on the basis of RECORD count 
         self.repository_name = 'singer-io/tap-github'
         expected_stream_1 = {'comments', 'stargazers', 'commits', 'pull_requests', 'reviews', 'review_comments', 'pr_commits', 'issues'} 
         self.run_test(expected_stream_1)
         
         self.repository_name = 'singer-io/test-repo'
-        expected_stream_2 = {'issue_labels', 'events', 'collaborators', 'issue_events', 'team_members', 'assignees', 'commit_comments', 'projects', 'project_cards', 'project_columns', 'issue_milestones', 'releases'}
+        expected_stream_2 = streams_to_test - expected_stream_1 - untestable_streams
         self.run_test(expected_stream_2)
     
     def run_test(self, streams):

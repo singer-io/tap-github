@@ -4,6 +4,7 @@ from tap_tester import runner, connections, menagerie
 
 from base import TestGithubBase
 
+# As we are not able to generate following fields by Github UI, so removed it form expectation list.
 KNOWN_MISSING_FIELDS = {
     'events': {
         'ref',

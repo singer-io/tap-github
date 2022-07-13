@@ -32,15 +32,19 @@ class GithubStartDateTest(TestGithubBase):
         # generate data for 'events' stream
         self.generate_data()
 
+        date_1 = '2020-04-01T00:00:00Z'
+        date_2 = '2021-10-08T00:00:00Z'
         expected_stream_1  = {'commits'}
-        self.run_test('2020-04-01T00:00:00Z', '2021-10-08T00:00:00Z', expected_stream_1)
+        self.run_test(date_1, date_2, expected_stream_1)
 
+        date_2 = '2022-05-06T00:00:00Z'
         expected_stream_2  = {'pull_requests', 'pr_commits', 'review_comments', 'reviews'}
-        self.run_test('2020-04-01T00:00:00Z', '2022-05-06T00:00:00Z', expected_stream_2)
+        self.run_test(date_1, date_2, expected_stream_2)
 
+        date_2 = '2022-01-27T00:00:00Z'
         # run the test for all the streams excluding 'events' stream
         # as for 'events' stream we have to use dynamic dates
-        self.run_test('2020-04-01T00:00:00Z', '2022-01-27T00:00:00Z', self.expected_streams() - expected_stream_1 - expected_stream_2 - {'events'})
+        self.run_test(date_1, date_2, self.expected_streams() - expected_stream_1 - expected_stream_2 - {'events'})
 
         # As per the Documentation: https://docs.github.com/en/rest/reference/activity#events
         # the 'events' of past 90 days will only be returned
