@@ -36,7 +36,6 @@ class TestGithubBookmarks(TestGithubBase):
             max_record_values = [values.get(replication_key) for values in sync_messages]
             max_value = max(max_record_values)
 
-            # this is because the tap uses `time_extracted` to bookmark with `since` at execution
             new_state_value = min(max_value, state_value)
             state_as_datetime = dateutil.parser.parse(new_state_value)
 
@@ -53,15 +52,15 @@ class TestGithubBookmarks(TestGithubBase):
 
     def test_run(self):
         """
-        - Verify that for each stream you can do a sync which records bookmarks.
-        - Verify that the bookmark is the maximum value sent to the target for the replication key.
-        - Verify that a second sync respects the bookmark
+        • Verify that for each stream you can do a sync which records bookmarks.
+        • Verify that the bookmark is the maximum value sent to the target for the replication key.
+        • Verify that a second sync respects the bookmark
             All data of the second sync is >= the bookmark from the first sync
             The number of records in the 2nd sync is less then the first (This assumes that
                 new data added to the stream is done at a rate slow enough that you haven't
                 doubled the amount of data from the start date to the first sync between
                 the first sync and second sync run in this test)
-        - Verify that for full table stream, all data replicated in sync 1 is replicated again in sync 2.
+        • Verify that for full table stream, all data replicated in sync 1 is replicated again in sync 2.
         
         PREREQUISITE
         For EACH stream that is incrementally replicated there are multiple rows of data with
@@ -119,10 +118,10 @@ class TestGithubBookmarks(TestGithubBase):
         for stream in expected_streams:
             with self.subTest(stream=stream):
 
-                # expected values
+                # Expected values
                 expected_replication_method = expected_replication_methods[stream]
 
-                # collect information for assertions from syncs 1 & 2 base on expected values
+                # Collect information for assertions from syncs 1 & 2 base on expected values
                 first_sync_count = first_sync_record_count.get(stream, 0)
                 second_sync_count = second_sync_record_count.get(stream, 0)
                 first_sync_messages = [record.get('data') for record in
@@ -136,7 +135,7 @@ class TestGithubBookmarks(TestGithubBase):
 
 
                 if expected_replication_method == self.INCREMENTAL:
-                    # collect information specific to incremental streams from syncs 1 & 2
+                    # Collect information specific to incremental streams from syncs 1 & 2
                     replication_key = next(iter(expected_replication_keys[stream]))
                     first_bookmark_value = first_bookmark_key_value.get('since')
                     second_bookmark_value = second_bookmark_key_value.get('since')

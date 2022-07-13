@@ -24,11 +24,12 @@ class GitHubPaginationTest(TestGithubBase):
         
         streams_to_test = self.expected_streams()
 
-        # Pagination is not supported for "team_memberships" by Github API
-        # Skipping "teams" stream as it's RECORD count is <= 30
+        # Pagination is not supported for "team_memberships" by Github API.
+        # Skipping "teams" stream as it's RECORD count is <= 30.
         untestable_streams = {'team_memberships', 'teams'}
 
-        # For some streams RECORD count were not > 30 in same test-repo. So, separated streams on the basis of RECORD count 
+        # For some streams RECORD count were not > 30 in same test-repo. 
+        # So, separated streams on the basis of RECORD count.
         self.repository_name = 'singer-io/tap-github'
         expected_stream_1 = {'comments', 'stargazers', 'commits', 'pull_requests', 'reviews', 'review_comments', 'pr_commits', 'issues'} 
         self.run_test(expected_stream_1)
@@ -44,15 +45,14 @@ class GitHubPaginationTest(TestGithubBase):
         • Verify by pks that the data replicated matches the data we expect.
         """
         
-        # page size for "pull_requests"
+        # Page size for pagination supported streams
         page_size = 30
         conn_id = connections.ensure_connection(self)
 
         expected_streams = streams
-        
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
-        # table and field selection
+        # Table and field selection
         test_catalogs = [catalog for catalog in found_catalogs
                          if catalog.get('stream_name') in expected_streams]
 
@@ -68,17 +68,17 @@ class GitHubPaginationTest(TestGithubBase):
 
         for stream in expected_streams:
             with self.subTest(stream=stream):
-                # expected values
+                # Expected values
                 expected_primary_keys = self.expected_primary_keys()[stream]
 
-                # collect information for assertions from syncs 1 & 2 base on expected values
+                # Collect information for assertions from syncs 1 & 2 base on expected values
                 record_count_sync = record_count_by_stream.get(stream, 0)
                 primary_keys_list = [tuple(message.get('data').get(expected_pk)
                                            for expected_pk in expected_primary_keys)
                                      for message in synced_records.get(stream).get('messages')
                                      if message.get('action') == 'upsert']
 
-                # verify records are more than page size so multiple page is working
+                # Verify records are more than page size so multiple page is working
                 self.assertGreater(record_count_sync, page_size)
 
                 primary_keys_list_1 = primary_keys_list[:page_size]

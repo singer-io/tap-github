@@ -37,14 +37,18 @@ class GithubStartDateTest(TestGithubBase):
         expected_stream_1  = {'commits'}
         self.run_test(date_1, date_2, expected_stream_1)
 
-        date_2 = '2022-05-06T00:00:00Z'
-        expected_stream_2  = {'pull_requests', 'pr_commits', 'review_comments', 'reviews'}
+        date_2 = '2022-07-13T00:00:00Z'
+        expected_stream_2  = {'issue_milestones'}
         self.run_test(date_1, date_2, expected_stream_2)
+
+        date_2 = '2022-05-06T00:00:00Z'
+        expected_stream_3  = {'pull_requests', 'pr_commits', 'review_comments', 'reviews'}
+        self.run_test(date_1, date_2, expected_stream_3)
 
         date_2 = '2022-01-27T00:00:00Z'
         # run the test for all the streams excluding 'events' stream
         # as for 'events' stream we have to use dynamic dates
-        self.run_test(date_1, date_2, self.expected_streams() - expected_stream_1 - expected_stream_2 - {'events'})
+        self.run_test(date_1, date_2, self.expected_streams() - expected_stream_1 - expected_stream_2 - expected_stream_3 - {'events'})
 
         # As per the Documentation: https://docs.github.com/en/rest/reference/activity#events
         # the 'events' of past 90 days will only be returned
@@ -57,13 +61,13 @@ class GithubStartDateTest(TestGithubBase):
 
     def run_test(self, date_1, date_2, streams):
         """   
-        - Verify that a sync with a later start date has at least one record synced
+        • Verify that a sync with a later start date has at least one record synced
           and less records than the 1st sync with a previous start date
-        - Verify that each stream has less records than the earlier start date sync
-        - Verify all data from later start data has bookmark values >= start_date
-        - Verify that the minimum bookmark sent to the target for the later start_date sync
+        • Verify that each stream has less records than the earlier start date sync
+        • Verify all data from later start data has bookmark values >= start_date
+        • Verify that the minimum bookmark sent to the target for the later start_date sync
           is greater than or equal to the start date
-        - Verify by primary key values, that all records in the 1st sync are included in the 2nd sync.
+        • Verify by primary key values, that all records in the 1st sync are included in the 2nd sync.
         """
 
         self.start_date_1 = date_1
