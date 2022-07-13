@@ -94,11 +94,12 @@ def is_any_child_selected(stream_obj,selected_streams):
 
 def write_schemas(stream_id, catalog, selected_streams):
     """
-    Write the schemas for each stream.
+    Write the schemas for the selected parent and its child stream.
     """
     stream_obj = STREAMS[stream_id]()
 
     if stream_id in selected_streams:
+        # Get catalog object for particular stream.
         stream = [cat for cat in catalog['streams'] if cat['tap_stream_id'] == stream_id ][0]
         singer.write_schema(stream_id, stream['schema'], stream['key_properties'])
 

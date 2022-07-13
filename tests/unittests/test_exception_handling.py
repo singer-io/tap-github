@@ -94,7 +94,7 @@ class TestExceptionHandling(unittest.TestCase):
     @mock.patch("tap_github.client.logger.info")
     def test_404_error(self, mock_logger,  mocked_parse_args, mocked_request, mock_verify_access):
         """
-        Verify that `authed_get` raises 404 error with proper message.
+        Verify that `authed_get` skip 404 error and print the log message with the proper message.
         """
         json = {"message": "Not Found", "documentation_url": "https:/docs.github.com/"}
         mocked_request.return_value = get_response(404, json = json, raise_error = True)

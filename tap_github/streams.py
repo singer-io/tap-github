@@ -45,6 +45,7 @@ def get_child_full_url(child_object, repo_path, parent_id, grand_parent_id):
         full_url = '{}/{}'.format(
             child_object.url,
             child_object.path).format(*grand_parent_id)
+    LOGGER.info(full_url)
 
     return full_url
 
@@ -71,7 +72,6 @@ class Stream:
         """
         Build the full url with parameters and attributes.
         """
-
         if self.filter_param:
             # Add the since parameter for incremental streams
             query_string = '?since={}'.format(bookmark)
@@ -89,6 +89,7 @@ class Stream:
                 repo_path,
                 self.path,
                 query_string)
+        LOGGER.info(full_url)
 
         return full_url
 
@@ -423,6 +424,9 @@ class IncrementalOrderedStream(Stream):
         return state
 
 class Reviews(IncrementalStream):
+    '''
+    https://docs.github.com/en/rest/reference/pulls#list-reviews-for-a-pull-request
+    '''
     tap_stream_id = "reviews"
     replication_method = "INCREMENTAL"
     replication_keys = "submitted_at"
@@ -433,16 +437,22 @@ class Reviews(IncrementalStream):
     parent = 'pull_requests'
 
 class ReviewComments(IncrementalOrderedStream):
+    '''
+    https://docs.github.com/en/rest/reference/pulls#list-review-comments-in-a-repository
+    '''
     tap_stream_id = "review_comments"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
     key_properties = ["id"]
-    path = "pulls/{}/comments"
+    path = "pulls/{}/comments?sort=updated_at&direction=desc"
     is_repository = True
     id_keys = ['number']
     parent = 'pull_requests'
 
 class PRCommits(IncrementalStream):
+    '''
+    https://docs.github.com/en/rest/reference/pulls#list-commits-on-a-pull-request
+    '''
     tap_stream_id = "pr_commits"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
@@ -460,6 +470,9 @@ class PRCommits(IncrementalStream):
         rec['id'] = '{}-{}'.format(parent_record.get('id'), rec.get('sha'))
 
 class PullRequests(IncrementalOrderedStream):
+    '''
+    https://developer.github.com/v3/pulls/#list-pull-requests
+    '''
     tap_stream_id = "pull_requests"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
@@ -468,6 +481,9 @@ class PullRequests(IncrementalOrderedStream):
     children = ['reviews', 'review_comments', 'pr_commits']
 
 class ProjectCards(IncrementalStream):
+    '''
+    https://docs.github.com/en/rest/reference/projects#list-project-cards
+    '''
     tap_stream_id = "project_cards"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
@@ -478,11 +494,13 @@ class ProjectCards(IncrementalStream):
     id_keys = ['id']
 
 class ProjectColumns(IncrementalStream):
+    '''
+    https://docs.github.com/en/rest/reference/projects#list-project-columns
+    '''
     tap_stream_id = "project_columns"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
     key_properties = ["id"]
-    filter_param = True
     path = "projects/{}/columns"
     children = ["project_cards"]
     parent = "projects"
@@ -490,6 +508,9 @@ class ProjectColumns(IncrementalStream):
     has_children = True
 
 class Projects(IncrementalStream):
+    '''
+    https://docs.github.com/en/rest/reference/projects#list-repository-projects
+    '''
     tap_stream_id = "projects"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
@@ -500,6 +521,9 @@ class Projects(IncrementalStream):
     child_objects = [ProjectColumns()]
 
 class TeamMemberships(FullTableStream):
+    '''
+    https://docs.github.com/en/rest/reference/teams#get-team-membership-for-a-user
+    '''
     tap_stream_id = "team_memberships"
     replication_method = "FULL_TABLE"
     key_properties = ["url"]
@@ -509,10 +533,12 @@ class TeamMemberships(FullTableStream):
     id_keys = ["login"]
 
 class TeamMembers(FullTableStream):
+    '''
+    https://docs.github.com/en/rest/reference/teams#list-team-members
+    '''
     tap_stream_id = "team_members"
     replication_method = "FULL_TABLE"
     key_properties = ["team_slug", "id"]
-    filter_param = True
     path = "orgs/{}/teams/{}/members"
     is_organization = True
     id_keys = ['slug']
@@ -524,6 +550,9 @@ class TeamMembers(FullTableStream):
         rec['team_slug'] = parent_record['slug']
 
 class Teams(FullTableStream):
+    '''
+    https://docs.github.com/en/rest/reference/teams#list-teams
+    '''
     tap_stream_id = "teams"
     replication_method = "FULL_TABLE"
     key_properties = ["id"]
@@ -535,12 +564,12 @@ class Commits(IncrementalStream):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
     '''
-
     tap_stream_id = "commits"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
     key_properties = ["sha"]
     path = "commits"
+    filter_param = True
 
     def add_fields_at_1st_level(self, rec, parent_record):
         rec['updated_at'] = rec['commit']['committer']['date']
@@ -549,7 +578,6 @@ class Comments(IncrementalOrderedStream):
     '''
     https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository
     '''
-
     tap_stream_id = "comments"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
@@ -557,12 +585,10 @@ class Comments(IncrementalOrderedStream):
     filter_param = True
     path = "issues/comments?sort=updated&direction=desc"
 
-
 class Issues(IncrementalOrderedStream):
     '''
-    https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository
+    https://developer.github.com/v3/issues/#list-issues-for-a-repository
     '''
-
     tap_stream_id = "issues"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
@@ -572,42 +598,45 @@ class Issues(IncrementalOrderedStream):
 
 class Assignees(FullTableStream):
     '''
-    https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository
+    https://developer.github.com/v3/issues/assignees/#list-assignees
     '''
-
     tap_stream_id = "assignees"
     replication_method = "FULL_TABLE"
     key_properties = ["id"]
-    sort = True
     path = "assignees"
 
 class Releases(FullTableStream):
-
+    '''
+    https://docs.github.com/en/rest/reference/pulls#list-reviews-for-a-pull-request
+    '''
     tap_stream_id = "releases"
     replication_method = "FULL_TABLE"
     key_properties = ["id"]
-    sort = True
     path = "releases?sort=created_at&direction=desc"
 
 class IssueLabels(FullTableStream):
-
+    '''
+    https://developer.github.com/v3/issues/labels/
+    '''
     tap_stream_id = "issue_labels"
     replication_method = "FULL_TABLE"
     key_properties = ["id"]
-    sort = True
     path = "labels"
 
 class IssueEvents(IncrementalOrderedStream):
-
+    '''
+    https://docs.github.com/en/rest/reference/issues#list-issue-events-for-a-repository
+    '''
     tap_stream_id = "issue_events"
     replication_method = "INCREMENTAL"
     replication_keys = "created_at"
     key_properties = ["id"]
-    filter_param = True
     path = "issues/events?sort=created_at&direction=desc"
 
 class Events(IncrementalStream):
-
+    '''
+    https://developer.github.com/v3/issues/events/#list-events-for-a-repository
+    '''
     tap_stream_id = "events"
     replication_method = "INCREMENTAL"
     replication_keys = "created_at"
@@ -615,7 +644,9 @@ class Events(IncrementalStream):
     path = "events"
 
 class CommitComments(IncrementalStream):
-
+    '''
+    https://developer.github.com/v3/repos/comments/
+    '''
     tap_stream_id = "commit_comments"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
@@ -623,21 +654,28 @@ class CommitComments(IncrementalStream):
     path = "comments"
 
 class IssueMilestones(IncrementalOrderedStream):
-
+    '''
+    https://developer.github.com/v3/issues/milestones/#list-milestones-for-a-repository
+    '''
     tap_stream_id = "issue_milestones"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
     key_properties = ["id"]
-    filter_param = True
     path = "milestones?direction=desc&sort=updated_at"
 
 class Collaborators(FullTableStream):
+    '''
+    https://developer.github.com/v3/repos/collaborators/#list-collaborators
+    '''
     tap_stream_id = "collaborators"
     replication_method = "FULL_TABLE"
     key_properties = ["id"]
     path = "collaborators"
 
 class StarGazers(FullTableStream):
+    '''
+    https://developer.github.com/v3/activity/starring/#list-stargazers
+    '''
     tap_stream_id = "stargazers"
     replication_method = "FULL_TABLE"
     key_properties = ["user_id"]

@@ -5,7 +5,7 @@ from simplejson import JSONDecodeError
 import singer
 from singer import metrics
 
-logger = singer.get_logger()
+LOGGER = singer.get_logger()
 DEFAULT_SLEEP_SECONDS = 600
 MAX_SLEEP_SECONDS = DEFAULT_SLEEP_SECONDS
 
@@ -100,7 +100,7 @@ def raise_for_error(resp, source):
         if source == "teams":
             details += ' or it is a personal account repository'
         message = "HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details.".format(details, response_json.get("documentation_url"))
-        logger.info(message)
+        LOGGER.warning(message)
         # Don't raise a NotFoundException
         return None
 
@@ -128,7 +128,7 @@ def rate_throttling(response):
             message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
             raise RateLimitExceeded(message) from None
 
-        logger.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
+        LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
         time.sleep(seconds_to_sleep)
 
 class GithubClient:
@@ -197,7 +197,7 @@ class GithubClient:
         """
         try:
             self.authed_get("verifying repository access", url_for_repo)
-            logger.info("Verifying access of repository: %s", repo)
+            LOGGER.info("Verifying access of repository: %s", repo)
         except NotFoundException:
             # Throwing user-friendly error message as it checks token access
             message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
@@ -213,7 +213,6 @@ class GithubClient:
         repositories = self.extract_repos_from_config()
 
         for repo in repositories:
-            logger.info("Verifying access of repository: %s", repo)
 
             url_for_repo = "https://api.github.com/repos/{}/commits".format(repo)
 
@@ -261,7 +260,7 @@ class GithubClient:
                 for repo in org_repos:
                     repo_full_name = repo.get('full_name')
 
-                    logger.info("Verifying access of repository: %s", repo_full_name)
+                    LOGGER.info("Verifying access of repository: %s", repo_full_name)
                     self.verify_repo_access(
                         'https://api.github.com/repos/{}/commits'.format(repo_full_name),
                         repo

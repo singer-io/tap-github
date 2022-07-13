@@ -4,8 +4,6 @@ from singer import metadata
 import singer
 from tap_github.streams import STREAMS
 
-logger = singer.get_logger()
-
 def get_abs_path(path):
     """
     Get the absolute path for the schema files.
