@@ -150,7 +150,9 @@ class GithubStartDateTest(TestGithubBase):
 
                 if expected_metadata.get(self.OBEYS_START_DATE):
                     
-                    if not self.is_full_table_sub_stream(stream):
+                    # Skipping child streams as it's bookmark will be written on the basis of parent streams
+                    # and all the child RECORDS will be collected for the updated parents
+                    if not self.is_incremental_sub_stream(stream):
 
                         # Expected bookmark key is one element in set so directly access it
                         bookmark_keys_list_1 = [message.get('data').get(next(iter(expected_bookmark_keys))) for message in synced_records_1.get(stream).get('messages')

@@ -22,7 +22,7 @@ class TestGithubBase(unittest.TestCase):
         "%Y-%m-%dT%H:%M:%S.000000Z"
     }
     START_DATE = ""
-    FULL_TABLE_SUB_STREAMS = ['team_members', 'team_memberships']
+    INCREMENTAL_SUB_STREAMS = ['reviews', 'review_comments', 'pr_commits', 'project_cards', 'project_columns']
     OBEYS_START_DATE = "obey-start-date"
 
     def setUp(self):
@@ -384,8 +384,8 @@ class TestGithubBase(unittest.TestCase):
     def is_incremental(self, stream):
         return self.expected_metadata()[stream][self.REPLICATION_METHOD] == self.INCREMENTAL
 
-    def is_full_table_sub_stream(self, stream):
-        return stream in self.FULL_TABLE_SUB_STREAMS
+    def is_incremental_sub_stream(self, stream):
+        return stream in self.INCREMENTAL_SUB_STREAMS
 
     def dt_to_ts(self, dtime):
         for date_format in self.DATETIME_FMT:

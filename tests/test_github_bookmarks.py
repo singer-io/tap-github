@@ -56,10 +56,7 @@ class TestGithubBookmarks(TestGithubBase):
         • Verify that the bookmark is the maximum value sent to the target for the replication key.
         • Verify that a second sync respects the bookmark
             All data of the second sync is >= the bookmark from the first sync
-            The number of records in the 2nd sync is less then the first (This assumes that
-                new data added to the stream is done at a rate slow enough that you haven't
-                doubled the amount of data from the start date to the first sync between
-                the first sync and second sync run in this test)
+            The number of records in the 2nd sync is less then the first
         • Verify that for full table stream, all data replicated in sync 1 is replicated again in sync 2.
         
         PREREQUISITE
@@ -67,7 +64,7 @@ class TestGithubBookmarks(TestGithubBase):
             different values for the replication key
         """
 
-        child_incremental_streams = {'reviews', 'review_comments', 'pr_commits', 'project_cards', 'project_columns'}
+        # child_incremental_streams = {'reviews', 'review_comments', 'pr_commits', 'project_cards', 'project_columns'}
         expected_streams = self.expected_streams()
         expected_replication_keys = self.expected_bookmark_keys()
         expected_replication_methods = self.expected_replication_method()
@@ -155,7 +152,7 @@ class TestGithubBookmarks(TestGithubBase):
 
                     # Skipping child streams as it's bookmark will be written on the basis of parent streams
                     # and all the child RECORDS will be collected for the updated parents
-                    if stream not in child_incremental_streams:
+                    if not self.is_incremental_sub_stream(stream):
                         for record in first_sync_messages:
                             # Verify the first sync bookmark value is the max replication key value for a given stream
                             replication_key_value = record.get(replication_key)
