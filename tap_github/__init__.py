@@ -19,6 +19,9 @@ def do_discover():
 
 @singer.utils.handle_top_exception(LOGGER)
 def main():
+    """
+    Run discover mode or sync mode.
+    """
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
     config = args.config

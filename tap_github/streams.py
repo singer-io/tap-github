@@ -4,6 +4,7 @@ import singer
 from singer import (metrics, bookmarks, metadata)
 
 LOGGER = singer.get_logger()
+DATE_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
 def get_bookmark(state, repo, stream_name, bookmark_key, start_date):
     """
@@ -29,7 +30,7 @@ def get_child_full_url(child_object, repo_path, parent_id, grand_parent_id):
 
     if child_object.is_repository:
         # The `is_repository` represents that the url contains /repos and the repository name.
-        full_url = '{}/repos/{}/{}'.format(
+        child_full_url = '{}/repos/{}/{}'.format(
             child_object.url,
             repo_path,
             child_object.path).format(*parent_id)
@@ -37,20 +38,23 @@ def get_child_full_url(child_object, repo_path, parent_id, grand_parent_id):
     elif child_object.is_organization:
         # The `is_organization` represents that the url contains the organization name.
         org = repo_path.split('/')[0]
-        full_url = '{}/{}'.format(
+        child_full_url = '{}/{}'.format(
             child_object.url,
             child_object.path).format(org, *parent_id, *grand_parent_id)
 
     else:
-        full_url = '{}/{}'.format(
+        child_full_url = '{}/{}'.format(
             child_object.url,
             child_object.path).format(*grand_parent_id)
-    LOGGER.info(full_url)
+    LOGGER.info(child_full_url)
 
-    return full_url
+    return child_full_url
 
 
 class Stream:
+    """
+    A base class representing tap-github streams.
+    """
     tap_stream_id = None
     replication_method = None
     replication_keys = None
@@ -89,7 +93,6 @@ class Stream:
                 repo_path,
                 self.path,
                 query_string)
-        LOGGER.info(full_url)
 
         return full_url
 
@@ -104,6 +107,7 @@ class Stream:
             min_bookmark = min(min_bookmark, get_bookmark(state, repo_path, stream, "since", start_date))
 
         for child in stream_obj.children:
+            # Iterate through all children and return minimum bookmark among all.
             min_bookmark = min(min_bookmark, self.get_min_bookmark(child, selected_streams, min_bookmark, repo_path, start_date, state))
 
         return min_bookmark
@@ -139,16 +143,18 @@ class Stream:
         """
         child_object = STREAMS[child_stream]()
 
+        child_bookmark_value = get_bookmark(state, repo_path, child_object.tap_stream_id, "since", start_date)
+
         if not parent_id:
             parent_id = grand_parent_id
 
-        full_url = get_child_full_url(child_object, repo_path, parent_id, grand_parent_id)
+        child_full_url = get_child_full_url(child_object, repo_path, parent_id, grand_parent_id)
         stream_catalog = get_schema(catalog, child_object.tap_stream_id)
 
         with metrics.record_counter(child_object.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
                 child_object.tap_stream_id,
-                full_url
+                child_full_url
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -159,19 +165,19 @@ class Stream:
                         record['_sdc_repository'] = repo_path
                         child_object.add_fields_at_1st_level(record, parent_record)
 
+                        with singer.Transformer() as transformer:
+
+                            rec = transformer.transform(record, stream_catalog['schema'], metadata=metadata.to_map(stream_catalog['metadata']))
+
+                            if child_object.tap_stream_id in selected_stream_ids and record.get(child_object.replication_keys, start_date) >= child_bookmark_value:
+                                singer.write_record(child_object.tap_stream_id, rec, time_extracted=extraction_time)
+                                counter.increment()
+
                         # Loop thru each child and nested child in the parent and fetch all the child records.
                         for nested_child in child_object.children:
                             if nested_child in stream_to_sync:
                                 child_id = tuple(record.get(key) for key in STREAMS[nested_child]().id_keys)
                                 child_object.get_child_records(client, catalog, nested_child, child_id, repo_path, state, start_date, bookmark_dttm, stream_to_sync, selected_stream_ids, grand_parent_id, record)
-
-                        with singer.Transformer() as transformer:
-
-                            rec = transformer.transform(record, stream_catalog['schema'], metadata=metadata.to_map(stream_catalog['metadata']))
-
-                            if child_object.tap_stream_id in selected_stream_ids:
-                                singer.write_record(child_object.tap_stream_id, rec, time_extracted=extraction_time)
-                                counter.increment()
 
                 else:
                     records['_sdc_repository'] = repo_path
@@ -180,8 +186,9 @@ class Stream:
                     with singer.Transformer() as transformer:
 
                         rec = transformer.transform(records, stream_catalog['schema'], metadata=metadata.to_map(stream_catalog['metadata']))
+                        if child_object.tap_stream_id in selected_stream_ids and record.get(child_object.replication_keys, start_date) >= child_bookmark_value :
 
-                        singer.write_record(child_object.tap_stream_id, rec, time_extracted=extraction_time)
+                            singer.write_record(child_object.tap_stream_id, rec, time_extracted=extraction_time)
 
 class FullTableStream(Stream):
     def sync_endpoint(self,
@@ -194,7 +201,7 @@ class FullTableStream(Stream):
                         stream_to_sync
                         ):
         """
-        A common function sync full table streams and incremental streams.
+        A common function sync full table streams.
         """
 
         # build full url
@@ -260,14 +267,17 @@ class IncrementalStream(Stream):
                       ):
 
         """
-        A common function sync full table streams and incremental streams. Sync an incremental stream for which records are not
+        A common function sync incremental streams. Sync an incremental stream for which records are not
         in descending order. For, incremental streams iterate all records, write only newly updated records and
         write the latest bookmark value.
         """
 
-        current_time = datetime.today().strftime('%Y-%m-%dT%H:%M:%SZ')
+        parent_bookmark_value = get_bookmark(state, repo_path, self.tap_stream_id, "since", start_date)
+        current_time = datetime.today().strftime(DATE_FORMAT)
         min_bookmark_value = self.get_min_bookmark(self.tap_stream_id, selected_stream_ids, current_time, repo_path, start_date, state)
+        
         max_bookmark_value = min_bookmark_value
+        
         # build full url
         full_url = self.build_url(repo_path, min_bookmark_value)
 
@@ -303,7 +313,7 @@ class IncrementalStream(Stream):
                             # Keep only records whose bookmark is after the last_datetime
                             if bookmark_dttm >= min_bookmark_value:
 
-                                if self.tap_stream_id in selected_stream_ids:
+                                if self.tap_stream_id in selected_stream_ids and bookmark_dttm >= parent_bookmark_value:
                                     rec = transformer.transform(record, stream_catalog['schema'], metadata=metadata.to_map(stream_catalog['metadata']))
 
                                     singer.write_record(self.tap_stream_id, rec, time_extracted=extraction_time)
@@ -313,7 +323,8 @@ class IncrementalStream(Stream):
                                     if child in stream_to_sync:
 
                                         parent_id = tuple(parent_record.get(key) for key in STREAMS[child]().id_keys)
-
+                                        
+                                        # Sync child stream, if it is selected or its nested child is selected.
                                         self.get_child_records(client,
                                                             catalog,
                                                             child,
@@ -351,16 +362,18 @@ class IncrementalOrderedStream(Stream):
         iterate only the latest records.
         """
         bookmark_value = get_bookmark(state, repo_path, self.tap_stream_id, "since", start_date)
-        current_time = datetime.today().strftime('%Y-%m-%dT%H:%M:%SZ')
+        current_time = datetime.today().strftime(DATE_FORMAT)
 
-        max_bookmark_value = self.get_min_bookmark(self.tap_stream_id, selected_stream_ids, current_time, repo_path, start_date, state)
-        bookmark_time = singer.utils.strptime_to_utc(max_bookmark_value)
+        min_bookmark_value = self.get_min_bookmark(self.tap_stream_id, selected_stream_ids, current_time, repo_path, start_date, state)
+        bookmark_time = singer.utils.strptime_to_utc(min_bookmark_value)
 
         # Build full url
         full_url = self.build_url(repo_path, bookmark_value)
         synced_all_records = False
         stream_catalog = get_schema(catalog, self.tap_stream_id)
-
+        
+        parent_bookmark_value = bookmark_value
+        
         with metrics.record_counter(self.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
                     self.tap_stream_id,
@@ -388,7 +401,7 @@ class IncrementalOrderedStream(Stream):
                             synced_all_records = True
                             break
 
-                        if self.tap_stream_id in selected_stream_ids:
+                        if self.tap_stream_id in selected_stream_ids and updated_at >= parent_bookmark_value:
 
                             # Transform and write record
                             with singer.Transformer() as transformer:
@@ -400,6 +413,7 @@ class IncrementalOrderedStream(Stream):
                             if child in stream_to_sync:
                                 parent_id = tuple(parent_record.get(key) for key in STREAMS[child]().id_keys)
 
+                                # Sync child stream, if it is selected or its nested child is selected.
                                 self.get_child_records(client,
                                                     catalog,
                                                     child,

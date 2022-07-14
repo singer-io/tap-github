@@ -7,7 +7,6 @@ from singer import metrics
 
 LOGGER = singer.get_logger()
 DEFAULT_SLEEP_SECONDS = 600
-MAX_SLEEP_SECONDS = DEFAULT_SLEEP_SECONDS
 
 # Set default timeout of 300 seconds
 REQUEST_TIMEOUT = 300
@@ -85,7 +84,7 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     }
 }
 
-def raise_for_error(resp, source):
+def raise_for_error(resp, source, should_skip_404):
     """
     Retrieve the error code and the error message from the response and return custom exceptions accordingly.
     """
@@ -95,7 +94,7 @@ def raise_for_error(resp, source):
     except JSONDecodeError:
         response_json = {}
 
-    if error_code == 404:
+    if error_code == 404 and should_skip_404:
         details = ERROR_CODE_EXCEPTION_MAPPING.get(error_code).get("message")
         if source == "teams":
             details += ' or it is a personal account repository'
@@ -117,14 +116,14 @@ def calculate_seconds(epoch):
     current = time.time()
     return int(round((epoch - current), 0))
 
-def rate_throttling(response):
+def rate_throttling(response, max_sleep_seconds):
     """
     For rate limit errors, get the remaining time before retrying and calculate the time to sleep before making a new request.
     """
     if int(response.headers['X-RateLimit-Remaining']) == 0:
         seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
-        if seconds_to_sleep > MAX_SLEEP_SECONDS:
+        if seconds_to_sleep > max_sleep_seconds:
             message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
             raise RateLimitExceeded(message) from None
 
@@ -138,6 +137,8 @@ class GithubClient:
     def __init__(self, config):
         self.config = config
         self.session = requests.Session()
+        self.base_url = "https://api.github.com"
+        self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
         self.verify_access_for_repo()
 
     # Return the 'timeout'
@@ -160,7 +161,7 @@ class GithubClient:
     # During 'Timeout' error there is also possibility of 'ConnectionError',
     # hence added backoff for 'ConnectionError' too.
     @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError), max_tries=5, factor=2)
-    def authed_get(self, source, url, headers={}):
+    def authed_get(self, source, url, headers={}, should_skip_404 = True):
         """
         Call rest API and return the response in case of status code 200.
         """
@@ -168,9 +169,9 @@ class GithubClient:
             self.session.headers.update(headers)
             resp = self.session.request(method='get', url=url, timeout=self.get_request_timeout())
             if resp.status_code != 200:
-                raise_for_error(resp, source)
+                raise_for_error(resp, source, should_skip_404)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
-            rate_throttling(resp)
+            rate_throttling(resp, self.max_sleep_seconds)
             if resp.status_code == 404:
                 # Return an empty response body since we're not raising a NotFoundException
                 resp._content = b'{}' # pylint: disable=protected-access
@@ -196,8 +197,8 @@ class GithubClient:
         Call rest API to verify that the user has sufficient permissions to access this repository.
         """
         try:
-            self.authed_get("verifying repository access", url_for_repo)
             LOGGER.info("Verifying access of repository: %s", repo)
+            self.authed_get("verifying repository access", url_for_repo, should_skip_404 = False)
         except NotFoundException:
             # Throwing user-friendly error message as it checks token access
             message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
@@ -214,7 +215,7 @@ class GithubClient:
 
         for repo in repositories:
 
-            url_for_repo = "https://api.github.com/repos/{}/commits".format(repo)
+            url_for_repo = "{}/repos/{}/commits".format(self.base_url, repo)
 
             # Verifying for Repo access
             self.verify_repo_access(url_for_repo, repo)
@@ -253,18 +254,12 @@ class GithubClient:
             org = org_path.split('/')[0]
             for response in self.authed_get_all_pages(
                 'get_all_repos',
-                'https://api.github.com/orgs/{}/repos?sort=created&direction=desc'.format(org)
+                '{}/orgs/{}/repos?sort=created&direction=desc'.format(self.base_url, org)
             ):
                 org_repos = response.json()
 
                 for repo in org_repos:
                     repo_full_name = repo.get('full_name')
-
-                    LOGGER.info("Verifying access of repository: %s", repo_full_name)
-                    self.verify_repo_access(
-                        'https://api.github.com/repos/{}/commits'.format(repo_full_name),
-                        repo
-                    )
 
                     repos.append(repo_full_name)
 

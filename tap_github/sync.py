@@ -74,8 +74,10 @@ def get_stream_to_sync(catalog):
     selected_streams = get_selected_streams(catalog)
     for stream_name, stream_obj in STREAMS.items():
         if stream_name in selected_streams:
+            # Append the selected stream into the list
             streams_to_sync.append(stream_name)
         elif is_any_child_selected(stream_obj,selected_streams):
+            # Append unselected parent stream into the list, if its child or nested child is selected.
             streams_to_sync.append(stream_name)
     return streams_to_sync
 
@@ -89,6 +91,7 @@ def is_any_child_selected(stream_obj,selected_streams):
                 return True
 
             if STREAMS[child].children:
+                # Return True if any child or its nested child is selected
                 return False or is_any_child_selected(STREAMS[child],selected_streams)
     return False
 

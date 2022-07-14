@@ -103,8 +103,6 @@ class TestExceptionHandling(unittest.TestCase):
 
         test_client.authed_get("", "")
 
-        test_client.verify_repo_access("", "repo")
-
         # Verifying the message formed for the custom exception
         self.assertEqual(mock_logger.mock_calls[0], mock.call(expected_message))
 
