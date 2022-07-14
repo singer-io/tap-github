@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from tap_github.client import GithubClient
+from tap_github.client import GithubClient, GithubException
 
 
 @mock.patch('tap_github.client.GithubClient.verify_access_for_repo')
@@ -61,7 +61,7 @@ class TestExtractReposFromConfig(unittest.TestCase):
         config = {'repository': 'singer-io'}
         test_client = GithubClient(config)
         expected_error_message = "Please provide repository name with organization: singer-io"
-        with self.assertRaises(Exception) as exc:
+        with self.assertRaises(GithubException) as exc:
             test_client.extract_repos_from_config()
 
         # VErify that we get expected error message
@@ -75,7 +75,20 @@ class TestExtractReposFromConfig(unittest.TestCase):
         config = {'repository': 'singer-io/'}
         test_client = GithubClient(config)
         expected_error_message = "Please provide repository name with organization: singer-io/"
-        with self.assertRaises(Exception) as exc:
+        with self.assertRaises(GithubException) as exc:
+            test_client.extract_repos_from_config()
+
+        # VErify that we get expected error message
+        self.assertEqual(str(exc.exception), expected_error_message)
+
+    def test_organization_with_only_slash_in_config(self, mocked_get_all_repos, mock_verify_access):
+        """
+        Verify that the tap throws an exception with proper error message when only / is provided in config.
+        """
+        config = {'repository': '/'}
+        test_client = GithubClient(config)
+        expected_error_message = "Please provide repository name with organization: /"
+        with self.assertRaises(GithubException) as exc:
             test_client.extract_repos_from_config()
 
         # VErify that we get expected error message
