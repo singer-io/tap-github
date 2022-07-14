@@ -73,18 +73,3 @@ class TestCredentials(unittest.TestCase):
 
         # Verify error with proper message
         self.assertEqual(str(e.exception), "HTTP-error-code: 401, Error: {}".format(json))
-
-
-@mock.patch("tap_github.client.LOGGER.warning")
-@mock.patch("tap_github.client.GithubClient.verify_repo_access", return_value = None)
-class TestRepoCallCount(unittest.TestCase):
-    def test_repo_call_count(self, mocked_repo, mocked_logger_info):
-        """
-            Here 3 repos are given,
-            so tap will check creds for all 3 repos
-        """
-
-        config = {"access_token": "access_token", "repository": "org1/repo1 org1/repo2 org2/repo1"}
-        GithubClient(config)
-
-        self.assertEqual(mocked_repo.call_count, 3)
