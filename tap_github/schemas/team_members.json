@@ -22,6 +22,24 @@
           "string"
         ]
       },
+      "name": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "email": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "starred_at": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
       "avatar_url": {
         "type": [
           "null",

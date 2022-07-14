@@ -954,10 +954,166 @@
       ]
     },
     "performed_via_github_app": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "object"],
+      "properties": {
+        "id": {
+          "type": ["null", "integer"]
+        },
+        "slug": {
+          "type": ["null", "string"]
+        },
+        "node_id": {
+          "type": ["null", "string"]
+        },
+        "owner": {
+          "type": ["null", "object"],
+          "properties": {
+            "name": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "email": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "login": {
+              "type": ["null", "string"]
+            },
+            "id": {
+              "type": ["null", "integer"]
+            },
+            "node_id": {
+              "type": ["null", "string"]
+            },
+            "avatar_url": {
+              "type": ["null", "string"]
+            },
+            "gravatar_id": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "url": {
+              "type": ["null", "string"]
+            },
+            "html_url": {
+              "type": ["null", "string"]
+            },
+            "followers_url": {
+              "type": ["null", "string"]
+            },
+            "following_url": {
+              "type": ["null", "string"]
+            },
+            "gists_url": {
+              "type": ["null", "string"]
+            },
+            "starred_url": {
+              "type": ["null", "string"]
+            },
+            "subscriptions_url": {
+              "type": ["null", "string"]
+            },
+            "organizations_url": {
+              "type": ["null", "string"]
+            },
+            "repos_url": {
+              "type": ["null", "string"]
+            },
+            "events_url": {
+              "type": ["null", "string"]
+            },
+            "received_events_url": {
+              "type": ["null", "string"]
+            },
+            "type": {
+              "type": ["null", "string"]
+            },
+            "site_admin": {
+              "type": ["null", "boolean"]
+            },
+            "starred_at": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "name": {
+          "type": ["null", "string"]
+        },
+        "description": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "external_url": {
+          "type": ["null", "string"]
+        },
+        "html_url": {
+          "type": ["null", "string"]
+        },
+        "created_at": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "permissions": {
+          "type": ["null", "object"],
+          "properties": {
+            "issues": {
+              "type": ["null", "string"]
+            },
+            "checks": {
+              "type": ["null", "string"]
+            },
+            "metadata": {
+              "type": ["null", "string"]
+            },
+            "contents": {
+              "type": ["null", "string"]
+            },
+            "deployments": {
+              "type": ["null", "string"]
+            }
+          },
+          "additionalProperties": {
+            "type": ["null", "string"]
+          }
+        },
+        "events": {
+          "description": "The list of events for the GitHub app",
+          "type":["null", "array"],
+          "items": {
+            "type": ["null", "string"]
+          }
+        },
+        "installations_count": {
+          "type": ["null", "integer"]
+        },
+        "client_id": {
+          "type": ["null", "string"]
+        },
+        "client_secret": {
+          "type": ["null", "string"]
+        },
+        "webhook_secret": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "pem": {
+          "type": ["null", "string"]
+        }
+      }
     },
     "_sdc_repository": {
       "type": [
@@ -1236,6 +1392,171 @@
           ]
         }
       }
+    },
+    "requested_team": {
+     "type": ["null", "object"],
+      "properties": {
+        "id": {
+          "type": ["null", "integer"]
+        },
+        "node_id": {
+          "type": ["null", "string"]
+        },
+        "name": {
+          "type": ["null", "string"]
+        },
+        "slug": {
+          "type": ["null", "string"]
+        },
+        "description": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "privacy": {
+          "type": ["null", "string"]
+        },
+        "permission": {
+          "type": ["null", "string"]
+        },
+        "permissions": {
+          "type": ["null", "object"],
+          "properties": {
+            "pull": {
+              "type": ["null", "boolean"]
+            },
+            "triage": {
+              "type": ["null", "boolean"]
+            },
+            "push": {
+              "type": ["null", "boolean"]
+            },
+            "maintain": {
+              "type": ["null", "boolean"]
+            },
+            "admin": {
+              "type": ["null", "boolean"]
+            }
+          }
+        },
+        "url": {
+          "type": ["null", "string"]
+        },
+        "html_url": {
+          "type": ["null", "string"]
+        },
+        "members_url": {
+          "type": ["null", "string"]
+        },
+        "repositories_url": {
+          "type": ["null", "string"]
+        },
+        "parent": {
+          "type": ["null", "object"],
+          "properties": {
+            "id": {
+              "type": ["null", "integer"]
+            },
+            "node_id": {
+              "type": ["null", "string"]
+            },
+            "url": {
+              "type": ["null", "string"]
+            },
+            "members_url": {
+              "type": ["null", "string"]
+            },
+            "name": {
+              "type": ["null", "string"]
+            },
+            "description": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "permission": {
+              "type": ["null", "string"]
+            },
+            "privacy": {
+              "type": ["null", "string"]
+            },
+            "html_url": {
+              "type": ["null", "string"]
+            },
+            "repositories_url": {
+              "type": ["null", "string"]
+            },
+            "slug": {
+              "type": ["null", "string"]
+            },
+            "ldap_dn": {
+              "type": ["null", "string"]
+            }
+          }
+        }
+      }
+    },
+    "dismissed_review": {
+      "type": ["null", "object"],
+      "properties": {
+        "state": {
+          "type": ["null", "string"]
+        },
+        "review_id": {
+          "type": ["null", "integer"]
+        },
+        "dismissal_message": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "dismissal_commit_id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
+    },
+    "milestone": {
+      "type": ["null", "object"],
+      "properties": {
+        "title": {
+          "type":["null", "string"]
+        }
+      }
+    },
+    "project_card": {
+      "type": ["null", "object"],
+      "properties": {
+        "url": {
+          "type": ["null", "string"]
+        },
+        "id": {
+          "type": ["null", "integer"]
+        },
+        "project_url": {
+          "type": ["null", "string"]
+        },
+        "project_id": {
+          "type": ["null", "integer"]
+        },
+        "column_name": {
+          "type": ["null", "string"]
+        },
+        "previous_column_name": {
+          "type": ["null", "string"]
+        }
+      }
+    },
+    "author_association": {
+      "type": ["null", "string"]
+    },
+    "lock_reason": {
+      "type": ["null", "string"]
     },
     "assignee": {
       "type": [

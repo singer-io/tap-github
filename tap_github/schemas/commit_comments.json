@@ -64,6 +64,18 @@
           "object"
         ],
         "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "login": {
             "type": [
               "null",
@@ -171,6 +183,12 @@
               "null",
               "boolean"
             ]
+          },
+          "starred_at": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -187,6 +205,44 @@
           "string"
         ],
         "format": "date-time"
+      },
+      "author_association": {
+        "type": ["null", "string"]
+      },
+      "reactions": {
+        "type": ["null", "object"],
+        "properties": {
+          "url": {
+            "type": ["null", "string"]
+          },
+          "total_count": {
+            "type": ["null", "integer"]
+          },
+          "+1": {
+            "type": ["null", "integer"]
+          },
+          "-1": {
+            "type": ["null", "integer"]
+          },
+          "laugh": {
+            "type": ["null", "integer"]
+          },
+          "confused": {
+            "type": ["null", "integer"]
+          },
+          "heart": {
+            "type": ["null", "integer"]
+          },
+          "hooray": {
+            "type": ["null", "integer"]
+          },
+          "eyes": {
+            "type": ["null", "integer"]
+          },
+          "rocket": {
+            "type": ["null", "integer"]
+          }
+        }
       }
     }
   }
