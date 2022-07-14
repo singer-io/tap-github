@@ -60,7 +60,21 @@ class TestExtractReposFromConfig(unittest.TestCase):
         """
         config = {'repository': 'singer-io'}
         test_client = GithubClient(config)
-        expected_error_message = "Repository name not found."
+        expected_error_message = "Please provide repository name with organization: singer-io"
+        with self.assertRaises(Exception) as exc:
+            test_client.extract_repos_from_config()
+
+        # VErify that we get expected error message
+        self.assertEqual(str(exc.exception), expected_error_message)
+
+    def test_organization_without_repo_with_slash_in_config(self, mocked_get_all_repos, mock_verify_access):
+        """
+        Verify that the tap throws an exception with proper error message when just organization is provided in
+        the config without the repository name.
+        """
+        config = {'repository': 'singer-io/'}
+        test_client = GithubClient(config)
+        expected_error_message = "Please provide repository name with organization: singer-io/"
         with self.assertRaises(Exception) as exc:
             test_client.extract_repos_from_config()
 

@@ -82,6 +82,10 @@ ERROR_CODE_EXCEPTION_MAPPING = {
         "raise_exception": UnprocessableError,
         "message": "The request was not able to process right now."
     },
+    429: {
+        "raise_exception": RateLimitExceeded,
+        "message": "API rate limit exceeded."
+    },
     500: {
         "raise_exception": InternalServerError,
         "message": "An error has occurred at Github's end."
@@ -165,7 +169,7 @@ class GithubClient:
     # pylint: disable=dangerous-default-value
     # During 'Timeout' error there is also possibility of 'ConnectionError',
     # hence added backoff for 'ConnectionError' too.
-    @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError), max_tries=5, factor=2)
+    @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError, RateLimitExceeded), max_tries=5, factor=2)
     def authed_get(self, source, url, headers={}):
         """
         Call rest API and return the response in case of status code 200.
@@ -235,12 +239,14 @@ class GithubClient:
 
         orgs_with_all_repos = []
         for each_repo in repo_paths:
+            # Split the repo_path by `/`.
             split_repo_path = each_repo.split('/')
-            if len(split_repo_path) > 1:
+            if len(split_repo_path) > 1 and split_repo_path[1] != '':
                 if split_repo_path[1] == '*':
                     orgs_with_all_repos.append(each_repo)
             else:
-                raise Exception("Repository name not found.")
+                # If `/` not found or repo name not found, raise an error
+                raise GithubException("Please provide repository name with organization: {}".format(each_repo))
 
         if orgs_with_all_repos:
             # Remove any wildcard "org/*" occurrences from `repo_paths`
