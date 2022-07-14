@@ -139,7 +139,6 @@ class GithubClient:
         self.session = requests.Session()
         self.base_url = "https://api.github.com"
         self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
-        self.verify_access_for_repo()
 
     # Return the 'timeout'
     def get_request_timeout(self):
@@ -197,7 +196,6 @@ class GithubClient:
         Call rest API to verify that the user has sufficient permissions to access this repository.
         """
         try:
-            LOGGER.info("Verifying access of repository: %s", repo)
             self.authed_get("verifying repository access", url_for_repo, should_skip_404 = False)
         except NotFoundException:
             # Throwing user-friendly error message as it checks token access
@@ -216,6 +214,7 @@ class GithubClient:
         for repo in repositories:
 
             url_for_repo = "{}/repos/{}/commits".format(self.base_url, repo)
+            LOGGER.info("Verifying access of repository: %s", repo)
 
             # Verifying for Repo access
             self.verify_repo_access(url_for_repo, repo)
@@ -260,6 +259,11 @@ class GithubClient:
 
                 for repo in org_repos:
                     repo_full_name = repo.get('full_name')
+
+                    self.verify_repo_access(
+                        'https://api.github.com/repos/{}/commits'.format(repo_full_name),
+                        repo
+                    )
 
                     repos.append(repo_full_name)
 
