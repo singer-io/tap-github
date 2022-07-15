@@ -139,6 +139,7 @@ class GithubClient:
         self.session = requests.Session()
         self.base_url = "https://api.github.com"
         self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
+        self.verify_access_for_repo()
 
     # Return the 'timeout'
     def get_request_timeout(self):
@@ -176,12 +177,12 @@ class GithubClient:
                 resp._content = b'{}' # pylint: disable=protected-access
             return resp
 
-    def authed_get_all_pages(self, source, url, headers={}):
+    def authed_get_all_pages(self, source, url, headers={}, should_skip_404 = True):
         """
         Fetch all pages of records and return them.
         """
         while True:
-            r = self.authed_get(source, url, headers)
+            r = self.authed_get(source, url, headers, should_skip_404)
             yield r
 
             # Fetch the next page if next found in the response.
@@ -207,7 +208,7 @@ class GithubClient:
         For all the repositories mentioned in the config, check the access for each repos.
         """
         access_token = self.config['access_token']
-        self.session.headers.update({'authorization': 'token ' + access_token, 'per_page': '1', 'page': '1'})
+        self.session.headers.update({'authorization': 'token ' + access_token})
 
         repositories = self.extract_repos_from_config()
 
@@ -253,9 +254,11 @@ class GithubClient:
             org = org_path.split('/')[0]
             for response in self.authed_get_all_pages(
                 'get_all_repos',
-                '{}/orgs/{}/repos?sort=created&direction=desc'.format(self.base_url, org)
+                '{}/orgs/{}/repos?sort=created&direction=desc'.format(self.base_url, org),
+                should_skip_404 = False
             ):
                 org_repos = response.json()
+                LOGGER.info("Collecting repos for organization: %s", org)
 
                 for repo in org_repos:
                     repo_full_name = repo.get('full_name')

@@ -14,13 +14,10 @@ def get_selected_streams(catalog):
     selected_streams = []
     for stream in catalog['streams']:
         stream_metadata = stream['metadata']
-        if stream['schema'].get('selected', False):
-            selected_streams.append(stream['tap_stream_id'])
-        else:
-            for entry in stream_metadata:
-                # Stream metadata will have an empty breadcrumb
-                if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
-                    selected_streams.append(stream['tap_stream_id'])
+        for entry in stream_metadata:
+            # Stream metadata will have an empty breadcrumb
+            if not entry['breadcrumb'] and entry['metadata'].get('selected',None) == True:
+                selected_streams.append(stream['tap_stream_id'])
 
     return selected_streams
 
@@ -118,7 +115,6 @@ def sync(client, config, state, catalog):
 
     # Get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
-
     streams_to_sync = get_stream_to_sync(catalog)
     LOGGER.info('Sync stream %s', streams_to_sync)
 
