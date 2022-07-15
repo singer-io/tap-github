@@ -23,7 +23,7 @@ def get_schema(catalog, stream_id):
     stream_catalog = [cat for cat in catalog if cat['tap_stream_id'] == stream_id ][0]
     return stream_catalog
 
-def get_child_full_url(child_object, repo_path, parent_id, grand_parent_id):
+def get_child_full_url(domain, child_object, repo_path, parent_id, grand_parent_id):
     """
     Build the child stream's URL based on the parent and the grandparent's ids.
     """
@@ -31,7 +31,7 @@ def get_child_full_url(child_object, repo_path, parent_id, grand_parent_id):
     if child_object.is_repository:
         # The `is_repository` represents that the url contains /repos and the repository name.
         child_full_url = '{}/repos/{}/{}'.format(
-            child_object.url,
+            domain,
             repo_path,
             child_object.path).format(*parent_id)
 
@@ -39,12 +39,12 @@ def get_child_full_url(child_object, repo_path, parent_id, grand_parent_id):
         # The `is_organization` represents that the url contains the organization name.
         org = repo_path.split('/')[0]
         child_full_url = '{}/{}'.format(
-            child_object.url,
+            domain,
             child_object.path).format(org, *parent_id, *grand_parent_id)
 
     else:
         child_full_url = '{}/{}'.format(
-            child_object.url,
+            domain,
             child_object.path).format(*grand_parent_id)
     LOGGER.info(child_full_url)
 
@@ -150,7 +150,7 @@ class Stream:
         if not parent_id:
             parent_id = grand_parent_id
 
-        child_full_url = get_child_full_url(child_object, repo_path, parent_id, grand_parent_id)
+        child_full_url = get_child_full_url(client.base_url, child_object, repo_path, parent_id, grand_parent_id)
         stream_catalog = get_schema(catalog, child_object.tap_stream_id)
 
         with metrics.record_counter(child_object.tap_stream_id) as counter:
@@ -207,6 +207,7 @@ class FullTableStream(Stream):
         """
 
         # build full url
+        self.url = client.base_url
         full_url = self.build_url(repo_path, None)
 
         headers = {}
@@ -281,6 +282,7 @@ class IncrementalStream(Stream):
         max_bookmark_value = min_bookmark_value
 
         # build full url
+        self.url = client.base_url
         full_url = self.build_url(repo_path, min_bookmark_value)
 
         headers = {}
@@ -370,6 +372,7 @@ class IncrementalOrderedStream(Stream):
         bookmark_time = singer.utils.strptime_to_utc(min_bookmark_value)
 
         # Build full url
+        self.url = client.domain
         full_url = self.build_url(repo_path, bookmark_value)
         synced_all_records = False
         stream_catalog = get_schema(catalog, self.tap_stream_id)

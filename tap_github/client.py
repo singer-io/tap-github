@@ -7,6 +7,7 @@ from singer import metrics
 
 LOGGER = singer.get_logger()
 DEFAULT_SLEEP_SECONDS = 600
+DEFAULT_DOMAIN = "https://api.github.com"
 
 # Set default timeout of 300 seconds
 REQUEST_TIMEOUT = 300
@@ -137,7 +138,7 @@ class GithubClient:
     def __init__(self, config):
         self.config = config
         self.session = requests.Session()
-        self.base_url = "https://api.github.com"
+        self.base_url = config.get('api_endpoint', DEFAULT_DOMAIN)
         self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
 
     # Return the 'timeout'
@@ -261,7 +262,7 @@ class GithubClient:
                     repo_full_name = repo.get('full_name')
 
                     self.verify_repo_access(
-                        'https://api.github.com/repos/{}/commits'.format(repo_full_name),
+                        '{}/repos/{}/commits'.format(self.base_url, repo_full_name),
                         repo
                     )
 
