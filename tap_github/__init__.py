@@ -33,8 +33,6 @@ def main():
         state = args.state
 
     if args.discover:
-        # Check credentials
-        client.verify_access_for_repo()
         do_discover()
     else:
         catalog = args.properties if args.properties else _discover()

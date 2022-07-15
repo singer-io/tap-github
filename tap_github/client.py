@@ -139,6 +139,7 @@ class GithubClient:
         self.session = requests.Session()
         self.base_url = "https://api.github.com"
         self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
+        self.verify_access_for_repo()
 
     # Return the 'timeout'
     def get_request_timeout(self):
