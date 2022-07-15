@@ -176,12 +176,12 @@ class GithubClient:
                 resp._content = b'{}' # pylint: disable=protected-access
             return resp
 
-    def authed_get_all_pages(self, source, url, headers={}):
+    def authed_get_all_pages(self, source, url, headers={}, should_skip_404 = True):
         """
         Fetch all pages of records and return them.
         """
         while True:
-            r = self.authed_get(source, url, headers)
+            r = self.authed_get(source, url, headers, should_skip_404)
             yield r
 
             # Fetch the next page if next found in the response.
@@ -253,9 +253,11 @@ class GithubClient:
             org = org_path.split('/')[0]
             for response in self.authed_get_all_pages(
                 'get_all_repos',
-                '{}/orgs/{}/repos?sort=created&direction=desc'.format(self.base_url, org)
+                '{}/orgs/{}/repos?sort=created&direction=desc'.format(self.base_url, org),
+                should_skip_404 = False
             ):
                 org_repos = response.json()
+                LOGGER.info("Collecting repos for organization: %s", org)
 
                 for repo in org_repos:
                     repo_full_name = repo.get('full_name')
