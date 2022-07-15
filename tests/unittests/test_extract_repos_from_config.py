@@ -60,7 +60,7 @@ class TestExtractReposFromConfig(unittest.TestCase):
         """
         config = {'repository': 'singer-io'}
         test_client = GithubClient(config)
-        expected_error_message = "Please provide repository name with organization: singer-io"
+        expected_error_message = "Please provide proper organization/repository: ['singer-io']"
         with self.assertRaises(GithubException) as exc:
             test_client.extract_repos_from_config()
 
@@ -74,7 +74,7 @@ class TestExtractReposFromConfig(unittest.TestCase):
         """
         config = {'repository': 'singer-io/'}
         test_client = GithubClient(config)
-        expected_error_message = "Please provide repository name with organization: singer-io/"
+        expected_error_message = "Please provide proper organization/repository: ['singer-io/']"
         with self.assertRaises(GithubException) as exc:
             test_client.extract_repos_from_config()
 
@@ -87,7 +87,20 @@ class TestExtractReposFromConfig(unittest.TestCase):
         """
         config = {'repository': '/'}
         test_client = GithubClient(config)
-        expected_error_message = "Please provide repository name with organization: /"
+        expected_error_message = "Please provide proper organization/repository: ['/']"
+        with self.assertRaises(GithubException) as exc:
+            test_client.extract_repos_from_config()
+
+        # VErify that we get expected error message
+        self.assertEqual(str(exc.exception), expected_error_message)
+
+    def test_organization_with_multiple_wrong_formatted_repo_path_in_config(self, mocked_get_all_repos, mock_verify_access):
+        """
+        Verify that the tap throws an exception with proper error message when multiple wrongly formatted repos are provided in config.
+        """
+        config = {'repository': 'singer-io/ /tap-github'}
+        test_client = GithubClient(config)
+        expected_error_message = "Please provide proper organization/repository: ['singer-io/', '/tap-github']"
         with self.assertRaises(GithubException) as exc:
             test_client.extract_repos_from_config()
 
