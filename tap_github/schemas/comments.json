@@ -115,16 +115,10 @@
           "type": ["null","object"],
           "properties": {
             "name": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "email": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "login": {
               "type": ["null", "string"]
@@ -139,10 +133,7 @@
               "type": ["null", "string"]
             },
             "gravatar_id": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "url": {
               "type": ["null", "string"]
@@ -192,10 +183,7 @@
           "type": ["null", "string"]
         },
         "description": {
-          "type": [
-            "null",
-            "string"
-          ]
+          "type": ["null", "string"]
         },
         "external_url": {
           "type": ["null", "string"]

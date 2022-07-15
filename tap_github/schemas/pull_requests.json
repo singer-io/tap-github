@@ -119,16 +119,10 @@
       "type": ["null", "object"],
       "properties": {
         "name": {
-          "type": [
-            "null",
-            "string"
-          ]
+          "type": ["null", "string"]
         },
         "email": {
-          "type": [
-            "null",
-            "string"
-          ]
+          "type": ["null", "string"]
         },
         "login": {
           "type": ["null", "string"]
@@ -143,10 +137,7 @@
           "type": ["null", "string"]
         },
         "gravatar_id": {
-          "type": [
-            "null",
-            "string"
-          ]
+          "type": ["null", "string"]
         },
         "url": {
           "type": ["null", "string"]
@@ -432,10 +423,7 @@
               "type": ["null", "string"]
             },
             "description": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "fork": {
               "type": ["null", "boolean"]
@@ -558,10 +546,7 @@
               "type": ["null", "string"]
             },
             "mirror_url": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "hooks_url": {
               "type": ["null", "string"]
@@ -570,16 +555,10 @@
               "type": ["null", "string"]
             },
             "homepage": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "language": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "forks_count": {
               "type": ["null", "integer"]
@@ -633,24 +612,15 @@
               "type": ["null", "string"]
             },
             "pushed_at": {
-              "type": [
-                "null",
-                "string"
-              ],
+              "type": ["null", "string"],
               "format": "date-time"
             },
             "created_at": {
-              "type": [
-                "null",
-                "string"
-              ],
+              "type": ["null", "string"],
               "format": "date-time"
             },
             "updated_at": {
-              "type": [
-                "null",
-                "string"
-              ],
+              "type": ["null", "string"],
               "format": "date-time"
             },
             "allow_rebase_merge": {
@@ -1040,16 +1010,10 @@
           "type": ["null", "object"],
           "properties": {
             "name": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "email": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "login": {
               "type": ["null", "string"]
@@ -1064,10 +1028,7 @@
               "type": ["null", "string"]
             },
             "gravatar_id": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "url": {
               "type": ["null", "string"]
@@ -1128,16 +1089,10 @@
           "type": ["null", "object"],
           "properties": {
             "name": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "email": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "login": {
               "type": ["null", "string"]
@@ -1152,10 +1107,7 @@
               "type": ["null", "string"]
             },
             "gravatar_id": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "url": {
               "type": ["null", "string"]
@@ -1329,25 +1281,16 @@
           "type": ["null", "string"]
         },
         "description": {
-          "type": [
-            "null",
-            "string"
-          ]
+          "type": ["null", "string"]
         },
         "creator": {
           "type": ["null", "object"],
           "properties": {
             "name": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "email": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "login": {
               "type": ["null", "string"]
@@ -1362,10 +1305,7 @@
               "type": ["null", "string"]
             },
             "gravatar_id": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "url": {
               "type": ["null", "string"]
@@ -1426,17 +1366,11 @@
           "format": "date-time"
         },
         "closed_at": {
-          "type": [
-            "null",
-            "string"
-          ],
+          "type": ["null", "string"],
           "format": "date-time"
         },
         "due_on": {
-          "type": [
-            "null",
-            "string"
-          ],
+          "type": ["null", "string"],
           "format": "date-time"
         }
       }
@@ -1676,16 +1610,10 @@
       "additionalProperties": false,
       "properties": {
         "name": {
-          "type": [
-            "null",
-            "string"
-          ]
+          "type": ["null", "string"]
         },
         "email": {
-          "type": [
-            "null",
-            "string"
-          ]
+          "type": ["null", "string"]
         },
         "login": {
           "type": ["null", "string"]
@@ -1700,10 +1628,7 @@
           "type": ["null", "string"]
         },
         "gravatar_id": {
-          "type": [
-            "null",
-            "string"
-          ]
+          "type": ["null", "string"]
         },
         "url": {
           "type": ["null", "string"]
@@ -1986,10 +1911,7 @@
               "type": ["null", "string"]
             },
             "description": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "fork": {
               "type": ["null", "boolean"]
@@ -2112,10 +2034,7 @@
               "type": ["null", "string"]
             },
             "mirror_url": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "hooks_url": {
               "type": ["null", "string"]
@@ -2124,16 +2043,10 @@
               "type": ["null", "string"]
             },
             "homepage": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "language": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "forks_count": {
               "type": ["null", "integer"]
@@ -2187,24 +2100,15 @@
               "type": ["null", "string"]
             },
             "pushed_at": {
-              "type": [
-                "null",
-                "string"
-              ],
+              "type": ["null", "string"],
               "format": "date-time"
             },
             "created_at": {
-              "type": [
-                "null",
-                "string"
-              ],
+              "type": ["null", "string"],
               "format": "date-time"
             },
             "updated_at": {
-              "type": [
-                "null",
-                "string"
-              ],
+              "type": ["null", "string"],
               "format": "date-time"
             },
             "allow_rebase_merge": {
@@ -2594,16 +2498,10 @@
           "type": ["null", "object"],
           "properties": {
             "name": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "email": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "login": {
               "type": ["null", "string"]
@@ -2618,10 +2516,7 @@
               "type": ["null", "string"]
             },
             "gravatar_id": {
-              "type": [
-                "null",
-                "string"
-              ]
+              "type": ["null", "string"]
             },
             "url": {
               "type": ["null", "string"]
