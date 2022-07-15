@@ -153,43 +153,37 @@ class GithubStartDateTest(TestGithubBase):
 
                 if expected_metadata.get(self.OBEYS_START_DATE):
                     
-                    # Skipping child streams as it's bookmark will be written on the basis of parent streams
-                    # and all the child RECORDS will be collected for the updated parents
-                    if not self.is_incremental_sub_stream(stream):
+                    # Expected bookmark key is one element in set so directly access it
+                    bookmark_keys_list_1 = [message.get('data').get(next(iter(expected_bookmark_keys))) for message in synced_records_1.get(stream).get('messages')
+                                            if message.get('action') == 'upsert']
+                    bookmark_keys_list_2 = [message.get('data').get(next(iter(expected_bookmark_keys))) for message in synced_records_2.get(stream).get('messages')
+                                            if message.get('action') == 'upsert']
 
-                        # Expected bookmark key is one element in set so directly access it
-                        bookmark_keys_list_1 = [message.get('data').get(next(iter(expected_bookmark_keys))) for message in synced_records_1.get(stream).get('messages')
-                                                if message.get('action') == 'upsert']
-                        bookmark_keys_list_2 = [message.get('data').get(next(iter(expected_bookmark_keys))) for message in synced_records_2.get(stream).get('messages')
-                                                if message.get('action') == 'upsert']
+                    bookmark_key_sync_1 = set(bookmark_keys_list_1)
+                    bookmark_key_sync_2 = set(bookmark_keys_list_2)
 
-                        bookmark_key_sync_1 = set(bookmark_keys_list_1)
-                        bookmark_key_sync_2 = set(bookmark_keys_list_2)
+                    REPLICATION_KEY_FORMAT = self.RECORD_REPLICATION_KEY_FORMAT
+                    # For events stream replication key value is coming in different format
+                    if stream == 'events':
+                        REPLICATION_KEY_FORMAT = self.EVENTS_RECORD_REPLICATION_KEY_FORMAT
 
-                        REPLICATION_KEY_FORMAT = ""
-                        # For events stream replication key value is coming in different format
-                        if stream == 'events':
-                            REPLICATION_KEY_FORMAT = self.EVENTS_RECORD_REPLICATION_KEY_FORMAT
-                        else:
-                            REPLICATION_KEY_FORMAT = self.RECORD_REPLICATION_KEY_FORMAT
+                    # Verify bookmark key values are greater than or equal to start date of sync 1
+                    for bookmark_key_value in bookmark_key_sync_1:
+                        self.assertGreaterEqual(
+                            self.dt_to_ts(bookmark_key_value, REPLICATION_KEY_FORMAT), start_date_1_epoch,
+                            msg="Report pertains to a date prior to our start date.\n" +
+                            "Sync start_date: {}\n".format(self.start_date_1) +
+                                "Record date: {} ".format(bookmark_key_value)
+                        )
 
-                        # Verify bookmark key values are greater than or equal to start date of sync 1
-                        for bookmark_key_value in bookmark_key_sync_1:
-                            self.assertGreaterEqual(
-                                self.dt_to_ts(bookmark_key_value, REPLICATION_KEY_FORMAT), start_date_1_epoch,
-                                msg="Report pertains to a date prior to our start date.\n" +
-                                "Sync start_date: {}\n".format(self.start_date_1) +
-                                    "Record date: {} ".format(bookmark_key_value)
-                            )
-
-                        # Verify bookmark key values are greater than or equal to start date of sync 2
-                        for bookmark_key_value in bookmark_key_sync_2:
-                            self.assertGreaterEqual(
-                                self.dt_to_ts(bookmark_key_value, REPLICATION_KEY_FORMAT), start_date_2_epoch,
-                                msg="Report pertains to a date prior to our start date.\n" +
-                                "Sync start_date: {}\n".format(self.start_date_2) +
-                                    "Record date: {} ".format(bookmark_key_value)
-                            )
+                    # Verify bookmark key values are greater than or equal to start date of sync 2
+                    for bookmark_key_value in bookmark_key_sync_2:
+                        self.assertGreaterEqual(
+                            self.dt_to_ts(bookmark_key_value, REPLICATION_KEY_FORMAT), start_date_2_epoch,
+                            msg="Report pertains to a date prior to our start date.\n" +
+                            "Sync start_date: {}\n".format(self.start_date_2) +
+                                "Record date: {} ".format(bookmark_key_value)
+                        )
 
                     # Verify the number of records replicated in sync 1 is greater than the number
                     # of records replicated in sync 2 for stream

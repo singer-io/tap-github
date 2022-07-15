@@ -15,6 +15,7 @@ class TestGithubBase(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
     BOOKMARK = "bookmark"
+    PK_CHILD_FIELDS = "pk_child_fields"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z" # %H:%M:%SZ
     BOOKMARK_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
     RECORD_REPLICATION_KEY_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -25,7 +26,6 @@ class TestGithubBase(unittest.TestCase):
         "%Y-%m-%dT%H:%M:%S.000000Z"
     }
     START_DATE = ""
-    INCREMENTAL_SUB_STREAMS = ['reviews', 'review_comments', 'pr_commits', 'project_cards', 'project_columns']
     OBEYS_START_DATE = "obey-start-date"
 
     def setUp(self):
@@ -154,7 +154,8 @@ class TestGithubBase(unittest.TestCase):
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.BOOKMARK: {"updated_at"},
-                self.OBEYS_START_DATE: True
+                self.OBEYS_START_DATE: True,
+                self.PK_CHILD_FIELDS: {"number"}
             },
             "releases": {
                 self.PRIMARY_KEYS: {"id"},
@@ -191,7 +192,8 @@ class TestGithubBase(unittest.TestCase):
             "teams": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL,
-                self.OBEYS_START_DATE: False
+                self.OBEYS_START_DATE: False,
+                self.PK_CHILD_FIELDS: {"slug"}
             }
         }
 
@@ -241,13 +243,24 @@ class TestGithubBase(unittest.TestCase):
         """
         return {}
 
+    def expected_child_pk_keys(self):
+        """
+        Return a dictionary with key of table name 
+        and value as a set of child streams primary key  fields 
+        which are not automatic in parent streams
+        """
+        return {table: properties.get(self.PK_CHILD_FIELDS, set())
+                for table, properties
+                in self.expected_metadata().items()}
+
     def expected_automatic_keys(self):
         """
         Return a dictionary with key of table name 
         and value as a set of automatic key fields
         """
         return {table: ((self.expected_primary_keys().get(table) or set()) |
-                        (self.expected_bookmark_keys().get(table) or set()))
+                        (self.expected_bookmark_keys().get(table) or set()) |
+                        (self.expected_child_pk_keys().get(table) or set()))
                 for table in self.expected_metadata()}
 
     #########################

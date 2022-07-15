@@ -64,7 +64,6 @@ class TestGithubBookmarks(TestGithubBase):
             different values for the replication key
         """
 
-        # child_incremental_streams = {'reviews', 'review_comments', 'pr_commits', 'project_cards', 'project_columns'}
         expected_streams = self.expected_streams()
         expected_replication_keys = self.expected_bookmark_keys()
         expected_replication_methods = self.expected_replication_method()
@@ -153,37 +152,31 @@ class TestGithubBookmarks(TestGithubBase):
                     # Verify the second sync bookmark is Equal or Greater than the first sync bookmark
                     self.assertGreaterEqual(second_bookmark_value_ts, first_bookmark_value_ts)
 
-                    # Skipping child streams as it's bookmark will be written on the basis of parent streams
-                    # and all the child RECORDS will be collected for the updated parents
-                    if not self.is_incremental_sub_stream(stream):
-
-                        REPLICATION_KEY_FORMAT = ""
-                        # For events stream replication key value is coming in different format
-                        if stream == 'events':
-                            REPLICATION_KEY_FORMAT = self.EVENTS_RECORD_REPLICATION_KEY_FORMAT
-                        else:
-                            REPLICATION_KEY_FORMAT = self.RECORD_REPLICATION_KEY_FORMAT
+                    REPLICATION_KEY_FORMAT = self.RECORD_REPLICATION_KEY_FORMAT
+                    # For events stream replication key value is coming in different format
+                    if stream == 'events':
+                        REPLICATION_KEY_FORMAT = self.EVENTS_RECORD_REPLICATION_KEY_FORMAT
+                    
+                    for record in first_sync_messages:
+                        # Verify the first sync bookmark value is the max replication key value for a given stream
+                        replication_key_value = self.dt_to_ts(record.get(replication_key), REPLICATION_KEY_FORMAT)
                         
-                        for record in first_sync_messages:
-                            # Verify the first sync bookmark value is the max replication key value for a given stream
-                            replication_key_value = self.dt_to_ts(record.get(replication_key), REPLICATION_KEY_FORMAT)
-                            
-                            self.assertLessEqual(
-                                replication_key_value, first_bookmark_value_ts,
-                                msg="First sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
-                            )
+                        self.assertLessEqual(
+                            replication_key_value, first_bookmark_value_ts,
+                            msg="First sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
+                        )
 
-                        for record in second_sync_messages:
-                            # Verify the second sync bookmark value is the max replication key value for a given stream
-                            replication_key_value = self.dt_to_ts(record.get(replication_key), REPLICATION_KEY_FORMAT)
-                            
-                            self.assertGreaterEqual(replication_key_value, simulated_bookmark_value,
-                                                    msg="Second sync records do not respect the previous bookmark.")
-                            
-                            self.assertLessEqual(
-                                replication_key_value, second_bookmark_value_ts,
-                                msg="Second sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
-                            )
+                    for record in second_sync_messages:
+                        # Verify the second sync bookmark value is the max replication key value for a given stream
+                        replication_key_value = self.dt_to_ts(record.get(replication_key), REPLICATION_KEY_FORMAT)
+                        
+                        self.assertGreaterEqual(replication_key_value, simulated_bookmark_value,
+                                                msg="Second sync records do not respect the previous bookmark.")
+                        
+                        self.assertLessEqual(
+                            replication_key_value, second_bookmark_value_ts,
+                            msg="Second sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
+                        )
 
                     # Verify the number of records in the 2nd sync is less then the first
                     self.assertLessEqual(second_sync_count, first_sync_count)
