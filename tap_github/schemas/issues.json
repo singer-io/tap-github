@@ -117,9 +117,6 @@
           "type": [
             "null",
             "string"
-          ],
-          "examples": [
-            "41d064eb2195891e12d0413f63227ea7"
           ]
         },
         "url": {
