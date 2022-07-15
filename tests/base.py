@@ -24,6 +24,7 @@ class TestGithubBase(unittest.TestCase):
     START_DATE = ""
     FULL_TABLE_SUB_STREAMS = ['reviews', 'review_comments', 'pr_commits', 'team_members', 'team_memberships']
     OBEYS_START_DATE = "obey-start-date"
+    BOOKMARK_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -193,7 +194,7 @@ class TestGithubBase(unittest.TestCase):
         }
 
     def expected_replication_method(self):
-        """return a dictionary with key of table name and value of replication method"""
+        """Return a dictionary with key of table name and value of replication method"""
         return {table: properties.get(self.REPLICATION_METHOD, None)
                 for table, properties
                 in self.expected_metadata().items()}
@@ -212,7 +213,7 @@ class TestGithubBase(unittest.TestCase):
 
     def expected_primary_keys(self):
         """
-        return a dictionary with key of table name
+        Return a dictionary with the key of the table name
         and value as a set of primary key fields
         """
         return {table: properties.get(self.PRIMARY_KEYS, set())
@@ -220,7 +221,8 @@ class TestGithubBase(unittest.TestCase):
                 in self.expected_metadata().items()}
 
     def expected_bookmark_keys(self):
-        """return a dictionary with key of table name 
+        """
+        Return a dictionary with the key of the table name
         and value as a set of bookmark key fields
         """
         return {table: properties.get(self.BOOKMARK, set())
@@ -229,13 +231,14 @@ class TestGithubBase(unittest.TestCase):
 
     def expected_foreign_keys(self):
         """
-        return dictionary with key of table name and
-        value is set of foreign keys
+        Return dictionary with the key of table name and
+        value is a set of foreign keys
         """
         return {}
 
     def expected_automatic_keys(self):
-        """Return a dictionary with key of table name 
+        """
+        Return a dictionary with the key of the table name
         and value as a set of automatic key fields
         """
         return {table: ((self.expected_primary_keys().get(table) or set()) |
@@ -387,5 +390,12 @@ class TestGithubBase(unittest.TestCase):
             try:
                 date_stripped = int(time.mktime(dt.strptime(dtime, date_format).timetuple()))
                 return date_stripped
+            except ValueError:
+                continue
+    
+    def get_bookmark_formatted(self, date):
+        for _format in self.DATETIME_FMT:
+            try:
+                return dt.strptime(date, _format).strftime(self.BOOKMARK_FORMAT)
             except ValueError:
                 continue

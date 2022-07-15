@@ -6,6 +6,7 @@ def get_stream_catalog(stream_name, selected_in_schema = False, selected_in_meta
     return {
                 "schema":{"selected": selected_in_schema},
                 "tap_stream_id": stream_name,
+                "key_properties": [],
                 "metadata": [
                         {
                             "breadcrumb": [],
