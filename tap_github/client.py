@@ -208,7 +208,7 @@ class GithubClient:
         For all the repositories mentioned in the config, check the access for each repos.
         """
         access_token = self.config['access_token']
-        self.session.headers.update({'authorization': 'token ' + access_token, 'per_page': '1', 'page': '1'})
+        self.session.headers.update({'authorization': 'token ' + access_token})
 
         repositories = self.extract_repos_from_config()
 
