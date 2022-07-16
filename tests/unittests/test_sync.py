@@ -7,9 +7,16 @@ from tap_github.sync import sync, write_schemas
 def get_stream_catalog(stream_name, is_selected = False):
     """Return catalog for stream"""
     return {
-                "schema":{"selected": is_selected},
+                "schema":{},
                 "tap_stream_id": stream_name,
-                "metadata": [],
+                "metadata": [
+                        {
+                            "breadcrumb": [],
+                            "metadata":{
+                                "selected": is_selected
+                            }
+                        }
+                    ],
                 "key_properties": []
             }
 
