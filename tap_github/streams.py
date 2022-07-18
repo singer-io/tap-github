@@ -1,4 +1,3 @@
-import copy
 from datetime import datetime
 import singer
 from singer import (metrics, bookmarks, metadata)
@@ -95,6 +94,7 @@ class Stream:
                 self.path,
                 query_string)
 
+        LOGGER.info(full_url)
         return full_url
 
     def get_min_bookmark(self, stream, selected_streams, bookmark, repo_path, start_date, state):
@@ -552,6 +552,8 @@ class TeamMembers(FullTableStream):
     children= ["team_memberships"]
     has_children = True
     parent = 'teams'
+    pk_child_fields = ['login']
+
 
     def add_fields_at_1st_level(self, rec, parent_record):
         rec['team_slug'] = parent_record['slug']

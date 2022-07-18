@@ -16,7 +16,7 @@ def get_selected_streams(catalog):
         stream_metadata = stream['metadata']
         for entry in stream_metadata:
             # Stream metadata will have an empty breadcrumb
-            if not entry['breadcrumb'] and entry['metadata'].get('selected',None) == True:
+            if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
                 selected_streams.append(stream['tap_stream_id'])
 
     return selected_streams
