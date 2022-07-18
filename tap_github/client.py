@@ -241,6 +241,14 @@ class GithubClient:
         """
         repo_paths = list(filter(None, self.config['repository'].split(' ')))
 
+        visited = set()
+        # Insert the duplicate repos found in the config repo_paths into duplicates
+        duplicates = [x for x in repo_paths if x in visited or (visited.add(x) or False)]
+        if duplicates:
+            LOGGER.warn('Duplicate repositories found: {} and will be synced only once.'.format(duplicates))
+
+        repo_paths = list(set(repo_paths))
+
         orgs_with_all_repos = []
         repos_with_errors = []
         for each_repo in repo_paths:
