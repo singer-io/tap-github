@@ -26,16 +26,10 @@
         "type": ["null", "object"],
         "properties": {
           "name": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           },
           "email": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           },
           "login": {
             "type": ["null", "string"]
@@ -50,10 +44,7 @@
             "type": ["null", "string"]
           },
           "gravatar_id": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           },
           "url": {
             "type": ["null", "string"]
@@ -220,16 +211,10 @@
                   "type": ["null", "string"]
                 },
                 "url": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "spdx_id": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "node_id": {
                   "type": ["null", "string"]
@@ -243,16 +228,10 @@
               "type": ["null", "object"],
               "properties": {
                 "name": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "email": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "login": {
                   "type": ["null", "string"]
@@ -267,10 +246,7 @@
                   "type": ["null", "string"]
                 },
                 "gravatar_id": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "url": {
                   "type": ["null", "string"]
@@ -320,39 +296,16 @@
               "type": ["null", "integer"]
             },
             "permissions": {
-              "type": ["null", "object"],
-              "properties": {
-                "admin": {
-                  "type": ["null", "boolean"]
-                },
-                "pull": {
-                  "type": ["null", "boolean"]
-                },
-                "triage": {
-                  "type": ["null", "boolean"]
-                },
-                "push": {
-                  "type": ["null", "boolean"]
-                },
-                "maintain": {
-                  "type": ["null", "boolean"]
-                }
-              }
+              "$ref": "shared/pull_permissions.json#/"
             },
             "owner": {
               "type": ["null", "object"],
               "properties": {
                 "name": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "email": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "login": {
                   "type": ["null", "string"]
@@ -367,10 +320,7 @@
                   "type": ["null", "string"]
                 },
                 "gravatar_id": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "url": {
                   "type": ["null", "string"]
@@ -908,24 +858,7 @@
                   "type": ["null", "string"]
                 },
                 "permissions": {
-                  "type": ["null", "object"],
-                  "properties": {
-                    "admin": {
-                      "type": ["null", "boolean"]
-                    },
-                    "maintain": {
-                      "type": ["null", "boolean"]
-                    },
-                    "push": {
-                      "type": ["null", "boolean"]
-                    },
-                    "triage": {
-                      "type": ["null", "boolean"]
-                    },
-                    "pull": {
-                      "type": ["null", "boolean"]
-                    }
-                  }
+                  "$ref": "shared/pull_permissions.json#/"
                 },
                 "allow_rebase_merge": {
                   "type": ["null", "boolean"]
@@ -1176,16 +1109,10 @@
         "type": ["null", "object"],
         "properties": {
           "name": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           },
           "email": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           },
           "login": {
             "type": ["null", "string"]
@@ -1200,10 +1127,7 @@
             "type": ["null", "string"]
           },
           "gravatar_id": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           },
           "url": {
             "type": ["null", "string"]
@@ -1468,10 +1392,7 @@
             "type": ["null", "string"]
           },
           "description": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           },
           "privacy": {
             "type": ["null", "string"]
@@ -1480,24 +1401,7 @@
             "type": ["null", "string"]
           },
           "permissions": {
-            "type": ["null", "object"],
-            "properties": {
-              "pull": {
-                "type": ["null", "boolean"]
-              },
-              "triage": {
-                "type": ["null", "boolean"]
-              },
-              "push": {
-                "type": ["null", "boolean"]
-              },
-              "maintain": {
-                "type": ["null", "boolean"]
-              },
-              "admin": {
-                "type": ["null", "boolean"]
-              }
-            }
+            "$ref": "shared/pull_permissions.json#/"
           },
           "url": {
             "type": ["null", "string"]
@@ -1530,10 +1434,7 @@
                 "type": ["null", "string"]
               },
               "description": {
-                "type": [
-                  "null",
-                  "string"
-                ]
+                "type": ["null", "string"]
               },
               "permission": {
                 "type": ["null", "string"]
@@ -1708,16 +1609,10 @@
                   "type": ["null", "string"]
                 },
                 "url": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "spdx_id": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "node_id": {
                   "type": ["null", "string"]
@@ -1731,16 +1626,10 @@
               "type": ["null", "object"],
               "properties": {
                 "name": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "email": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "login": {
                   "type": ["null", "string"]
@@ -1755,10 +1644,7 @@
                   "type": ["null", "string"]
                 },
                 "gravatar_id": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "url": {
                   "type": ["null", "string"]
@@ -1808,39 +1694,16 @@
               "type": ["null", "integer"]
             },
             "permissions": {
-              "type": ["null", "object"],
-              "properties": {
-                "admin": {
-                  "type": ["null", "boolean"]
-                },
-                "pull": {
-                  "type": ["null", "boolean"]
-                },
-                "triage": {
-                  "type": ["null", "boolean"]
-                },
-                "push": {
-                  "type": ["null", "boolean"]
-                },
-                "maintain": {
-                  "type": ["null", "boolean"]
-                }
-              }
+              "$ref": "shared/pull_permissions.json#/"
             },
             "owner": {
               "type": ["null", "object"],
               "properties": {
                 "name": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "email": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "login": {
                   "type": ["null", "string"]
@@ -1855,10 +1718,7 @@
                   "type": ["null", "string"]
                 },
                 "gravatar_id": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null", "string"]
                 },
                 "url": {
                   "type": ["null", "string"]
@@ -2396,24 +2256,7 @@
                   "type": ["null", "string"]
                 },
                 "permissions": {
-                  "type": ["null", "object"],
-                  "properties": {
-                    "admin": {
-                      "type": ["null", "boolean"]
-                    },
-                    "maintain": {
-                      "type": ["null", "boolean"]
-                    },
-                    "push": {
-                      "type": ["null", "boolean"]
-                    },
-                    "triage": {
-                      "type": ["null", "boolean"]
-                    },
-                    "pull": {
-                      "type": ["null", "boolean"]
-                    }
-                  }
+                  "$ref": "shared/pull_permissions.json#/"
                 },
                 "allow_rebase_merge": {
                   "type": ["null", "boolean"]

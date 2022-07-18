@@ -5,103 +5,46 @@
   ],
   "properties": {
     "_sdc_repository": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "id": {
-      "type": [
-        "null",
-        "number"
-      ]
+      "type": ["null", "number"]
     },
     "node_id": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "url": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "html_url": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "permissions": {
-      "type": ["null", "object"],
-      "properties": {
-        "pull": {
-          "type": ["null", "boolean"]
-        },
-        "triage": {
-          "type": ["null", "boolean"]
-        },
-        "push": {
-          "type": ["null", "boolean"]
-        },
-        "maintain": {
-          "type": ["null", "boolean"]
-        },
-        "admin": {
-          "type": ["null", "boolean"]
-        }
-      }
+      "$ref": "shared/pull_permissions.json#/"
     },
     "name": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "slug": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "description": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "privacy": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "permission": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "members_url": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "repositories_url": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "parent": {
-      "type": [
-        "null",
-        "object",
-        "string"
-      ]
+      "type": ["null", "object", "string"]
     }
   }
 }

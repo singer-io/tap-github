@@ -1,7 +1,7 @@
 {
     "type": ["null", "object"],
     "properties": {
-        "commit": {"$ref": "commits.json#/"},
+        "commit": {"$ref": "shared/commits.json#/"},
         "pr_number": {
             "type": ["null", "integer"]
         },
