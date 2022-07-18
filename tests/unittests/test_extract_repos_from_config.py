@@ -107,7 +107,7 @@ class TestExtractReposFromConfig(unittest.TestCase):
             # Verify that we get expected error message
             self.assertEqual(str(exc.exception), expected_error_message.format(expected_repos))
 
-    @mock.patch('tap_github.client.LOGGER.warn')
+    @mock.patch('tap_github.client.LOGGER.warning')
     def test_organization_with_duplicate_repo_paths_in_config(self, mock_warn, mocked_get_all_repos, mock_verify_access, mock_set_auth_in_session):
         """
         Verify that the tap logs proper warning message for duplicate repos in config and returns list without duplicates
@@ -116,9 +116,10 @@ class TestExtractReposFromConfig(unittest.TestCase):
         test_client = GithubClient(config)
         expected_repos = ['singer-io/tap-github', 'singer-io/test-repo']
         actual_repos = test_client.extract_repos_from_config()
+        expected_message = "Duplicate repositories found: %s and will be synced only once."
 
         # Verify that the logger is called with expected error message
-        mock_warn.assert_called_with("Duplicate repositories found: {} and will be synced only once.".format(['singer-io/tap-github']))
+        mock_warn.assert_called_with(expected_message, ['singer-io/tap-github'])
 
         # Verify that extract_repos_from_config() returns repos without duplicates
         self.assertEqual(sorted(expected_repos), sorted(actual_repos))

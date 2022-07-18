@@ -241,11 +241,11 @@ class GithubClient:
         """
         repo_paths = list(filter(None, self.config['repository'].split(' ')))
 
-        visited = set()
+        unique_repos  = set()
         # Insert the duplicate repos found in the config repo_paths into duplicates
-        duplicates = [x for x in repo_paths if x in visited or (visited.add(x) or False)]
-        if duplicates:
-            LOGGER.warn('Duplicate repositories found: {} and will be synced only once.'.format(duplicates))
+        duplicate_repos = [x for x in repo_paths if x in unique_repos or (unique_repos.add(x) or False)]
+        if duplicate_repos:
+            LOGGER.warning("Duplicate repositories found: %s and will be synced only once.", duplicate_repos)
 
         repo_paths = list(set(repo_paths))
 
@@ -258,9 +258,9 @@ class GithubClient:
                 if split_repo_path[1] == '*':
                     orgs_with_all_repos.append(each_repo)
             else:
-                # If `/` not found or repo name not found, append the repo_path in the repos_with_errors
+                # If `/`/repo name/organization not found, append the repo_path in the repos_with_errors
                 repos_with_errors.append(each_repo)
-        
+
         # If any repos found in repos_with_errors, raise an exception
         if repos_with_errors:
             raise GithubException("Please provide proper organization/repository: {}".format(repos_with_errors))
