@@ -164,9 +164,6 @@ class GithubClient:
         access_token = self.config['access_token']
         self.session.headers.update({'authorization': 'token ' + access_token})
 
-    def __exit__(self):
-        self.session.close()
-
     # pylint: disable=dangerous-default-value
     # During 'Timeout' error there is also possibility of 'ConnectionError',
     # hence added backoff for 'ConnectionError' too.
