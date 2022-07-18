@@ -498,7 +498,7 @@ class ProjectCards(IncrementalStream):
     key_properties = ["id"]
     path = "projects/columns/{}/cards"
     tap_stream_id = "project_cards"
-    parent = 'projects'
+    parent = 'project_columns'
     id_keys = ['id']
 
 class ProjectColumns(IncrementalStream):
@@ -537,8 +537,11 @@ class TeamMemberships(FullTableStream):
     key_properties = ["url"]
     path = "orgs/{}/teams/{}/memberships/{}"
     is_organization = True
-    parent = 'teams'
+    parent = 'team_members'
     id_keys = ["login"]
+
+    def add_fields_at_1st_level(self, rec, parent_record):
+        rec['login'] = parent_record['login']
 
 class TeamMembers(FullTableStream):
     '''
@@ -573,7 +576,7 @@ class Teams(FullTableStream):
 
 class Commits(IncrementalStream):
     '''
-    https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
+    https://docs.github.com/en/rest/commits/commits#list-commits-on-a-repository
     '''
     tap_stream_id = "commits"
     replication_method = "INCREMENTAL"
@@ -598,7 +601,7 @@ class Comments(IncrementalOrderedStream):
 
 class Issues(IncrementalOrderedStream):
     '''
-    https://developer.github.com/v3/issues/#list-issues-for-a-repository
+    https://docs.github.com/en/rest/issues/issues#list-repository-issues
     '''
     tap_stream_id = "issues"
     replication_method = "INCREMENTAL"
@@ -609,7 +612,7 @@ class Issues(IncrementalOrderedStream):
 
 class Assignees(FullTableStream):
     '''
-    https://developer.github.com/v3/issues/assignees/#list-assignees
+    https://docs.github.com/en/rest/issues/assignees#list-assignees
     '''
     tap_stream_id = "assignees"
     replication_method = "FULL_TABLE"
@@ -627,7 +630,7 @@ class Releases(FullTableStream):
 
 class IssueLabels(FullTableStream):
     '''
-    https://developer.github.com/v3/issues/labels/
+    https://docs.github.com/en/rest/issues/labels#list-labels-for-a-repository
     '''
     tap_stream_id = "issue_labels"
     replication_method = "FULL_TABLE"
@@ -656,7 +659,7 @@ class Events(IncrementalStream):
 
 class CommitComments(IncrementalStream):
     '''
-    https://developer.github.com/v3/repos/comments/
+    https://docs.github.com/en/rest/commits/comments#list-commit-comments-for-a-repository
     '''
     tap_stream_id = "commit_comments"
     replication_method = "INCREMENTAL"
@@ -666,7 +669,7 @@ class CommitComments(IncrementalStream):
 
 class IssueMilestones(IncrementalOrderedStream):
     '''
-    https://developer.github.com/v3/issues/milestones/#list-milestones-for-a-repository
+    https://docs.github.com/en/rest/issues/milestones#list-milestones
     '''
     tap_stream_id = "issue_milestones"
     replication_method = "INCREMENTAL"
@@ -676,7 +679,7 @@ class IssueMilestones(IncrementalOrderedStream):
 
 class Collaborators(FullTableStream):
     '''
-    https://developer.github.com/v3/repos/collaborators/#list-collaborators
+    https://docs.github.com/en/rest/collaborators/collaborators#list-repository-collaborators
     '''
     tap_stream_id = "collaborators"
     replication_method = "FULL_TABLE"
@@ -685,7 +688,7 @@ class Collaborators(FullTableStream):
 
 class StarGazers(FullTableStream):
     '''
-    https://developer.github.com/v3/activity/starring/#list-stargazers
+    https://docs.github.com/en/rest/activity/starring#list-stargazers
     '''
     tap_stream_id = "stargazers"
     replication_method = "FULL_TABLE"
