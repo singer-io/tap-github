@@ -182,7 +182,8 @@ class TestGithubBase(unittest.TestCase):
             "team_members": {
                 self.PRIMARY_KEYS: {"id", "team_slug"},
                 self.REPLICATION_METHOD: self.FULL,
-                self.OBEYS_START_DATE: False
+                self.OBEYS_START_DATE: False,
+                self.PK_CHILD_FIELDS: {"login"}
             },
             "team_memberships": {
                 self.PRIMARY_KEYS: {"url"},
