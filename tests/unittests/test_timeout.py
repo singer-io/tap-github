@@ -55,7 +55,7 @@ class TestTimeoutValue(unittest.TestCase):
         # mock response
         mocked_request.return_value = get_response(200, json)
 
-        mock_config = {"request_timeout": 100}
+        mock_config = {"request_timeout": 100, "access_token": "access_token"}
         # mock parse args
         mocked_parse_args.return_value = get_args(mock_config)
         test_client = GithubClient(mock_config)
@@ -78,7 +78,7 @@ class TestTimeoutValue(unittest.TestCase):
         # mock response
         mocked_request.return_value = get_response(200, json)
 
-        mock_config = {}
+        mock_config = {"access_token": "access_token"}
         # mock parse args
         mocked_parse_args.return_value = get_args(mock_config)
         test_client = GithubClient(mock_config)
@@ -101,7 +101,7 @@ class TestTimeoutValue(unittest.TestCase):
         # mock response
         mocked_request.return_value = get_response(200, json)
 
-        mock_config = {"request_timeout": "100"}
+        mock_config = {"request_timeout": "100", "access_token": "access_token"}
         # mock parse args
         mocked_parse_args.return_value = get_args(mock_config)
         test_client = GithubClient(mock_config)
@@ -124,7 +124,7 @@ class TestTimeoutValue(unittest.TestCase):
         # mock response
         mocked_request.return_value = get_response(200, json)
 
-        mock_config = {"request_timeout": ""}
+        mock_config = {"request_timeout": "", "access_token": "access_token"}
         # mock parse args
         mocked_parse_args.return_value = get_args(mock_config)
         test_client = GithubClient(mock_config)
@@ -147,7 +147,7 @@ class TestTimeoutValue(unittest.TestCase):
         # mock response
         mocked_request.return_value = get_response(200, json)
 
-        mock_config = {"request_timeout": 0.0}
+        mock_config = {"request_timeout": 0.0, "access_token": "access_token"}
         # mock parse args
         mocked_parse_args.return_value = get_args(mock_config)
         test_client = GithubClient(mock_config)
@@ -170,7 +170,7 @@ class TestTimeoutValue(unittest.TestCase):
         # mock response
         mocked_request.return_value = get_response(200, json)
 
-        mock_config = {"request_timeout": "0.0"}
+        mock_config = {"request_timeout": "0.0", "access_token": "access_token"}
         # mock parse args
         mocked_parse_args.return_value = get_args(mock_config)
         test_client = GithubClient(mock_config)
@@ -201,7 +201,7 @@ class TestTimeoutAndConnnectionErrorBackoff(unittest.TestCase):
         # mock request and raise 'Timeout' error
         mocked_request.side_effect = requests.Timeout
 
-        mock_config = {}
+        mock_config = {"access_token": "access_token"}
         # mock parse args
         mocked_parse_args.return_value = get_args(mock_config)
         test_client = GithubClient(mock_config)
@@ -219,7 +219,7 @@ class TestTimeoutAndConnnectionErrorBackoff(unittest.TestCase):
         # mock request and raise 'Connection' error
         mocked_request.side_effect = requests.ConnectionError
 
-        mock_config = {}
+        mock_config = {"access_token": "access_token"}
         # mock parse args
         mocked_parse_args.return_value = get_args(mock_config)
         test_client = GithubClient(mock_config)

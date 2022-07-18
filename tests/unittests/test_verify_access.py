@@ -38,19 +38,6 @@ class TestCredentials(unittest.TestCase):
 
     config = {"access_token": "", "repository": "singer-io/tap-github"}
 
-    @mock.patch("tap_github.client.logger.info")
-    def test_repo_not_found(self, mock_logger, mocked_parse_args, mocked_request, mock_verify_access):
-        """Verify if 404 error arises"""
-        test_client = GithubClient(self.config)
-        json = {"message": "Not Found", "documentation_url": "https:/docs.github.com/"}
-        expected_message = "HTTP-error-code: 404, Error: The resource you have specified cannot be found. Alternatively the access_token is not valid for the resource. Please refer 'https:/docs.github.com/' for more details."
-        mocked_request.return_value = get_response(404, json, True)
-
-        test_client.verify_repo_access("", "repo")
-        
-        # Verify logger called with proper message
-        self.assertEqual(mock_logger.mock_calls[0], mock.call(expected_message))
-
     def test_repo_bad_request(self, mocked_parse_args, mocked_request, mock_verify_access):
         """Verify if 400 error arises"""
         test_client = GithubClient(self.config)
@@ -73,19 +60,3 @@ class TestCredentials(unittest.TestCase):
 
         # Verify error with proper message
         self.assertEqual(str(e.exception), "HTTP-error-code: 401, Error: {}".format(json))
-
-
-@mock.patch("tap_github.client.logger.info")
-@mock.patch("tap_github.client.GithubClient.verify_repo_access", return_value = None)
-class TestRepoCallCount(unittest.TestCase):
-    def test_repo_call_count(self, mocked_repo, mocked_logger_info):
-        """
-            Here 3 repos are given,
-            so tap will check creds for all 3 repos
-        """
-
-        config = {"access_token": "access_token", "repository": "org1/repo1 org1/repo2 org2/repo1"}
-        GithubClient(config)
-
-        self.assertEqual(mocked_logger_info.call_count, 3)
-        self.assertEqual(mocked_repo.call_count, 3)

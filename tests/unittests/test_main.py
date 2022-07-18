@@ -3,7 +3,6 @@ from unittest import mock
 from tap_github import main
 from tap_github.discover import discover
 
-
 class MockArgs:
     """Mock args object class"""
     
@@ -82,22 +81,23 @@ class TestSyncMode(unittest.TestCase):
         # Verify `_sync` is called with ecpected arguments
         mock_sync.assert_called_with("mock_client", self.mock_config, mock_state, self.mock_catalog)
 
-
+@mock.patch("tap_github.GithubClient")
 class TestDiscover(unittest.TestCase):
     """Test `discover` function."""
-    def test_discover(self):
+    
+    def test_discover(self, mock_client):
         
-        return_catalog = discover()
+        return_catalog = discover(mock_client)
         
         self.assertIsInstance(return_catalog, dict)
 
     @mock.patch("tap_github.discover.Schema")
     @mock.patch("tap_github.discover.LOGGER.error")
-    def test_discover_error_handling(self, mock_logger, mock_schema):
+    def test_discover_error_handling(self, mock_logger, mock_schema, mock_client):
         """Test discover function if exception arises."""
         mock_schema.from_dict.side_effect = [Exception]
         with self.assertRaises(Exception):
-            discover()
+            discover(mock_client)
 
         # Verify logger called 3 times when exception arises.
         self.assertEqual(mock_logger.call_count, 3)

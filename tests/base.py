@@ -15,14 +15,17 @@ class TestGithubBase(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
     BOOKMARK = "bookmark"
+    PK_CHILD_FIELDS = "pk_child_fields"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z" # %H:%M:%SZ
+    BOOKMARK_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+    RECORD_REPLICATION_KEY_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+    EVENTS_RECORD_REPLICATION_KEY_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
     DATETIME_FMT = {
         "%Y-%m-%dT%H:%M:%SZ",
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%dT%H:%M:%S.000000Z"
     }
     START_DATE = ""
-    FULL_TABLE_SUB_STREAMS = ['reviews', 'review_comments', 'pr_commits', 'team_members', 'team_memberships']
     OBEYS_START_DATE = "obey-start-date"
 
     def setUp(self):
@@ -151,7 +154,8 @@ class TestGithubBase(unittest.TestCase):
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.BOOKMARK: {"updated_at"},
-                self.OBEYS_START_DATE: True
+                self.OBEYS_START_DATE: True,
+                self.PK_CHILD_FIELDS: {"number"}
             },
             "releases": {
                 self.PRIMARY_KEYS: {"id"},
@@ -178,7 +182,8 @@ class TestGithubBase(unittest.TestCase):
             "team_members": {
                 self.PRIMARY_KEYS: {"id", "team_slug"},
                 self.REPLICATION_METHOD: self.FULL,
-                self.OBEYS_START_DATE: False
+                self.OBEYS_START_DATE: False,
+                self.PK_CHILD_FIELDS: {"login"}
             },
             "team_memberships": {
                 self.PRIMARY_KEYS: {"url"},
@@ -188,12 +193,16 @@ class TestGithubBase(unittest.TestCase):
             "teams": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL,
-                self.OBEYS_START_DATE: False
+                self.OBEYS_START_DATE: False,
+                self.PK_CHILD_FIELDS: {"slug"}
             }
         }
 
     def expected_replication_method(self):
-        """return a dictionary with key of table name and value of replication method"""
+        """
+        Return a dictionary with key of table name 
+        and value of replication method
+        """
         return {table: properties.get(self.REPLICATION_METHOD, None)
                 for table, properties
                 in self.expected_metadata().items()}
@@ -212,7 +221,7 @@ class TestGithubBase(unittest.TestCase):
 
     def expected_primary_keys(self):
         """
-        return a dictionary with key of table name
+        Return a dictionary with key of table name
         and value as a set of primary key fields
         """
         return {table: properties.get(self.PRIMARY_KEYS, set())
@@ -220,7 +229,8 @@ class TestGithubBase(unittest.TestCase):
                 in self.expected_metadata().items()}
 
     def expected_bookmark_keys(self):
-        """return a dictionary with key of table name 
+        """
+        Return a dictionary with key of table name 
         and value as a set of bookmark key fields
         """
         return {table: properties.get(self.BOOKMARK, set())
@@ -229,20 +239,32 @@ class TestGithubBase(unittest.TestCase):
 
     def expected_foreign_keys(self):
         """
-        return dictionary with key of table name and
+        Return dictionary with key of table name and
         value is set of foreign keys
         """
         return {}
 
+    def expected_child_pk_keys(self):
+        """
+        Return a dictionary with key of table name 
+        and value as a set of child streams primary key  fields 
+        which are not automatic in parent streams
+        """
+        return {table: properties.get(self.PK_CHILD_FIELDS, set())
+                for table, properties
+                in self.expected_metadata().items()}
+
     def expected_automatic_keys(self):
-        """Return a dictionary with key of table name 
+        """
+        Return a dictionary with key of table name 
         and value as a set of automatic key fields
         """
         return {table: ((self.expected_primary_keys().get(table) or set()) |
-                        (self.expected_bookmark_keys().get(table) or set()))
+                        (self.expected_bookmark_keys().get(table) or set()) |
+                        (self.expected_child_pk_keys().get(table) or set()))
                 for table in self.expected_metadata()}
 
-     #########################
+    #########################
     #   Helper Methods      #
     #########################
 
@@ -252,10 +274,10 @@ class TestGithubBase(unittest.TestCase):
         This should be ran prior to field selection and initial sync.
         Return the connection id and found catalogs from menagerie.
         """
-        # run in check mode
+        # Run in check mode
         check_job_name = runner.run_check_mode(self, conn_id)
 
-        # verify check exit codes
+        # Verify check exit codes
         exit_status = menagerie.get_exit_status(conn_id, check_job_name)
         menagerie.verify_check_exit_status(self, exit_status, check_job_name)
 
@@ -359,7 +381,7 @@ class TestGithubBase(unittest.TestCase):
 
             non_selected_properties = []
             if not select_all_fields:
-                # get a list of all properties so that none are selected
+                # Get a list of all properties so that none are selected
                 non_selected_properties = schema.get('annotated-schema', {}).get(
                     'properties', {}).keys()
 
@@ -379,13 +401,10 @@ class TestGithubBase(unittest.TestCase):
     def is_incremental(self, stream):
         return self.expected_metadata()[stream][self.REPLICATION_METHOD] == self.INCREMENTAL
 
-    def is_full_table_sub_stream(self, stream):
-        return stream in self.FULL_TABLE_SUB_STREAMS
+    def is_incremental_sub_stream(self, stream):
+        return stream in self.INCREMENTAL_SUB_STREAMS
 
-    def dt_to_ts(self, dtime):
-        for date_format in self.DATETIME_FMT:
-            try:
-                date_stripped = int(time.mktime(dt.strptime(dtime, date_format).timetuple()))
-                return date_stripped
-            except ValueError:
-                continue
+    def dt_to_ts(self, dtime, format):
+        """Convert datetime with a format to timestamp"""
+        date_stripped = int(time.mktime(dt.strptime(dtime, format).timetuple()))
+        return date_stripped
