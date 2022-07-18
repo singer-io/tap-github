@@ -366,7 +366,7 @@ class IncrementalOrderedStream(Stream):
         stream_catalog = get_schema(catalog, self.tap_stream_id)
 
         parent_bookmark_value = bookmark_value
-
+        record_counter = 0
         with metrics.record_counter(self.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
                     self.tap_stream_id,
@@ -380,10 +380,11 @@ class IncrementalOrderedStream(Stream):
 
                     updated_at = record.get(self.replication_keys)
 
-                    if counter.value == 0:
+                    if record_counter == 0:
                         # Consider replication key value of 1st record as bookmark value.
                         # Because all records are in descending order of replication key value
                         bookmark_value = updated_at
+                    record_counter = record_counter + 1
 
                     if updated_at:
                         if bookmark_time and singer.utils.strptime_to_utc(updated_at) < bookmark_time:
@@ -444,7 +445,7 @@ class Reviews(IncrementalStream):
 
 class ReviewComments(IncrementalOrderedStream):
     '''
-    https://docs.github.com/en/rest/reference/pulls#list-review-comments-in-a-repository
+    https://docs.github.com/en/rest/pulls/comments#get-a-review-comment-for-a-pull-request
     '''
     tap_stream_id = "review_comments"
     replication_method = "INCREMENTAL"

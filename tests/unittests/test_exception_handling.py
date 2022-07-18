@@ -54,7 +54,7 @@ class TestExceptionHandling(unittest.TestCase):
         mock_response = get_mock_http_response(409, "json_error")
 
         with self.assertRaises(tap_github.client.ConflictError) as e:
-            raise_for_error(mock_response, "", False)
+            raise_for_error(mock_response, "")
 
         # Verifying the message formed for the custom exception
         self.assertEqual(str(e.exception), "HTTP-error-code: 409, Error: The request could not be completed due to a conflict with the current state of the server.")
@@ -122,22 +122,6 @@ class TestExceptionHandling(unittest.TestCase):
         test_client = GithubClient(self.config)
 
         test_client.authed_get("", "")
-
-        # Verifying the message formed for the custom exception
-        self.assertEqual(mock_logger.mock_calls[0], mock.call(expected_message))
-
-    @mock.patch("tap_github.client.LOGGER.warning")
-    def test_404_error_for_teams(self, mock_logger,  mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` skip 404 error and logs the error with proper message.
-        """
-        json = {"message": "Not Found", "documentation_url": "https:/docs.github.com/"}
-        mocked_request.return_value = get_response(404, json = json, raise_error = True)
-        expected_message = "HTTP-error-code: 404, Error: The resource you have specified cannot be found. Alternatively the access_token is not valid for the resource or it is a personal account repository. Please refer '{}' for more details.".format(json.get("documentation_url"))
-        test_client = GithubClient(self.config)
-
-        test_client.authed_get("teams", "")
-        print(mock_logger.mock_calls[0])
 
         # Verifying the message formed for the custom exception
         self.assertEqual(mock_logger.mock_calls[0], mock.call(expected_message))

@@ -1,37 +1,18 @@
 import unittest
 from tap_github.sync import get_selected_streams, translate_state, get_stream_to_sync
 
-def get_stream_catalog(stream_name, selected = False):
+def get_stream_catalog(stream_name, selected_in_metadata = False):
     """Return catalog for stream"""
     return {
-                "schema": {},
+                "schema":{},
                 "tap_stream_id": stream_name,
                 "metadata": [
                         {
                             "breadcrumb": [],
-                            "metadata":{
-                                "selected": selected
-                            }
+                            "metadata":{"selected": selected_in_metadata}
                         }
                     ]
             }
-
-class TestGetSelectedStreams(unittest.TestCase):
-    """
-    Testcase for `get_selected_streams` in sync
-    """
-
-    def test_selected_in_metadata(self):
-        """Verify if stream is selected in metadata"""
-        catalog = {
-            "streams": [
-                get_stream_catalog("assignees", selected=True),
-                get_stream_catalog("comments"),
-                get_stream_catalog("commits", selected=True)
-            ]
-        }
-
-        self.assertListEqual(["assignees", "commits"], get_selected_streams(catalog))
 
 class TestTranslateState(unittest.TestCase):
     """
@@ -40,7 +21,7 @@ class TestTranslateState(unittest.TestCase):
 
     catalog = {
         "streams": [
-            get_stream_catalog("comments", selected=True),
+            get_stream_catalog("comments"),
             get_stream_catalog("releases"),
             get_stream_catalog("issue_labels"),
             get_stream_catalog("issue_events")
@@ -96,13 +77,13 @@ class TestGetStreamsToSync(unittest.TestCase):
     def get_catalog(self, parent=False, mid_child = False, child = False):
         return {
             "streams": [
-                get_stream_catalog("projects", selected=parent),
-                get_stream_catalog("project_columns", selected=mid_child),
-                get_stream_catalog("project_cards", selected=child),
-                get_stream_catalog("teams", selected=parent),
-                get_stream_catalog("team_members", selected=mid_child),
-                get_stream_catalog("team_memberships", selected=child),
-                get_stream_catalog("assignees", selected=parent),
+                get_stream_catalog("projects", selected_in_metadata=parent),
+                get_stream_catalog("project_columns", selected_in_metadata=mid_child),
+                get_stream_catalog("project_cards", selected_in_metadata=child),
+                get_stream_catalog("teams", selected_in_metadata=parent),
+                get_stream_catalog("team_members", selected_in_metadata=mid_child),
+                get_stream_catalog("team_memberships", selected_in_metadata=child),
+                get_stream_catalog("assignees", selected_in_metadata=parent),
             ]
         }
 

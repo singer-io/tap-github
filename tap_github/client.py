@@ -84,7 +84,7 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     }
 }
 
-def raise_for_error(resp, source, should_skip_404):
+def raise_for_error(resp, source):
     """
     Retrieve the error code and the error message from the response and return custom exceptions accordingly.
     """
@@ -94,7 +94,7 @@ def raise_for_error(resp, source, should_skip_404):
     except JSONDecodeError:
         response_json = {}
 
-    if error_code == 404 and should_skip_404:
+    if error_code == 404:
         details = ERROR_CODE_EXCEPTION_MAPPING.get(error_code).get("message")
         if source == "teams":
             details += ' or it is a personal account repository'
@@ -139,7 +139,7 @@ class GithubClient:
         self.session = requests.Session()
         self.base_url = "https://api.github.com"
         self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
-        self.verify_access_for_repo()
+        self.set_auth_in_session()
 
     # Return the 'timeout'
     def get_request_timeout(self):
@@ -157,11 +157,21 @@ class GithubClient:
         # Return default timeout
         return REQUEST_TIMEOUT
 
+    def set_auth_in_session(self):
+        """
+        Set access token in the header for authorization.
+        """
+        access_token = self.config['access_token']
+        self.session.headers.update({'authorization': 'token ' + access_token})
+
+    def __exit__(self):
+        self.session.close()
+
     # pylint: disable=dangerous-default-value
     # During 'Timeout' error there is also possibility of 'ConnectionError',
     # hence added backoff for 'ConnectionError' too.
     @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError), max_tries=5, factor=2)
-    def authed_get(self, source, url, headers={}, should_skip_404 = True):
+    def authed_get(self, source, url, headers={}):
         """
         Call rest API and return the response in case of status code 200.
         """
@@ -169,7 +179,7 @@ class GithubClient:
             self.session.headers.update(headers)
             resp = self.session.request(method='get', url=url, timeout=self.get_request_timeout())
             if resp.status_code != 200:
-                raise_for_error(resp, source, should_skip_404)
+                raise_for_error(resp, source)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
             rate_throttling(resp, self.max_sleep_seconds)
             if resp.status_code == 404:
@@ -177,12 +187,12 @@ class GithubClient:
                 resp._content = b'{}' # pylint: disable=protected-access
             return resp
 
-    def authed_get_all_pages(self, source, url, headers={}, should_skip_404 = True):
+    def authed_get_all_pages(self, source, url, headers={}):
         """
         Fetch all pages of records and return them.
         """
         while True:
-            r = self.authed_get(source, url, headers, should_skip_404)
+            r = self.authed_get(source, url, headers)
             yield r
 
             # Fetch the next page if next found in the response.
@@ -197,7 +207,7 @@ class GithubClient:
         Call rest API to verify that the user has sufficient permissions to access this repository.
         """
         try:
-            self.authed_get("verifying repository access", url_for_repo, should_skip_404 = False)
+            self.authed_get("verifying repository access", url_for_repo)
         except NotFoundException:
             # Throwing user-friendly error message as it checks token access
             message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
@@ -207,9 +217,6 @@ class GithubClient:
         """
         For all the repositories mentioned in the config, check the access for each repos.
         """
-        access_token = self.config['access_token']
-        self.session.headers.update({'authorization': 'token ' + access_token})
-
         repositories = self.extract_repos_from_config()
 
         for repo in repositories:
@@ -254,8 +261,7 @@ class GithubClient:
             org = org_path.split('/')[0]
             for response in self.authed_get_all_pages(
                 'get_all_repos',
-                '{}/orgs/{}/repos?sort=created&direction=desc'.format(self.base_url, org),
-                should_skip_404 = False
+                '{}/orgs/{}/repos?sort=created&direction=desc'.format(self.base_url, org)
             ):
                 org_repos = response.json()
                 LOGGER.info("Collecting repos for organization: %s", org)
