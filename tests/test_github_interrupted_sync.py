@@ -20,22 +20,21 @@ class TestGithubInterruptedSync(TestGithubBase):
 
     def test_run(self):
         """
-        Testing that if a sync job is interrupted and state is saved with `currently_syncing`,
-        the next sync job kicks off and the tap picks back up on that `currently_syncing` stream.
+        Testing that if a sync job is interrupted and state is saved with `currently_syncing`(stream) and `currently_syncing_repo`,
+        the next sync job kicks off and the tap picks back up on that `currently_syncing` stream of `currently_syncing_repo`.
         """
         streams_to_test = {"issues", "stargazers", "pull_requests", "issue_events"}
         conn_id = connections.ensure_connection(self)
         expected_replication_methods = self.expected_replication_method()
         expected_replication_keys = self.expected_bookmark_keys()
-        repo_1, repo_2 = self.get_properties().get("repository").split()
         repo_key = "_sdc_repository"
         
-        start_date = self.get_bookmark_formatted(self.get_properties().get("start_date"))
+        start_date = self.dt_to_ts(self.get_properties().get("start_date"), self.BOOKMARK_FORMAT)
 
         # Run a discovery job
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
-        # partition catalogs for use in table/field seelction
+        # Partition catalogs for use in table/field selection
         test_catalogs = [catalog for catalog in found_catalogs
                            if catalog.get('stream_name') in streams_to_test]
         self.perform_and_verify_table_and_field_selection(conn_id, test_catalogs, select_all_fields=True)
@@ -43,7 +42,7 @@ class TestGithubInterruptedSync(TestGithubBase):
         # Run a sync
         self.run_and_verify_sync(conn_id)
 
-        # acquire records from target output
+        # Acquire records from the target output
         full_sync_records = runner.get_records_from_target_output()
         full_sync_state = menagerie.get_state(conn_id)
 
@@ -99,7 +98,7 @@ class TestGithubInterruptedSync(TestGithubBase):
             # (This is what the value would have been without an interruption and proves resuming succeeds)
             self.assertDictEqual(final_state, full_sync_state)
 
-        for repository in [repo_1, repo_2]:
+        for repository in self.get_properties().get("repository").split():
             with self.subTest(repository=repository):
             
                 full_sync_bookmark = full_sync_state["bookmarks"][repository]
@@ -128,12 +127,12 @@ class TestGithubInterruptedSync(TestGithubBase):
                             expected_replication_key = next(iter(expected_replication_keys[stream]))
                                 
                             if stream in interrupted_repo_bookmark.keys():
-                                interrupted_bookmark = self.get_bookmark_formatted(interrupted_repo_bookmark[stream]["since"])
+                                interrupted_bookmark =  self.dt_to_ts(interrupted_repo_bookmark[stream]["since"], self.BOOKMARK_FORMAT)
                                 
                                 if stream == interrupted_state['currently_syncing'] and repository == interrupted_state['currently_syncing_repo']:
 
                                     for record in interrupted_records:
-                                        rec_time = self.get_bookmark_formatted(record[expected_replication_key])
+                                        rec_time = self.dt_to_ts(record[expected_replication_key], self.RECORD_REPLICATION_KEY_FORMAT)
                                         self.assertGreater(rec_time, interrupted_bookmark)
 
                                         # Verify all interrupted recs are in full recs
@@ -143,7 +142,7 @@ class TestGithubInterruptedSync(TestGithubBase):
                                     full_records_after_interrupted_bookmark = 0
 
                                     for record in full_records:
-                                        rec_time = self.get_bookmark_formatted(record[expected_replication_key])
+                                        rec_time = self.dt_to_ts(record[expected_replication_key], self.RECORD_REPLICATION_KEY_FORMAT)
                                         self.assertGreater(rec_time, start_date)
 
                                         if (rec_time > interrupted_bookmark):
@@ -152,7 +151,7 @@ class TestGithubInterruptedSync(TestGithubBase):
                                     self.assertEqual(full_records_after_interrupted_bookmark, len(interrupted_records), \
                                                         msg="Expected {} records in each sync".format(full_records_after_interrupted_bookmark))
                                 else:
-                                    # verify we collected records that have same raplication value as bookmark for stream that are already synced
+                                    # Verify we collected records that have the same replication value as a bookmark for streams that are already synced
                                     self.assertGreater(interrupted_record_count, 0)
                             else:
                                 # Verify resuming sync replicates all records that were found in the full sync (uninterrupted)

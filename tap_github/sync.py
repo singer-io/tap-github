@@ -14,10 +14,13 @@ def get_selected_streams(catalog):
     selected_streams = []
     for stream in catalog['streams']:
         stream_metadata = stream['metadata']
-        for entry in stream_metadata:
-            # Stream metadata will have an empty breadcrumb
-            if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
-                selected_streams.append(stream['tap_stream_id'])
+        if stream['schema'].get('selected', False):
+            selected_streams.append(stream['tap_stream_id'])
+        else:
+            for entry in stream_metadata:
+                # Stream metadata will have an empty breadcrumb
+                if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
+                    selected_streams.append(stream['tap_stream_id'])
 
     return selected_streams
 
@@ -25,7 +28,7 @@ def update_currently_syncing(state, stream_name):
     """
     Updates currently syncing stream in the state.
     """
-    if stream_name is None and ('currently_syncing' in state):
+    if not stream_name and singer.get_currently_syncing(state):
         del state['currently_syncing']
     else:
         singer.set_currently_syncing(state, stream_name)
@@ -36,7 +39,7 @@ def update_currently_syncing_repo(state, repo_path):
     Appends repository if completed syncing, 
     and flushes `currently_syncing_repo` when all repositories are synced.
     """
-    if (repo_path is None) and ('currently_syncing_repo' in state):
+    if (not repo_path) and ('currently_syncing_repo' in state):
         del state['currently_syncing_repo']
     else:
         state['currently_syncing_repo'] = repo_path
@@ -49,8 +52,7 @@ def get_ordered_stream_list(currently_syncing):
     stream_list = list(sorted(STREAMS.keys()))
     if currently_syncing:
         index = stream_list.index(currently_syncing)
-        if currently_syncing:
-            stream_list = stream_list[index:] + stream_list[:index]
+        stream_list = stream_list[index:] + stream_list[:index]
     return stream_list
 
 def get_ordered_repos(state, repositories):
@@ -153,6 +155,7 @@ def sync(client, config, state, catalog):
 
     # Get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
+
     streams_to_sync = get_stream_to_sync(catalog)
     LOGGER.info('Sync stream %s', streams_to_sync)
 
@@ -164,7 +167,7 @@ def sync(client, config, state, catalog):
     # pylint: disable=too-many-nested-blocks
     for repo in get_ordered_repos(state, repositories):
         LOGGER.info("Starting sync of repository: %s", repo)
-        currently_syncing = state.get('currently_syncing')
+        currently_syncing = singer.get_currently_syncing(state)
         update_currently_syncing_repo(state, repo)
 
         for stream_id in get_ordered_stream_list(currently_syncing):
