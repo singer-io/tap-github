@@ -38,19 +38,6 @@ class TestCredentials(unittest.TestCase):
 
     config = {"access_token": "", "repository": "singer-io/tap-github"}
 
-    @mock.patch("tap_github.client.LOGGER.warning")
-    def test_repo_not_found(self, mock_logger, mocked_parse_args, mocked_request, mock_verify_access):
-        """Verify if 404 error arises while checking access of repo"""
-        test_client = GithubClient(self.config)
-        json = {"message": "Not Found", "documentation_url": "https:/docs.github.com/"}
-        mocked_request.return_value = get_response(404, json, True)
-
-        with self.assertRaises(tap_github.client.NotFoundException) as e:
-            test_client.verify_repo_access("", "repo")
-        
-        # Verify logger called with proper message
-        self.assertEqual(str(e.exception), "HTTP-error-code: 404, Error: Please check the repository name 'repo' or you do not have sufficient permissions to access this repository.")
-
     def test_repo_bad_request(self, mocked_parse_args, mocked_request, mock_verify_access):
         """Verify if 400 error arises"""
         test_client = GithubClient(self.config)

@@ -42,11 +42,11 @@ class TestGithubDiscovery(TestGithubBase):
                                      if catalog["stream_name"] == stream]))
                 self.assertIsNotNone(catalog)
 
-                # collecting expected values
+                # Collecting expected values
                 expected_primary_keys = self.expected_primary_keys()[stream]
                 expected_automatic_keys = self.expected_automatic_keys().get(stream)
 
-                # collecting actual values...
+                # Collecting actual values...
                 schema_and_metadata = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
                 metadata = schema_and_metadata["metadata"]
                 stream_properties = [item for item in metadata if item.get("breadcrumb") == []]
@@ -68,25 +68,25 @@ class TestGithubDiscovery(TestGithubBase):
                 ### metadata assertions
                 ##########################################################################
 
-                # verify there is only 1 top level breadcrumb in metadata
+                # Verify there is only 1 top level breadcrumb in metadata
                 self.assertTrue(len(stream_properties) == 1,
                                 msg="There is NOT only one top level breadcrumb for {}".format(stream) + \
                                 "\nstream_properties | {}".format(stream_properties))
 
-                # verify there are no duplicate metadata entries
+                # Verify there are no duplicate metadata entries
                 self.assertEqual(len(actual_fields), 
                                 len(set(actual_fields)), 
                                 msg = "duplication in the retrieved fields")
                 
-                # verify primary key(s) match expectations
+                # Verify primary key(s) match expectations
                 self.assertSetEqual(
                     expected_primary_keys, actual_primary_keys,
                 )
 
-                # verify that primary keys and replication keys are given the inclusion of automatic in metadata.
+                # Verify that primary keys and replication keys are given the inclusion of automatic in metadata.
                 self.assertSetEqual(expected_automatic_keys, actual_automatic_fields)
 
-                # verify the actual replication matches our expected replication method
+                # Verify the actual replication matches our expected replication method
                 self.assertEqual(
                     self.expected_replication_method().get(stream, None),
                     actual_replication_method,
@@ -94,7 +94,7 @@ class TestGithubDiscovery(TestGithubBase):
                         actual_replication_method,
                         self.expected_replication_method().get(stream, None)))
                 
-                # verify that all other fields have inclusion of available
+                # Verify that all other fields have inclusion of available
                 # This assumes there are no unsupported fields for SaaS sources
                 self.assertTrue(
                     all({item.get("metadata").get("inclusion") == "available"
