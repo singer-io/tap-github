@@ -1,49 +1,17 @@
 {
   "type": ["null", "object"],
-  "additionalProperties": false,
   "properties": {
-    "_sdc_repository": {
-      "type": ["string"]
-    },
     "id": {
       "type": ["null", "integer"]
     },
-    "_links": {
-      "type": ["null", "object"],
-      "properties": {
-        "html": {
-          "type": ["null", "object"],
-          "properties": {
-            "href": {
-              "type": ["null", "string"]
-            }
-          }
-        },
-        "pull_request": {
-          "type": ["null", "object"],
-          "properties": {
-            "href": {
-              "type": ["null", "string"]
-            }
-          }
-        }
-      }
-    },
-    "body_html": {
-      "type": ["null", "string"]
-    },
-    "body_text": {
+    "slug": {
       "type": ["null", "string"]
     },
     "node_id": {
       "type": ["null", "string"]
     },
-    "author_association": {
-      "type": ["null", "string"]
-    },
-    "user": {
-      "type": ["null", "object"],
-      "additionalProperties": false,
+    "owner": {
+      "type": ["null","object"],
       "properties": {
         "name": {
           "type": ["null", "string"]
@@ -110,24 +78,49 @@
         }
       }
     },
-    "body": {
+    "name": {
       "type": ["null", "string"]
     },
-    "state": {
+    "description": {
       "type": ["null", "string"]
     },
-    "commit_id": {
+    "external_url": {
       "type": ["null", "string"]
     },
     "html_url": {
       "type": ["null", "string"]
     },
-    "pull_request_url": {
-      "type": ["null", "string"]
-    },
-    "submitted_at": {
+    "created_at": {
       "type": ["null", "string"],
       "format": "date-time"
+    },
+    "updated_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "permissions": {
+      "$ref": "shared/issue_permissions.json#/"
+    },
+    "events": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "string"]
+      }
+    },
+    "installations_count": {
+      "type": ["null", "integer"]
+    },
+    "client_id": {
+      "type": ["null", "string"]
+    },
+    "client_secret": {
+      "type": ["null", "string"]
+    },
+    "webhook_secret": {
+      "type": ["null", "string"]
+    },
+    "pem": {
+      "type": ["null", "string"]
     }
   }
 }

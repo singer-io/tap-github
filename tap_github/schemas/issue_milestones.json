@@ -70,6 +70,18 @@
           "object"
         ],
         "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "login": {
             "type": [
               "null",
@@ -176,6 +188,12 @@
             "type": [
               "null",
               "boolean"
+            ]
+          },
+          "starred_at": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
