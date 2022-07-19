@@ -274,3 +274,7 @@ class GithubClient:
                     repos.append(repo_full_name)
 
         return repos
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        # Kill the session instance.
+        self.session.close()
