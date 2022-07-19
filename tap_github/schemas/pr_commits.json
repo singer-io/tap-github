@@ -13,8 +13,7 @@
         },
         "updated_at": {
             "type": ["null", "string"],
-            "format": "date-time",
-            "description": "The date the committer committed the change"
+            "format": "date-time"
         }
     }
 }
