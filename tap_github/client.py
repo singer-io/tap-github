@@ -224,6 +224,15 @@ class GithubClient:
             # Verifying for Repo access
             self.verify_repo_access(url_for_repo, repo)
 
+    def extract_orgs_from_config(self):
+        """
+        Extracts all organizations from the config
+        """
+        repo_paths = list(filter(None, self.config['repository'].split(' ')))
+        orgs_paths = set([repo.split('/')[0] for repo in repo_paths])
+
+        return orgs_paths
+
     def extract_repos_from_config(self):
         """
         Extracts all repositories from the config and calls get_all_repos()

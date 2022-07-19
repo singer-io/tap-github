@@ -106,6 +106,15 @@ def write_schemas(stream_id, catalog, selected_streams):
     for child in stream_obj.children:
         write_schemas(child, catalog, selected_streams)
 
+def get_stream_to_sync_for_orgs(streams_to_sync):
+    """
+    Return set of streams to sync among the `teams`, 'team_members' and 'team_memberships'.
+    """
+    streams_to_sync_for_orgs = ['teams', 'team_members', 'team_memberships']
+    streams_to_sync_for_orgs = set([stream for stream in streams_to_sync if stream in streams_to_sync_for_orgs])
+
+    return streams_to_sync_for_orgs
+
 def sync(client, config, state, catalog):
     """
     sync selected streams.
@@ -119,28 +128,44 @@ def sync(client, config, state, catalog):
     LOGGER.info('Sync stream %s', streams_to_sync)
 
     repositories = client.extract_repos_from_config()
+    organizations = client.extract_orgs_from_config()
 
     state = translate_state(state, catalog, repositories)
     singer.write_state(state)
 
+    # Sync `teams`, `team_members`and `team_memberships` streams just single time for any organization.
+    streams_to_sync_for_orgs = get_stream_to_sync_for_orgs(streams_to_sync)
+    # Loop through all organizations
+    for orgs in organizations:
+        LOGGER.info("Starting sync of organization: %s", orgs)
+        do_sync(catalog, streams_to_sync_for_orgs, selected_stream_ids, client, start_date, state, orgs)
+
+    # Sync other streams for all repos
+    streams_to_sync_for_repos = set(streams_to_sync) - streams_to_sync_for_orgs
     # pylint: disable=too-many-nested-blocks
     for repo in repositories:
         LOGGER.info("Starting sync of repository: %s", repo)
-        for stream in catalog['streams']:
-            stream_id = stream['tap_stream_id']
-            stream_obj = STREAMS[stream_id]()
+        do_sync(catalog, streams_to_sync_for_repos, selected_stream_ids, client, start_date, state, repo)
 
-            # If it is a "sub_stream", it will be synced as part of parent stream
-            if stream_id in streams_to_sync and not stream_obj.parent:
-                write_schemas(stream_id, catalog, selected_stream_ids)
+def do_sync(catalog, streams_to_sync, selected_stream_ids, client, start_date, state, repo):
+    """
+    Sync all other streams except teams, team_members and team_memberships for each repo.
+    """
+    for stream in catalog['streams']:
+        stream_id = stream['tap_stream_id']
+        stream_obj = STREAMS[stream_id]()
 
-                state = stream_obj.sync_endpoint(client = client,
-                                                 state = state,
-                                                 catalog = catalog['streams'],
-                                                 repo_path = repo,
-                                                 start_date = start_date,
-                                                 selected_stream_ids = selected_stream_ids,
-                                                 stream_to_sync = streams_to_sync
-                                                )
+        # If it is a "sub_stream", it will be synced as part of parent stream
+        if stream_id in streams_to_sync and not stream_obj.parent:
+            write_schemas(stream_id, catalog, selected_stream_ids)
 
-                singer.write_state(state)
+            state = stream_obj.sync_endpoint(client = client,
+                                              state = state,
+                                              catalog = catalog['streams'],
+                                              repo_path = repo,
+                                              start_date = start_date,
+                                              selected_stream_ids = selected_stream_ids,
+                                              stream_to_sync = streams_to_sync
+                                            )
+
+            singer.write_state(state)

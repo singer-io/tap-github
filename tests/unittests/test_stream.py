@@ -77,7 +77,7 @@ class TestBuildUrl(unittest.TestCase):
         """
         test_streams = Teams()
         expected_url = "https://api.github.com/orgs/org/teams"
-        full_url = test_streams.build_url("org/test-repo", "2022-01-01T00:00:00Z")
+        full_url = test_streams.build_url("org", "2022-01-01T00:00:00Z")
 
         # verify returned url is expected
         self.assertEqual(expected_url, full_url)

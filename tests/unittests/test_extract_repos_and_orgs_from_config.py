@@ -52,3 +52,41 @@ class TestExtractReposFromConfig(unittest.TestCase):
 
         # Verify list of repo path with expected
         self.assertEqual(expected_repositories, test_client.extract_repos_from_config())
+
+class TestExtractOrgsFromConfig(unittest.TestCase):
+    """
+    Test `extract_orgs_from_config` method from client.
+    """
+
+    def test_single_repo(self):
+        """
+        Test `extract_orgs_from_config` if only one repo path is given in config.
+        """
+        config = {'repository': 'singer-io/test-repo', "access_token": "TOKEN"}
+        test_client = GithubClient(config)
+        expected_organizations = {'singer-io'}
+
+        # Verify list of orgs path with expected
+        self.assertEqual(expected_organizations, test_client.extract_orgs_from_config())
+
+    def test_multiple_repos(self):
+        """
+        Test `extract_orgs_from_config` if multiple repo paths are given in config.
+        """
+        config = {'repository': 'singer-io/test-repo singer-io/tap-github', "access_token": "TOKEN"}
+        test_client = GithubClient(config)
+        expected_organizations = {'singer-io'}
+
+        # Verify list of orgs path with expected
+        self.assertEqual(expected_organizations, test_client.extract_orgs_from_config())
+
+    def test_org_all_repos(self):
+        """
+        Test `extract_orgs_from_config` for taking all the repositories of organisation given in config.
+        """
+        config = {'repository': 'singer-io/test-repo test-org/*', "access_token": "TOKEN"}
+        test_client = GithubClient(config)
+        expected_organizations = {'singer-io','test-org'}
+
+        # Verify list of orgs path with expected
+        self.assertEqual(expected_organizations, test_client.extract_orgs_from_config())
