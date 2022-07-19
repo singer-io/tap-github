@@ -380,7 +380,7 @@ class IncrementalOrderedStream(Stream):
 
                     updated_at = record.get(self.replication_keys)
 
-                    if record_counter == 0:
+                    if record_counter == 0 and updated_at > bookmark_value:
                         # Consider replication key value of 1st record as bookmark value.
                         # Because all records are in descending order of replication key value
                         bookmark_value = updated_at

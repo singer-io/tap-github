@@ -265,6 +265,7 @@ class GithubClient:
 
                 for repo in org_repos:
                     repo_full_name = repo.get('full_name')
+                    LOGGER.info("Verifying access of repository: %s", repo_full_name)
 
                     self.verify_repo_access(
                         'https://api.github.com/repos/{}/commits'.format(repo_full_name),
