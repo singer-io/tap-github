@@ -265,6 +265,7 @@ class GithubClient:
 
                 for repo in org_repos:
                     repo_full_name = repo.get('full_name')
+                    LOGGER.info("Verifying access of repository: %s", repo_full_name)
 
                     self.verify_repo_access(
                         'https://api.github.com/repos/{}/commits'.format(repo_full_name),
@@ -274,3 +275,7 @@ class GithubClient:
                     repos.append(repo_full_name)
 
         return repos
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        # Kill the session instance.
+        self.session.close()
