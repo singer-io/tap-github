@@ -36,7 +36,7 @@ def update_currently_syncing(state, stream_name):
 
 def update_currently_syncing_repo(state, repo_path):
     """
-    Appends repository if completed syncing, 
+    Appends repository if completed syncing,
     and flushes `currently_syncing_repo` when all repositories are synced.
     """
     if (not repo_path) and ('currently_syncing_repo' in state):
@@ -60,7 +60,7 @@ def get_ordered_repos(state, repositories):
     Get an ordered list of remaining repos to sync followed by synced repos.
     """
     syncing_repo = state.get("currently_syncing_repo")
-    if syncing_repo:
+    if syncing_repo in repositories:
         index = repositories.index(syncing_repo)
         repositories = repositories[index:] + repositories[:index]
     return repositories

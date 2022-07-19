@@ -3,13 +3,11 @@ from unittest import mock
 from tap_github.sync import (update_currently_syncing_repo, update_currently_syncing,
                              get_ordered_stream_list, get_ordered_repos)
 
-
 class TestGetOrderedStreamList(unittest.TestCase):
-    
     """
     Test `get_ordered_stream_list` function to get ordered list od streams
     """
-    
+
     def test_for_interrupted_sync(self):
         """Test if sync was interrupted"""
         expected_list = ['releases', 'review_comments', 'reviews', 'stargazers', 'team_members',
@@ -39,9 +37,8 @@ class TestGetOrderedRepos(unittest.TestCase):
     """
     Test `get_ordered_repos` function to get ordered list repositories
     """
-
     repo_list = ["org/repo1", "org/repo2", "org/repo3", "org/repo4", "org/repo5"]
-    
+
     def test_for_interupted_sync(self):
         """Test if sync was interrupted"""
         state = {"currently_syncing_repo": "org/repo3"}
@@ -50,7 +47,16 @@ class TestGetOrderedRepos(unittest.TestCase):
 
         # Verify with expected ordered list of repos
         self.assertEqual(final_repo_list, expected_list)
-    
+
+    def test_currently_syncing_repo_removed_from_config(self):
+        """Test if currently syncing repo was removed from config"""
+        state = {"currently_syncing_repo": "org/repo3"}
+        repo_list = ["org/repo1", "org/repo2", "org/repo4", "org/repo5"]
+        final_repo_list = get_ordered_repos(state, repo_list)
+
+        # Verify with expected ordered list of repos
+        self.assertEqual(final_repo_list, repo_list)
+
     def test_for_completed_sync(self):
         """Test if sync was not interrupted"""
         state = {}
@@ -65,12 +71,11 @@ class TestUpdateCurrentlySyncingRepo(unittest.TestCase):
     """
     Test `update_currently_syncing_repo` function of sync
     """
-
     def test_adding_repo(self, mock_currently_syncing):
         """Test for adding currently syncing repo in state"""
         state = {"currently_syncing_repo": None}
         update_currently_syncing_repo(state, "org/test-repo")
- 
+
         # Verify with expected state
         self.assertEqual(state, {"currently_syncing_repo": "org/test-repo"})
 
@@ -78,22 +83,20 @@ class TestUpdateCurrentlySyncingRepo(unittest.TestCase):
         """Test for removing currently syncing repo from state"""
         state = {"currently_syncing_repo": "org/test-repo"}
         update_currently_syncing_repo(state, None)
- 
+
         # Verify with expected state
         self.assertEqual(state, {})
-
 
 class TestUpdateCurrentlySyncing(unittest.TestCase):
 
     """
     Test `update_currently_syncing` function of sync
     """
-
     def test_update_syncing_stream(self):
         """Test for adding currently syncing stream in state"""
         state = {"currently_syncing": "assignees"}
         update_currently_syncing(state, "issues")
- 
+
         # Verify with expected state
         self.assertEqual(state, {"currently_syncing": "issues"})
 
@@ -101,6 +104,6 @@ class TestUpdateCurrentlySyncing(unittest.TestCase):
         """Test for removing currently syncing stream from state"""
         state = {"currently_syncing": "assignees"}
         update_currently_syncing(state, None)
- 
+
         # Verify with expected state
         self.assertEqual(state, {})
