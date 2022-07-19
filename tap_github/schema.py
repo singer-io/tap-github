@@ -52,12 +52,14 @@ def get_schemas():
             )
         mdata = metadata.to_map(mdata)
 
-        # Loop through all keys and make replication keys of automatic inclusion
+        # Loop through all keys and make replication keys and primary keys of child stream which are not automatic in parent stream of automatic inclusion
         for field_name in schema['properties'].keys():
 
+            pk_child_fields = (hasattr(stream_metadata, 'pk_child_fields') or None) and stream_metadata.pk_child_fields
             replication_keys = (hasattr(stream_metadata, 'replication_keys') or None) and stream_metadata.replication_keys
-            if replication_keys and field_name in replication_keys:
+            if (replication_keys and field_name in replication_keys) or (pk_child_fields and field_name in pk_child_fields):
                 mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'automatic')
+
 
         mdata = metadata.to_list(mdata)
         field_metadata[stream_name] = mdata

@@ -14,13 +14,10 @@ def get_selected_streams(catalog):
     selected_streams = []
     for stream in catalog['streams']:
         stream_metadata = stream['metadata']
-        if stream['schema'].get('selected', False):
-            selected_streams.append(stream['tap_stream_id'])
-        else:
-            for entry in stream_metadata:
-                # Stream metadata will have an empty breadcrumb
-                if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
-                    selected_streams.append(stream['tap_stream_id'])
+        for entry in stream_metadata:
+            # Stream metadata will have an empty breadcrumb
+            if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
+                selected_streams.append(stream['tap_stream_id'])
 
     return selected_streams
 
@@ -74,8 +71,10 @@ def get_stream_to_sync(catalog):
     selected_streams = get_selected_streams(catalog)
     for stream_name, stream_obj in STREAMS.items():
         if stream_name in selected_streams:
+            # Append the selected stream into the list
             streams_to_sync.append(stream_name)
         elif is_any_child_selected(stream_obj,selected_streams):
+            # Append unselected parent stream into the list, if its child or nested child is selected.
             streams_to_sync.append(stream_name)
     return streams_to_sync
 
@@ -89,6 +88,7 @@ def is_any_child_selected(stream_obj,selected_streams):
                 return True
 
             if STREAMS[child].children:
+                # Return True if any child or its nested child is selected
                 return False or is_any_child_selected(STREAMS[child],selected_streams)
     return False
 
@@ -115,7 +115,6 @@ def sync(client, config, state, catalog):
 
     # Get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
-
     streams_to_sync = get_stream_to_sync(catalog)
     LOGGER.info('Sync stream %s', streams_to_sync)
 

@@ -7,7 +7,6 @@ from singer import metrics
 
 LOGGER = singer.get_logger()
 DEFAULT_SLEEP_SECONDS = 600
-MAX_SLEEP_SECONDS = DEFAULT_SLEEP_SECONDS
 
 # Set default timeout of 300 seconds
 REQUEST_TIMEOUT = 300
@@ -117,14 +116,14 @@ def calculate_seconds(epoch):
     current = time.time()
     return int(round((epoch - current), 0))
 
-def rate_throttling(response):
+def rate_throttling(response, max_sleep_seconds):
     """
     For rate limit errors, get the remaining time before retrying and calculate the time to sleep before making a new request.
     """
     if int(response.headers['X-RateLimit-Remaining']) == 0:
         seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
-        if seconds_to_sleep > MAX_SLEEP_SECONDS:
+        if seconds_to_sleep > max_sleep_seconds:
             message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
             raise RateLimitExceeded(message) from None
 
@@ -138,7 +137,9 @@ class GithubClient:
     def __init__(self, config):
         self.config = config
         self.session = requests.Session()
-        self.verify_access_for_repo()
+        self.base_url = "https://api.github.com"
+        self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
+        self.set_auth_in_session()
 
     # Return the 'timeout'
     def get_request_timeout(self):
@@ -156,6 +157,13 @@ class GithubClient:
         # Return default timeout
         return REQUEST_TIMEOUT
 
+    def set_auth_in_session(self):
+        """
+        Set access token in the header for authorization.
+        """
+        access_token = self.config['access_token']
+        self.session.headers.update({'authorization': 'token ' + access_token})
+
     # pylint: disable=dangerous-default-value
     # During 'Timeout' error there is also possibility of 'ConnectionError',
     # hence added backoff for 'ConnectionError' too.
@@ -170,7 +178,7 @@ class GithubClient:
             if resp.status_code != 200:
                 raise_for_error(resp, source)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
-            rate_throttling(resp)
+            rate_throttling(resp, self.max_sleep_seconds)
             if resp.status_code == 404:
                 # Return an empty response body since we're not raising a NotFoundException
                 resp._content = b'{}' # pylint: disable=protected-access
@@ -197,7 +205,6 @@ class GithubClient:
         """
         try:
             self.authed_get("verifying repository access", url_for_repo)
-            LOGGER.info("Verifying access of repository: %s", repo)
         except NotFoundException:
             # Throwing user-friendly error message as it checks token access
             message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
@@ -207,14 +214,12 @@ class GithubClient:
         """
         For all the repositories mentioned in the config, check the access for each repos.
         """
-        access_token = self.config['access_token']
-        self.session.headers.update({'authorization': 'token ' + access_token, 'per_page': '1', 'page': '1'})
-
         repositories = self.extract_repos_from_config()
 
         for repo in repositories:
 
-            url_for_repo = "https://api.github.com/repos/{}/commits".format(repo)
+            url_for_repo = "{}/repos/{}/commits".format(self.base_url, repo)
+            LOGGER.info("Verifying access of repository: %s", repo)
 
             # Verifying for Repo access
             self.verify_repo_access(url_for_repo, repo)
@@ -253,14 +258,14 @@ class GithubClient:
             org = org_path.split('/')[0]
             for response in self.authed_get_all_pages(
                 'get_all_repos',
-                'https://api.github.com/orgs/{}/repos?sort=created&direction=desc'.format(org)
+                '{}/orgs/{}/repos?sort=created&direction=desc'.format(self.base_url, org)
             ):
                 org_repos = response.json()
+                LOGGER.info("Collecting repos for organization: %s", org)
 
                 for repo in org_repos:
                     repo_full_name = repo.get('full_name')
 
-                    LOGGER.info("Verifying access of repository: %s", repo_full_name)
                     self.verify_repo_access(
                         'https://api.github.com/repos/{}/commits'.format(repo_full_name),
                         repo

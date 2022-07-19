@@ -5,6 +5,7 @@ from unittest import mock
 import time
 import requests
 
+DEFAULT_SLEEP_SECONDS = 600
 def api_call():
     return requests.get("https://api.github.com/rate_limit")
 
@@ -27,7 +28,7 @@ class TestRateLimit(unittest.TestCase):
         resp.headers["X-RateLimit-Reset"] = int(round(time.time(), 0)) + 120
         resp.headers["X-RateLimit-Remaining"] = 0
 
-        rate_throttling(resp)
+        rate_throttling(resp, DEFAULT_SLEEP_SECONDS)
 
         # Verify `time.sleep` is called with expected seconds in response
         mocked_sleep.assert_called_with(120)
@@ -47,7 +48,7 @@ class TestRateLimit(unittest.TestCase):
 
         # Verify exception is raised with proper message
         with self.assertRaises(tap_github.client.RateLimitExceeded) as e:
-            rate_throttling(resp)
+            rate_throttling(resp, DEFAULT_SLEEP_SECONDS)
         self.assertEqual(str(e.exception), "API rate limit exceeded, please try after 601 seconds.")
 
 
@@ -62,7 +63,7 @@ class TestRateLimit(unittest.TestCase):
         resp.headers["X-RateLimit-Reset"] = int(round(time.time(), 0)) + 10
         resp.headers["X-RateLimit-Remaining"] = 5
 
-        rate_throttling(resp)
+        rate_throttling(resp, DEFAULT_SLEEP_SECONDS)
 
         # Verify that `time.sleep` is not called
         self.assertFalse(mocked_sleep.called)
