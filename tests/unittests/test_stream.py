@@ -233,6 +233,6 @@ class TestGetChildUrl(unittest.TestCase):
         """
         child_stream = TeamMemberships()
         expected_url = "https://api.github.com/orgs/org1/teams/dev-team/memberships/demo-user-1"
-        full_url = get_child_full_url(child_stream, "org1/test-repo",
+        full_url = get_child_full_url(child_stream, "org1",
                                                        ("dev-team",), ("demo-user-1",))
         self.assertEqual(expected_url, full_url)

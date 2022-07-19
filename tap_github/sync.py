@@ -111,9 +111,9 @@ def get_stream_to_sync_for_orgs(streams_to_sync):
     Return set of streams to sync among the `teams`, 'team_members' and 'team_memberships'.
     """
     streams_to_sync_for_orgs = ['teams', 'team_members', 'team_memberships']
-    streams_to_sync_for_orgs = set([stream for stream in streams_to_sync if stream in streams_to_sync_for_orgs])
+    streams_to_sync_for_orgs = [stream for stream in streams_to_sync if stream in streams_to_sync_for_orgs]
 
-    return streams_to_sync_for_orgs
+    return set(streams_to_sync_for_orgs)
 
 def sync(client, config, state, catalog):
     """

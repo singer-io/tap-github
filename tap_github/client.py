@@ -229,9 +229,9 @@ class GithubClient:
         Extracts all organizations from the config
         """
         repo_paths = list(filter(None, self.config['repository'].split(' ')))
-        orgs_paths = set([repo.split('/')[0] for repo in repo_paths])
+        orgs_paths = [repo.split('/')[0] for repo in repo_paths]
 
-        return orgs_paths
+        return set(orgs_paths)
 
     def extract_repos_from_config(self):
         """
