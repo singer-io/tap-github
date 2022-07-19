@@ -5,7 +5,7 @@
             "type": ["null", "string"]
         },
         "total_count": {
-        "   type": ["null", "integer"]
+           "type": ["null", "integer"]
         },
         "+1": {
             "type": ["null", "integer"]

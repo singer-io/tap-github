@@ -6,12 +6,10 @@
     },
     "updated_at": {
       "type": ["null", "string"],
-      "format": "date-time",
-      "description": "The date the committer committed the change"
+      "format": "date-time"
     },
     "sha": {
-      "type": ["null", "string"],
-      "description": "The git commit hash"
+      "type": ["null", "string"]
     },
     "url": {
       "type": ["null", "string"]
@@ -23,16 +21,13 @@
         "additionalProperties": false,
         "properties": {
           "sha": {
-            "type": ["null", "string"],
-            "description": "The git hash of the parent commit"
+            "type": ["null", "string"]
           },
           "url": {
-            "type": ["null", "string"],
-            "description": "The URL to the parent commit"
+            "type": ["null", "string"]
           },
           "html_url": {
-            "type": ["null", "string"],
-            "description": "The HTML URL to the parent commit"
+            "type": ["null", "string"]
           }
         }
       }
@@ -100,20 +95,17 @@
       }
     },
     "html_url": {
-      "type": ["null", "string"],
-      "description": "The HTML URL to the commit"
+      "type": ["null", "string"]
     },
     "comments_url": {
-      "type": ["null", "string"],
-      "description": "The URL to the commit's comments page"
+      "type": ["null", "string"]
     },
     "commit": {
       "type": ["null", "object"],
       "additionalProperties": false,
       "properties": {
         "url": {
-          "type": ["null", "string"],
-          "description": "The URL to the commit"
+          "type": ["null", "string"]
         },
         "tree": {
           "type": ["null", "object"],
@@ -133,26 +125,21 @@
           "properties": {
             "date": {
               "type": ["null", "string"],
-              "format": "date-time",
-              "description": "The date the author committed the change"
+              "format": "date-time"
             },
             "name": {
-              "type": ["null", "string"],
-              "description": "The author's name"
+              "type": ["null", "string"]
             },
             "email": {
-              "type": ["null", "string"],
-              "description": "The author's email"
+              "type": ["null", "string"]
             },
             "login": {
-              "type": ["null", "string"],
-              "description": "The author's login"
+              "type": ["null", "string"]
             }
           }
         },
         "message": {
-          "type": ["null", "string"],
-          "description": "The commit message"
+          "type": ["null", "string"]
         },
         "committer": {
           "type": ["null", "object"],
@@ -160,26 +147,21 @@
           "properties": {
             "date": {
               "type": ["null", "string"],
-              "format": "date-time",
-              "description": "The date the committer committed the change"
+              "format": "date-time"
             },
             "name": {
-              "type": ["null", "string"],
-              "description": "The committer's name"
+              "type": ["null", "string"]
             },
             "email": {
-              "type": ["null", "string"],
-              "description": "The committer's email"
+              "type": ["null", "string"]
             },
             "login": {
-              "type": ["null", "string"],
-              "description": "The committer's login"
+              "type": ["null", "string"]
             }
           }
         },
         "comment_count": {
-          "type": ["null", "integer"],
-          "description": "The number of comments on the commit"
+          "type": ["null", "integer"]
         }
       }
     }
