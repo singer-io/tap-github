@@ -11,7 +11,7 @@
       "type": ["null", "string"]
     },
     "owner": {
-      "$ref": "shared/owner.json#/"
+      "$ref": "shared/user.json#/"
     },
     "name": {
       "type": ["null", "string"]

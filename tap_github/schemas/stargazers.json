@@ -6,7 +6,7 @@
       "type": ["string"]
     },
     "user": {
-      "$ref": "shared/owner.json#/"
+      "$ref": "shared/user.json#/"
     },
     "starred_at": {
       "type": ["null", "string"],

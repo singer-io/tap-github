@@ -27,7 +27,7 @@
       ],
       "properties": {
         "user": {
-          "$ref": "shared/owner.json#/"
+          "$ref": "shared/user.json#/"
         },
         "comments": {
           "type": ["null", "integer"]

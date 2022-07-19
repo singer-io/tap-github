@@ -29,7 +29,7 @@
         "type": ["null", "string"]
       },
       "user": {
-        "$ref": "shared/owner.json#/"
+        "$ref": "shared/user.json#/"
       },
       "created_at": {
         "type": ["null", "string"],

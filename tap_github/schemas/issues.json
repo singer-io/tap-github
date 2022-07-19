@@ -419,7 +419,7 @@
       "type": ["string"]
     },
     "user": {
-      "$ref": "shared/owner.json#/"
+      "$ref": "shared/user.json#/"
     },
     "id": {
       "type": ["null", "integer"]

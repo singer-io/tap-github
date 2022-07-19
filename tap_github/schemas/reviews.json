@@ -42,7 +42,7 @@
       "type": ["null", "string"]
     },
     "user": {
-      "$ref": "shared/owner.json#/"
+      "$ref": "shared/user.json#/"
     },
     "body": {
       "type": ["null", "string"]
