@@ -1,52 +1,49 @@
 {
-  "type": [
-    "null",
-    "object"
-  ],
-  "properties": {
-    "html_url": {
-      "type": ["null", "string"]
-    },
-    "url": {
-      "type": ["null", "string"]
-    },
-    "id": {
-      "type": ["null", "number"]
-    },
-    "node_id": {
-      "type": ["null", "string"]
-    },
-    "body": {
-      "type": ["null", "string"]
-    },
-    "path": {
-      "type": ["null", "string"]
-    },
-    "position": {
-      "type": ["null", "number"]
-    },
-    "line": {
-      "type": ["null", "number"]
-    },
-    "commit_id": {
-      "type": ["null", "string"]
-    },
-    "user": {
-      "$ref": "shared/owner.json#/"
-    },
-    "created_at": {
-      "type": ["null", "string"],
-      "format": "date-time"
-    },
-    "updated_at": {
-      "type": ["null", "string"],
-      "format": "date-time"
-    },
-    "author_association": {
-      "type": ["null", "string"]
-    },
-    "reactions": {
-      "$ref": "shared/reactions.json#/"
+    "type": ["null", "object"],
+    "properties": {
+      "html_url": {
+        "type": ["null", "string"]
+      },
+      "url": {
+        "type": ["null", "string"]
+      },
+      "id": {
+        "type": ["null", "number"]
+      },
+      "node_id": {
+        "type": ["null", "string"]
+      },
+      "body": {
+        "type": ["null", "string"]
+      },
+      "path": {
+        "type": ["null", "string"]
+      },
+      "position": {
+        "type": ["null", "number"]
+      },
+      "line": {
+        "type": ["null", "number"]
+      },
+      "commit_id": {
+        "type": ["null", "string"]
+      },
+      "user": {
+        "$ref": "shared/owner.json#/"
+      },
+      "created_at": {
+        "type": ["null", "string"],
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": ["null", "string"],
+        "format": "date-time"
+      },
+      "author_association": {
+        "type": ["null", "string"]
+      },
+      "reactions": {
+        "$ref": "shared/reactions.json#/"
+      }
     }
-  }
 }
