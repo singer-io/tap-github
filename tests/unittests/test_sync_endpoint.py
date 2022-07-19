@@ -11,7 +11,7 @@ class MockResponse():
     def json(self):
         return self.json_data
 
-@mock.patch("tap_github.streams.Stream.get_schema")
+@mock.patch("tap_github.streams.get_schema")
 @mock.patch("tap_github.client.GithubClient.verify_access_for_repo", return_value = None)
 @mock.patch("tap_github.client.GithubClient.authed_get_all_pages")
 class TestSyncEndpoints(unittest.TestCase):
@@ -69,7 +69,7 @@ class TestSyncEndpoints(unittest.TestCase):
         mock_write_records.assert_called_with(mock.ANY, {'id': 4, 'created_at': '2019-01-02T00:00:00Z', '_sdc_repository': 'tap-github'},time_extracted = mock.ANY)
 
 
-@mock.patch("tap_github.streams.Stream.get_schema")
+@mock.patch("tap_github.streams.get_schema")
 @mock.patch("tap_github.client.GithubClient.verify_access_for_repo", return_value = None)
 @mock.patch("tap_github.client.GithubClient.authed_get_all_pages")
 class TestFullTable(unittest.TestCase):
@@ -144,7 +144,7 @@ class TestFullTable(unittest.TestCase):
         self.assertEqual(mock_authed_get_all_pages.mock_calls[1], exp_call_2)
         self.assertEqual(mock_authed_get_all_pages.mock_calls[2], exp_call_3)
 
-@mock.patch("tap_github.streams.Stream.get_schema")
+@mock.patch("tap_github.streams.get_schema")
 @mock.patch("tap_github.client.GithubClient.verify_access_for_repo", return_value = None)
 @mock.patch("tap_github.client.GithubClient.authed_get_all_pages")
 class TestIncrementalStream(unittest.TestCase):
@@ -166,7 +166,7 @@ class TestIncrementalStream(unittest.TestCase):
         test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["commits"], ["commits"])
 
         # Verify that the authed_get_all_pages() is called with the expected url
-        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/commits", mock.ANY)
+        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/commits?since=", mock.ANY)
         
         # Verify that the get_child_records() is not called as Commits does not contain any child stream.
         self.assertFalse(mock_get_child_records.called)
@@ -217,7 +217,7 @@ class TestIncrementalStream(unittest.TestCase):
         self.assertEqual(mock_authed_get_all_pages.mock_calls[1], exp_call_2)
         self.assertEqual(mock_authed_get_all_pages.mock_calls[2], exp_call_3)
 
-@mock.patch("tap_github.streams.Stream.get_schema")
+@mock.patch("tap_github.streams.get_schema")
 @mock.patch("tap_github.client.GithubClient.verify_access_for_repo", return_value = None)
 @mock.patch("tap_github.client.GithubClient.authed_get_all_pages")
 @mock.patch("tap_github.streams.singer.utils.strptime_to_utc")
@@ -282,7 +282,7 @@ class TestIncrementalOrderedStream(unittest.TestCase):
         
         print(mock_authed_get_all_pages.mock_calls)
         exp_call_1 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all")
-        exp_call_2 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/pulls/1/comments")
+        exp_call_2 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/pulls/1/comments?sort=updated_at&direction=desc")
 
         # Verify that the API calls are done as expected with the correct url
         self.assertEqual(mock_authed_get_all_pages.mock_calls[0], exp_call_1)

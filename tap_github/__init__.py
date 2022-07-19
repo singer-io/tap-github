@@ -9,16 +9,19 @@ LOGGER = singer.get_logger()
 
 REQUIRED_CONFIG_KEYS = ['start_date', 'access_token', 'repository']
 
-def do_discover():
+def do_discover(client):
     """
     Call the discovery function.
     """
-    catalog = _discover()
-    # dump catalog
+    catalog = _discover(client)
+    # Dump catalog
     json.dump(catalog, sys.stdout, indent=2)
 
 @singer.utils.handle_top_exception(LOGGER)
 def main():
+    """
+    Run discover mode or sync mode.
+    """
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
     config = args.config
@@ -30,9 +33,9 @@ def main():
         state = args.state
 
     if args.discover:
-        do_discover()
+        do_discover(client)
     else:
-        catalog = args.properties if args.properties else _discover()
+        catalog = args.properties if args.properties else _discover(client)
         _sync(client, config, state, catalog)
 
 if __name__ == '__main__':

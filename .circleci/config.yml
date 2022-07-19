@@ -24,7 +24,7 @@ jobs:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-github/bin/activate
-            pylint tap_github --disable 'missing-module-docstring,missing-function-docstring,missing-class-docstring,line-too-long,invalid-name,too-many-lines,consider-using-f-string,too-many-arguments,too-many-locals,no-else-return,no-self-use'
+            pylint tap_github --disable 'missing-module-docstring,missing-function-docstring,missing-class-docstring,line-too-long,invalid-name,too-many-lines,consider-using-f-string,too-many-arguments,too-many-locals'
       - run:
           name: 'Unit Tests'
           command: |

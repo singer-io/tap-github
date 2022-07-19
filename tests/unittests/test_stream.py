@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from tap_github.streams import Comments, ProjectColumns, Projects, Reviews, Stream, TeamMemberships, Teams, PullRequests
+from tap_github.streams import Comments, ProjectColumns, Projects, Reviews, TeamMemberships, Teams, PullRequests, get_schema, get_child_full_url, get_bookmark
 
 
 class TestGetSchema(unittest.TestCase):
@@ -16,15 +16,14 @@ class TestGetSchema(unittest.TestCase):
             {"tap_stream_id": "events"},
         ]
         expected_schema = {"tap_stream_id": "comments"}
-        test_stream = Comments()
         
         # Verify returned schema is same as exected schema 
-        self.assertEqual(test_stream.get_schema(catalog, "comments"), expected_schema)
+        self.assertEqual(get_schema(catalog, "comments"), expected_schema)
 
 
 class TestGetBookmark(unittest.TestCase):
     """
-    Test `get_bookmark` method of stream class
+    Test `get_bookmark` method
     """
 
     test_stream = Comments()
@@ -38,7 +37,7 @@ class TestGetBookmark(unittest.TestCase):
                 "projects": {"since": "2022-01-01T00:00:00Z"}
             }
         }
-        returned_bookmark = self.test_stream.get_bookmark(state, "org/test-repo", "projects", "since", "2021-01-01T00:00:00Z")
+        returned_bookmark = get_bookmark(state, "org/test-repo", "projects", "since", "2021-01-01T00:00:00Z")
         self.assertEqual(returned_bookmark, "2021-01-01T00:00:00Z")
         
     def test_with_repo_path(self):
@@ -52,7 +51,7 @@ class TestGetBookmark(unittest.TestCase):
                 }
             }
         }
-        returned_bookmark = self.test_stream.get_bookmark(state, "org/test-repo", "projects", "since", "2021-01-01T00:00:00Z")
+        returned_bookmark = get_bookmark(state, "org/test-repo", "projects", "since", "2021-01-01T00:00:00Z")
         self.assertEqual(returned_bookmark, "2022-01-01T00:00:00Z")
 
 
@@ -208,15 +207,13 @@ class TestGetChildUrl(unittest.TestCase):
     Test `get_child_full_url` method of stream class
     """
 
-    test_stream = Stream()
-
     def test_child_stream(self):
         """
         Test for stream with one child
         """
         child_stream = ProjectColumns()
         expected_url = "https://api.github.com/projects/1309875/columns"
-        full_url = self.test_stream.get_child_full_url(child_stream, "org1/test-repo",
+        full_url = get_child_full_url(child_stream, "org1/test-repo",
                                                        None, (1309875,))
         self.assertEqual(expected_url, full_url)
 
@@ -226,7 +223,7 @@ class TestGetChildUrl(unittest.TestCase):
         """
         child_stream = Reviews()
         expected_url = "https://api.github.com/repos/org1/test-repo/pulls/11/reviews"
-        full_url = self.test_stream.get_child_full_url(child_stream, "org1/test-repo",
+        full_url = get_child_full_url(child_stream, "org1/test-repo",
                                                        (11,), None)
         self.assertEqual(expected_url, full_url)
 
@@ -236,6 +233,6 @@ class TestGetChildUrl(unittest.TestCase):
         """
         child_stream = TeamMemberships()
         expected_url = "https://api.github.com/orgs/org1/teams/dev-team/memberships/demo-user-1"
-        full_url = self.test_stream.get_child_full_url(child_stream, "org1/test-repo",
+        full_url = get_child_full_url(child_stream, "org1/test-repo",
                                                        ("dev-team",), ("demo-user-1",))
         self.assertEqual(expected_url, full_url)
