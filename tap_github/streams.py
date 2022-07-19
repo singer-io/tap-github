@@ -67,12 +67,11 @@ class Stream:
     is_repository = False
     headers = None
     parent = None
-    url = "https://api.github.com"
 
     def add_fields_at_1st_level(self, rec, parent_record):
         pass
 
-    def build_url(self, repo_path, bookmark):
+    def build_url(self, base_url, repo_path, bookmark):
         """
         Build the full url with parameters and attributes.
         """
@@ -85,11 +84,11 @@ class Stream:
         if self.is_organization:
             org = repo_path.split('/')[0]
             full_url = '{}/{}'.format(
-                self.url,
+                base_url,
                 self.path).format(org)
         else:
             full_url = '{}/repos/{}/{}{}'.format(
-                self.url,
+                base_url,
                 repo_path,
                 self.path,
                 query_string)
@@ -207,8 +206,7 @@ class FullTableStream(Stream):
         """
 
         # build full url
-        self.url = client.base_url
-        full_url = self.build_url(repo_path, None)
+        full_url = self.build_url(client.base_url, repo_path, None)
 
         headers = {}
         if self.headers:
@@ -282,8 +280,7 @@ class IncrementalStream(Stream):
         max_bookmark_value = min_bookmark_value
 
         # build full url
-        self.url = client.base_url
-        full_url = self.build_url(repo_path, min_bookmark_value)
+        full_url = self.build_url(client.base_url, repo_path, min_bookmark_value)
 
         headers = {}
         if self.headers:
@@ -372,8 +369,7 @@ class IncrementalOrderedStream(Stream):
         bookmark_time = singer.utils.strptime_to_utc(min_bookmark_value)
 
         # Build full url
-        self.url = client.domain
-        full_url = self.build_url(repo_path, bookmark_value)
+        full_url = self.build_url(client.base_url, repo_path, bookmark_value)
         synced_all_records = False
         stream_catalog = get_schema(catalog, self.tap_stream_id)
 
