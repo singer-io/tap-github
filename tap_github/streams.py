@@ -45,7 +45,7 @@ def get_child_full_url(child_object, repo_path, parent_id, grand_parent_id):
         child_full_url = '{}/{}'.format(
             child_object.url,
             child_object.path).format(*grand_parent_id)
-    LOGGER.info(child_full_url)
+    LOGGER.info("Final url is: {}".format(child_full_url))
 
     return child_full_url
 
@@ -69,7 +69,10 @@ class Stream:
     parent = None
     url = "https://api.github.com"
 
-    def add_fields_at_1st_level(self, rec, parent_record):
+    def add_fields_at_1st_level(self, rec, parent_record= []):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
         pass
 
     def build_url(self, repo_path, bookmark):
@@ -94,7 +97,7 @@ class Stream:
                 self.path,
                 query_string)
 
-        LOGGER.info(full_url)
+        LOGGER.info("Final url is: {}".format(full_url))
         return full_url
 
     def get_min_bookmark(self, stream, selected_streams, bookmark, repo_path, start_date, state):
@@ -164,7 +167,7 @@ class Stream:
                 extraction_time = singer.utils.now()
 
                 if isinstance(records, list):
-                    # Loop through all the records
+                    # Loop through all the records of response
                     for record in records:
                         record['_sdc_repository'] = repo_path
                         child_object.add_fields_at_1st_level(record, parent_record)
@@ -180,10 +183,14 @@ class Stream:
                         # Loop thru each child and nested child in the parent and fetch all the child records.
                         for nested_child in child_object.children:
                             if nested_child in stream_to_sync:
+                                # Collect id of child record to pass in the API of its sub-child.
                                 child_id = tuple(record.get(key) for key in STREAMS[nested_child]().id_keys)
+                                # Here, grand_parent_id is the id of 1st level parent(main parent) which is required to 
+                                # pass in the API of the current child's sub-child.
                                 child_object.get_child_records(client, catalog, nested_child, child_id, repo_path, state, start_date, bookmark_dttm, stream_to_sync, selected_stream_ids, grand_parent_id, record)
 
                 else:
+                    # Write JSON response directly if it is a single record only.
                     records['_sdc_repository'] = repo_path
                     child_object.add_fields_at_1st_level(records, parent_record)
 
@@ -474,6 +481,9 @@ class PRCommits(IncrementalStream):
     parent = 'pull_requests'
 
     def add_fields_at_1st_level(self, rec, parent_record):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
         rec['updated_at'] = rec['commit']['committer']['date']
 
         rec['pr_number'] = parent_record.get('number')
@@ -545,6 +555,9 @@ class TeamMemberships(FullTableStream):
     id_keys = ["login"]
 
     def add_fields_at_1st_level(self, rec, parent_record):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
         rec['login'] = parent_record['login']
 
 class TeamMembers(FullTableStream):
@@ -564,6 +577,9 @@ class TeamMembers(FullTableStream):
 
 
     def add_fields_at_1st_level(self, rec, parent_record):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
         rec['team_slug'] = parent_record['slug']
 
 class Teams(FullTableStream):
@@ -589,7 +605,10 @@ class Commits(IncrementalStream):
     path = "commits"
     filter_param = True
 
-    def add_fields_at_1st_level(self, rec, parent_record):
+    def add_fields_at_1st_level(self, rec, parent_record = []):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
         rec['updated_at'] = rec['commit']['committer']['date']
 
 class Comments(IncrementalOrderedStream):
@@ -700,7 +719,10 @@ class StarGazers(FullTableStream):
     path = "stargazers"
     headers = {'Accept': 'application/vnd.github.v3.star+json'}
 
-    def add_fields_at_1st_level(self, rec, parent_record):
+    def add_fields_at_1st_level(self, rec, parent_record = []):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
         rec['user_id'] = rec['user']['id']
 
 

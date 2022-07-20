@@ -271,7 +271,7 @@ class GithubClient:
                     LOGGER.info("Verifying access of repository: %s", repo_full_name)
 
                     self.verify_repo_access(
-                        'https://api.github.com/repos/{}/commits'.format(repo_full_name),
+                        '{}/repos/{}/commits'.format(self.base_url,repo_full_name),
                         repo
                     )
 
