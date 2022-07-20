@@ -138,7 +138,7 @@ class GithubClient:
     def __init__(self, config):
         self.config = config
         self.session = requests.Session()
-        self.base_url = config.get('api_endpoint', DEFAULT_DOMAIN)
+        self.base_url = config.get('base_url', DEFAULT_DOMAIN)
         self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
 
     # Return the 'timeout'

@@ -22,8 +22,8 @@ class TestCustomDomain(unittest.TestCase):
         """
         Test if the domain is given in the config
         """
-        mock_config = {'repository': 'singer-io/test-repo', "api_endpoint": "http://CUSTOM-git.com", "access_token": ""}
+        mock_config = {'repository': 'singer-io/test-repo', "base_url": "http://CUSTOM-git.com", "access_token": ""}
         test_client = GithubClient(mock_config)
 
         # Verify domain in client is from config
-        self.assertEqual(test_client.base_url, mock_config["api_endpoint"])
+        self.assertEqual(test_client.base_url, mock_config["base_url"])
