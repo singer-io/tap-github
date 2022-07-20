@@ -251,19 +251,19 @@ class GithubClient:
 
         orgs_with_all_repos = []
         repos_with_errors = []
-        for each_repo in repo_paths:
-            # Split the repo_path by `/`.
-            split_repo_path = each_repo.split('/')
+        for repo in repo_paths:
+            # Split the repo_path by `/` as we are passing org/repo_name in the config.
+            split_repo_path = repo.split('/')
             if len(split_repo_path) > 1 and split_repo_path[1] != '' and split_repo_path[0] != '':
                 if split_repo_path[1] == '*':
-                    orgs_with_all_repos.append(each_repo)
+                    orgs_with_all_repos.append(repo)
             else:
                 # If `/`/repo name/organization not found, append the repo_path in the repos_with_errors
-                repos_with_errors.append(each_repo)
+                repos_with_errors.append(repo)
 
         # If any repos found in repos_with_errors, raise an exception
         if repos_with_errors:
-            raise GithubException("Please provide proper organization/repository: {}".format(repos_with_errors))
+            raise GithubException("Please provide valid organization/repository for: {}".format(repos_with_errors))
 
         if orgs_with_all_repos:
             # Remove any wildcard "org/*" occurrences from `repo_paths`

@@ -204,7 +204,7 @@ class TestExceptionHandling(unittest.TestCase):
         # Verifying the message formed for the custom exception
         self.assertEqual(str(e.exception), "HTTP-error-code: 501, Error: Unknown Error")
 
-        # Verify that we backoff 5 times
+        # Verify that the tap retries for 5 times
         self.assertEquals(5, mocked_request.call_count)
 
     def test_429_error(self, mocked_parse_args, mocked_request, mock_verify_access):
@@ -220,7 +220,7 @@ class TestExceptionHandling(unittest.TestCase):
         # Verifying the message formed for the custom exception
         self.assertEqual(str(e.exception), "HTTP-error-code: 429, Error: API rate limit exceeded.")
 
-        # Verify that we backoff 5 times
+        # Verify that the tap retries for 5 times
         self.assertEquals(5, mocked_request.call_count)
 
     def test_200_success(self, mocked_parse_args, mocked_request, mock_verify_access):

@@ -60,7 +60,7 @@ class TestExtractReposFromConfig(unittest.TestCase):
         """
         config = {'repository': 'singer-io'}
         test_client = GithubClient(config)
-        expected_error_message = "Please provide proper organization/repository: ['singer-io']"
+        expected_error_message = "Please provide valid organization/repository for: ['singer-io']"
         with self.assertRaises(GithubException) as exc:
             test_client.extract_repos_from_config()
 
@@ -74,7 +74,7 @@ class TestExtractReposFromConfig(unittest.TestCase):
         """
         config = {'repository': 'singer-io/'}
         test_client = GithubClient(config)
-        expected_error_message = "Please provide proper organization/repository: ['singer-io/']"
+        expected_error_message = "Please provide valid organization/repository for: ['singer-io/']"
         with self.assertRaises(GithubException) as exc:
             test_client.extract_repos_from_config()
 
@@ -87,7 +87,7 @@ class TestExtractReposFromConfig(unittest.TestCase):
         """
         config = {'repository': '/'}
         test_client = GithubClient(config)
-        expected_error_message = "Please provide proper organization/repository: ['/']"
+        expected_error_message = "Please provide valid organization/repository for: ['/']"
         with self.assertRaises(GithubException) as exc:
             test_client.extract_repos_from_config()
 
@@ -100,7 +100,7 @@ class TestExtractReposFromConfig(unittest.TestCase):
         """
         config = {'repository': 'singer-io/ /tap-github'}
         test_client = GithubClient(config)
-        expected_error_message = "Please provide proper organization/repository: {}"
+        expected_error_message = "Please provide valid organization/repository for: {}"
         with self.assertRaises(GithubException) as exc:
             expected_repos = test_client.extract_repos_from_config()
 
