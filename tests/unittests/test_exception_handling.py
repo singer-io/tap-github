@@ -54,7 +54,7 @@ class TestExceptionHandling(unittest.TestCase):
         mock_response = get_mock_http_response(409, "json_error")
 
         with self.assertRaises(tap_github.client.ConflictError) as e:
-            raise_for_error(mock_response, "")
+            raise_for_error(mock_response, "", "", "")
 
         # Verifying the message formed for the custom exception
         self.assertEqual(str(e.exception), "HTTP-error-code: 409, Error: The request could not be completed due to a conflict with the current state of the server.")

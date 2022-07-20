@@ -157,7 +157,8 @@ class Stream:
         with metrics.record_counter(child_object.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
                 child_object.tap_stream_id,
-                child_full_url
+                child_full_url,
+                stream = child_object.tap_stream_id
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -216,7 +217,8 @@ class FullTableStream(Stream):
             for response in client.authed_get_all_pages(
                     self.tap_stream_id,
                     full_url,
-                    self.headers
+                    self.headers,
+                    stream = self.tap_stream_id
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -285,7 +287,8 @@ class IncrementalStream(Stream):
             for response in client.authed_get_all_pages(
                     self.tap_stream_id,
                     full_url,
-                    self.headers
+                    self.headers,
+                    stream = self.tap_stream_id
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -370,7 +373,8 @@ class IncrementalOrderedStream(Stream):
         with metrics.record_counter(self.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
                     self.tap_stream_id,
-                    full_url
+                    full_url,
+                    stream = self.tap_stream_id
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()

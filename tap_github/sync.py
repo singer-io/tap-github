@@ -144,3 +144,9 @@ def sync(client, config, state, catalog):
                                                 )
 
                 singer.write_state(state)
+
+        if client.not_accessible_repos:
+            # Give warning messages for a repo that is not accessible by a stream or is invalid.
+            message = "Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository for following streams {}.".format(repo, ", ".join(client.not_accessible_repos))
+            LOGGER.warning(message)
+            client.not_accessible_repos = set()
