@@ -123,54 +123,14 @@
                 }
               },
               "author": {
-                "type": ["null", "object"],
-                "additionalProperties": false,
-                "properties": {
-                  "date": {
-                    "type": ["null", "string"],
-                    "format": "date-time",
-                    "description": "The date the author committed the change"
-                  },
-                  "name": {
-                    "type": ["null", "string"],
-                    "description": "The author's name"
-                  },
-                  "email": {
-                    "type": ["null", "string"],
-                    "description": "The author's email"
-                  },
-                  "login": {
-                    "type": ["null", "string"],
-                    "description": "The author's login"
-                  }
-                }
+                "$ref": "shared/user.json#/"
               },
               "message": {
                 "type": ["null", "string"],
                 "description": "The commit message"
               },
               "committer": {
-                "type": ["null", "object"],
-                "additionalProperties": false,
-                "properties": {
-                  "date": {
-                    "type": ["null", "string"],
-                    "format": "date-time",
-                    "description": "The date the committer committed the change"
-                  },
-                  "name": {
-                    "type": ["null", "string"],
-                    "description": "The committer's name"
-                  },
-                  "email": {
-                    "type": ["null", "string"],
-                    "description": "The committer's email"
-                  },
-                  "login": {
-                    "type": ["null", "string"],
-                    "description": "The committer's login"
-                  }
-                }
+                "$ref": "shared/user.json#/"
               },
               "comment_count": {
                 "type": ["null", "integer"],
