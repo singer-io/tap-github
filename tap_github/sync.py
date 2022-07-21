@@ -33,7 +33,7 @@ def update_currently_syncing(state, stream_name):
 
 def update_currently_syncing_repo(state, repo_path):
     """
-    Appends repository if completed syncing,
+     Updates currently syncing repository in the state.
     and flushes `currently_syncing_repo` when all repositories are synced.
     """
     if (not repo_path) and ('currently_syncing_repo' in state):
@@ -44,7 +44,7 @@ def update_currently_syncing_repo(state, repo_path):
 
 def get_ordered_stream_list(currently_syncing, streams_to_sync):
     """
-    Get an ordered list of remaining streams to sync followed by synced streams.
+    Get an ordered list of remaining streams to sync other streams followed by synced streams.
     """
     stream_list = list(sorted(streams_to_sync))
     if currently_syncing in stream_list:
@@ -163,6 +163,7 @@ def sync(client, config, state, catalog):
 
     # pylint: disable=too-many-nested-blocks
     if selected_stream_ids:
+        # Sync repositories only if any streams are selected
         for repo in get_ordered_repos(state, repositories):
             LOGGER.info("Starting sync of repository: %s", repo)
             currently_syncing = singer.get_currently_syncing(state)
