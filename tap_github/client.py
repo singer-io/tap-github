@@ -241,7 +241,7 @@ class GithubClient:
         """
         repo_paths = list(filter(None, self.config['repository'].split(' ')))
 
-        unique_repos  = set()
+        unique_repos = set()
         # Insert the duplicate repos found in the config repo_paths into duplicates
         duplicate_repos = [x for x in repo_paths if x in unique_repos or (unique_repos.add(x) or False)]
         if duplicate_repos:
@@ -254,7 +254,10 @@ class GithubClient:
         for repo in repo_paths:
             # Split the repo_path by `/` as we are passing org/repo_name in the config.
             split_repo_path = repo.split('/')
+            # Check for the second element in the split list only if the length is greater than 1 and the first/second
+            # element is not empty (for scenarios such as: `org/` or `/repo` which is invalid)
             if len(split_repo_path) > 1 and split_repo_path[1] != '' and split_repo_path[0] != '':
+                # If the second element is *, we need to check access for all the repos.
                 if split_repo_path[1] == '*':
                     orgs_with_all_repos.append(repo)
             else:
