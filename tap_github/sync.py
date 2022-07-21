@@ -4,6 +4,7 @@ from singer import bookmarks
 from tap_github.streams import STREAMS
 
 LOGGER = singer.get_logger()
+STREAM_TO_SYNC_FOR_ORGS = ['teams', 'team_members', 'team_memberships']
 
 def get_selected_streams(catalog):
     '''
@@ -106,15 +107,6 @@ def write_schemas(stream_id, catalog, selected_streams):
     for child in stream_obj.children:
         write_schemas(child, catalog, selected_streams)
 
-def get_stream_to_sync_for_orgs(streams_to_sync):
-    """
-    Return set of streams to sync among the `teams`, 'team_members' and 'team_memberships'.
-    """
-    streams_to_sync_for_orgs = ['teams', 'team_members', 'team_memberships']
-    streams_to_sync_for_orgs = [stream for stream in streams_to_sync if stream in streams_to_sync_for_orgs]
-
-    return set(streams_to_sync_for_orgs)
-
 def sync(client, config, state, catalog):
     """
     sync selected streams.
@@ -134,7 +126,7 @@ def sync(client, config, state, catalog):
     singer.write_state(state)
 
     # Sync `teams`, `team_members`and `team_memberships` streams just single time for any organization.
-    streams_to_sync_for_orgs = get_stream_to_sync_for_orgs(streams_to_sync)
+    streams_to_sync_for_orgs = set(streams_to_sync).intersection(STREAM_TO_SYNC_FOR_ORGS)
     # Loop through all organizations
     for orgs in organizations:
         LOGGER.info("Starting sync of organization: %s", orgs)
