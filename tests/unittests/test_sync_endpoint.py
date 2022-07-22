@@ -37,7 +37,7 @@ class TestSyncEndpoints(unittest.TestCase):
         self.assertEqual(final_state, expected_state)
 
         # Verify `get_auth_all_pages` called with expected url
-        mock_authed_all_pages.assert_called_with(mock.ANY, 'https://api.github.com/repos/tap-github/events', mock.ANY)
+        mock_authed_all_pages.assert_called_with(mock.ANY, 'https://api.github.com/repos/tap-github/events', mock.ANY, stream='events')
 
         # Verify `write_records` call count
         self.assertEqual(mock_write_records.call_count, 4)
@@ -65,7 +65,7 @@ class TestSyncEndpoints(unittest.TestCase):
         self.assertEqual(mock_write_records.call_count, 3)
         
         # Verify `get_auth_all_pages` called with expected url
-        mock_authed_all_pages.assert_called_with(mock.ANY, 'https://api.github.com/repos/tap-github/events', mock.ANY)
+        mock_authed_all_pages.assert_called_with(mock.ANY, 'https://api.github.com/repos/tap-github/events', mock.ANY, stream='events')
         mock_write_records.assert_called_with(mock.ANY, {'id': 4, 'created_at': '2019-01-02T00:00:00Z', '_sdc_repository': 'tap-github'},time_extracted = mock.ANY)
 
 
@@ -91,7 +91,7 @@ class TestFullTable(unittest.TestCase):
         test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["stargazers"], ["stargazers"])
 
         # Verify that the authed_get_all_pages() is called with the expected url
-        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/stargazers", mock.ANY)
+        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/stargazers", mock.ANY, stream='stargazers')
         
         # Verify that the get_child_records() is not called as Stargazers doesn't have a child stream
         self.assertFalse(mock_get_child_records.called)
@@ -110,7 +110,7 @@ class TestFullTable(unittest.TestCase):
         test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["teams", "team_members"], ["teams","team_members"])
 
         # Verify that the authed_get_all_pages() is called with the expected url
-        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/orgs/tap-github/teams", mock.ANY)
+        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/orgs/tap-github/teams", mock.ANY, stream='teams')
         
         # Verify that the get_child_records() is called
         self.assertTrue(mock_get_child_records.called)
@@ -136,9 +136,9 @@ class TestFullTable(unittest.TestCase):
         self.assertEqual(mock_authed_get_all_pages.call_count, 4)
         
         # Verify that the authed_get_all_pages() is called with the expected url
-        exp_call_1 = mock.call(mock.ANY, "https://api.github.com/orgs/tap-github/teams", mock.ANY)
-        exp_call_2 = mock.call(mock.ANY, "https://api.github.com/orgs/tap-github/teams/stitch-dev/members")
-        exp_call_3 = mock.call(mock.ANY, "https://api.github.com/orgs/tap-github/teams/stitch-dev/memberships/log1")
+        exp_call_1 = mock.call(mock.ANY, "https://api.github.com/orgs/tap-github/teams", mock.ANY, stream='teams')
+        exp_call_2 = mock.call(mock.ANY, "https://api.github.com/orgs/tap-github/teams/stitch-dev/members", stream='team_members')
+        exp_call_3 = mock.call(mock.ANY, "https://api.github.com/orgs/tap-github/teams/stitch-dev/memberships/log1", stream='team_memberships')
 
         self.assertEqual(mock_authed_get_all_pages.mock_calls[0], exp_call_1)
         self.assertEqual(mock_authed_get_all_pages.mock_calls[1], exp_call_2)
@@ -166,7 +166,7 @@ class TestIncrementalStream(unittest.TestCase):
         test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["commits"], ["commits"])
 
         # Verify that the authed_get_all_pages() is called with the expected url
-        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/commits?since=", mock.ANY)
+        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/commits?since=", mock.ANY, stream='commits')
         
         # Verify that the get_child_records() is not called as Commits does not contain any child stream.
         self.assertFalse(mock_get_child_records.called)
@@ -184,7 +184,7 @@ class TestIncrementalStream(unittest.TestCase):
         test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["projects", "project_columns"], ["projects","project_columns"])
 
         # Verify that the authed_get_all_pages() is called with the expected url
-        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/projects?state=all", mock.ANY)
+        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/projects?state=all", mock.ANY, stream='projects')
         
         # Verify that the get_child_records() is called as thw Projects stream has a child stream
         self.assertTrue(mock_get_child_records.called)
@@ -208,9 +208,9 @@ class TestIncrementalStream(unittest.TestCase):
         # Verify that the authed_get_all_pages() is called expected number of times
         self.assertEqual(mock_authed_get_all_pages.call_count, 4)
         
-        exp_call_1 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/projects?state=all", mock.ANY)
-        exp_call_2 = mock.call(mock.ANY, "https://api.github.com/projects/1/columns")
-        exp_call_3 = mock.call(mock.ANY, "https://api.github.com/projects/columns/1/cards")
+        exp_call_1 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/projects?state=all", mock.ANY, stream='projects')
+        exp_call_2 = mock.call(mock.ANY, "https://api.github.com/projects/1/columns", stream='project_columns')
+        exp_call_3 = mock.call(mock.ANY, "https://api.github.com/projects/columns/1/cards", stream='project_cards')
 
         # Verify that the API calls are done as expected with the correct url
         self.assertEqual(mock_authed_get_all_pages.mock_calls[0], exp_call_1)
@@ -240,7 +240,7 @@ class TestIncrementalOrderedStream(unittest.TestCase):
         test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["pull_requests"], ["pull_requests"])
 
         # Verify that the authed_get_all_pages() is called with the expected url
-        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all")
+        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all", stream='pull_requests')
 
 
     @mock.patch("tap_github.streams.Stream.get_child_records")
@@ -257,7 +257,7 @@ class TestIncrementalOrderedStream(unittest.TestCase):
         test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["pull_requests", "review_comments"], ["pull_requests","review_comments"])
 
         # Verify that the authed_get_all_pages() is called with the expected url
-        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all")
+        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all", stream='pull_requests')
         
         # Verify that the get_child_records() is called as the PullRequests stream has a child stream
         self.assertTrue(mock_get_child_records.called)
@@ -281,8 +281,8 @@ class TestIncrementalOrderedStream(unittest.TestCase):
         self.assertEqual(mock_authed_get_all_pages.call_count, 2)
         
         print(mock_authed_get_all_pages.mock_calls)
-        exp_call_1 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all")
-        exp_call_2 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/pulls/1/comments?sort=updated_at&direction=desc")
+        exp_call_1 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all", stream='pull_requests')
+        exp_call_2 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/pulls/1/comments?sort=updated_at&direction=desc", stream='review_comments')
 
         # Verify that the API calls are done as expected with the correct url
         self.assertEqual(mock_authed_get_all_pages.mock_calls[0], exp_call_1)
