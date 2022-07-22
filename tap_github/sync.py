@@ -119,8 +119,7 @@ def sync(client, config, state, catalog):
     streams_to_sync = get_stream_to_sync(catalog)
     LOGGER.info('Sync stream %s', streams_to_sync)
 
-    repositories = client.extract_repos_from_config()
-    organizations = client.extract_orgs_from_config()
+    repositories, organizations = client.extract_repos_from_config()
 
     state = translate_state(state, catalog, repositories)
     singer.write_state(state)

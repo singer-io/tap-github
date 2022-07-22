@@ -227,7 +227,7 @@ class GithubClient:
         """
         For all the repositories mentioned in the config, check the access for each repos.
         """
-        repositories = self.extract_repos_from_config()
+        repositories, organizations = self.extract_repos_from_config()
 
         for repo in repositories:
 
@@ -262,10 +262,13 @@ class GithubClient:
         repo_paths = list(set(repo_paths))
 
         orgs_with_all_repos = []
+        orgs = []
         repos_with_errors = []
         for repo in repo_paths:
             # Split the repo_path by `/` as we are passing org/repo_name in the config.
             split_repo_path = repo.split('/')
+            # Prepare list of organizations
+            orgs.append(split_repo_path[0])
             # Check for the second element in the split list only if the length is greater than 1 and the first/second
             # element is not empty (for scenarios such as: `org/` or `/repo` which is invalid)
             if len(split_repo_path) > 1 and split_repo_path[1] != '' and split_repo_path[0] != '':
@@ -290,7 +293,7 @@ class GithubClient:
             # Update repo_paths
             repo_paths.extend(all_repos)
 
-        return repo_paths
+        return repo_paths, set(orgs)
 
     def get_all_repos(self, organizations: list):
         """
