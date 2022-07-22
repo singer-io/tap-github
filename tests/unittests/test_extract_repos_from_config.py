@@ -52,3 +52,14 @@ class TestExtractReposFromConfig(unittest.TestCase):
 
         # Verify list of repo path with expected
         self.assertEqual(expected_repositories, test_client.extract_repos_from_config())
+
+    def test_multiple_repos(self, mocked_get_all_repos, mock_verify_access):
+        """
+        Test `extract_repos_from_config` if multiple repo paths are given in config.
+        """
+        config = {'repository': 'singer-io/test-repo singer-io/tap-github', "access_token": "TOKEN"}
+        test_client = GithubClient(config)
+        expected_repositories = ['singer-io/test-repo', 'singer-io/tap-github']
+
+        # Verify list of repo path with expected
+        self.assertEqual(expected_repositories, test_client.extract_repos_from_config())

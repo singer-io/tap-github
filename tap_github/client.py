@@ -84,7 +84,7 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     }
 }
 
-def raise_for_error(resp, source, stream, client):
+def raise_for_error(resp, source, stream, client, should_skip_404):
     """
     Retrieve the error code and the error message from the response and return custom exceptions accordingly.
     """
@@ -94,7 +94,7 @@ def raise_for_error(resp, source, stream, client):
     except JSONDecodeError:
         response_json = {}
 
-    if error_code == 404:
+    if error_code == 404 and should_skip_404:
         # Add not accessible stream into list.
         client.not_accessible_repos.add(stream)
         details = ERROR_CODE_EXCEPTION_MAPPING.get(error_code).get("message")
@@ -171,7 +171,7 @@ class GithubClient:
     # During 'Timeout' error there is also possibility of 'ConnectionError',
     # hence added backoff for 'ConnectionError' too.
     @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError), max_tries=5, factor=2)
-    def authed_get(self, source, url, headers={}, stream=""):
+    def authed_get(self, source, url, headers={}, stream="", should_skip_404 = True):
         """
         Call rest API and return the response in case of status code 200.
         """
@@ -179,7 +179,7 @@ class GithubClient:
             self.session.headers.update(headers)
             resp = self.session.request(method='get', url=url, timeout=self.get_request_timeout())
             if resp.status_code != 200:
-                raise_for_error(resp, source, stream, self)
+                raise_for_error(resp, source, stream, self, should_skip_404)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
             rate_throttling(resp, self.max_sleep_seconds)
             if resp.status_code == 404:
@@ -187,12 +187,12 @@ class GithubClient:
                 resp._content = b'{}' # pylint: disable=protected-access
             return resp
 
-    def authed_get_all_pages(self, source, url, headers={}, stream=""):
+    def authed_get_all_pages(self, source, url, headers={}, stream="", should_skip_404 = True):
         """
         Fetch all pages of records and return them.
         """
         while True:
-            r = self.authed_get(source, url, headers, stream)
+            r = self.authed_get(source, url, headers, stream, should_skip_404)
             yield r
 
             # Fetch the next page if next found in the response.
@@ -259,23 +259,29 @@ class GithubClient:
 
         for org_path in organizations:
             org = org_path.split('/')[0]
-            for response in self.authed_get_all_pages(
-                'get_all_repos',
-                '{}/orgs/{}/repos?sort=created&direction=desc'.format(self.base_url, org)
-            ):
-                org_repos = response.json()
-                LOGGER.info("Collecting repos for organization: %s", org)
+            try:
+                for response in self.authed_get_all_pages(
+                    'get_all_repos',
+                    '{}/orgs/{}/repos?sort=created&direction=desc'.format(self.base_url, org),
+                    should_skip_404 = False
+                ):
+                    org_repos = response.json()
+                    LOGGER.info("Collecting repos for organization: %s", org)
 
-                for repo in org_repos:
-                    repo_full_name = repo.get('full_name')
-                    LOGGER.info("Verifying access of repository: %s", repo_full_name)
+                    for repo in org_repos:
+                        repo_full_name = repo.get('full_name')
+                        LOGGER.info("Verifying access of repository: %s", repo_full_name)
 
-                    self.verify_repo_access(
-                        '{}/repos/{}/commits'.format(self.base_url,repo_full_name),
-                        repo
-                    )
+                        self.verify_repo_access(
+                            '{}/repos/{}/commits'.format(self.base_url,repo_full_name),
+                            repo
+                        )
 
-                    repos.append(repo_full_name)
+                        repos.append(repo_full_name)
+            except NotFoundException:
+                # Throwing user-friendly error message as it checks token access
+                message = "HTTP-error-code: 404, Error: Please check the organization name \'{}\' or you do not have sufficient permissions to access this organization.".format(org)
+                raise NotFoundException(message) from None
 
         return repos
 

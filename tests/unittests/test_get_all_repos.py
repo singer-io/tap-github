@@ -122,6 +122,6 @@ class TestAuthedGetAllPages(unittest.TestCase):
         self.assertEqual(mock_auth_get.call_count, 3)
         
         # Verify `auth_get` calls with expected url
-        self.assertEqual(mock_auth_get.mock_calls[0], mock.call("", "mock_url_1", {}, ''))
-        self.assertEqual(mock_auth_get.mock_calls[1], mock.call("", "mock_url_2", {}, ''))
-        self.assertEqual(mock_auth_get.mock_calls[2], mock.call("", "mock_url_3", {}, ''))
+        self.assertEqual(mock_auth_get.mock_calls[0], mock.call("", "mock_url_1", {}, '', True))
+        self.assertEqual(mock_auth_get.mock_calls[1], mock.call("", "mock_url_2", {}, '', True))
+        self.assertEqual(mock_auth_get.mock_calls[2], mock.call("", "mock_url_3", {}, '', True))
