@@ -170,6 +170,9 @@
     },
     "statuses_url": {
       "type": ["null", "string"]
+    },
+    "pr_id": {
+      "type": ["null", "string"]
     }
   }
 }
