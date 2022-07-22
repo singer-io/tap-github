@@ -27,7 +27,6 @@ class TestGithubBase(unittest.TestCase):
     }
     START_DATE = ""
     OBEYS_START_DATE = "obey-start-date"
-    BOOKMARK_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
     def setUp(self):
         missing_envs = [x for x in [

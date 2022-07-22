@@ -29,7 +29,7 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
         expected_replication_methods = self.expected_replication_method()
         expected_replication_keys = self.expected_bookmark_keys()
         repo_key = "_sdc_repository"
-        
+
         start_date = self.dt_to_ts(self.get_properties().get("start_date"), self.BOOKMARK_FORMAT)
 
         # Run a discovery job
@@ -106,7 +106,7 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
                 full_sync_bookmark = full_sync_state["bookmarks"][repository]
                 final_bookmark = final_state["bookmarks"][repository]
                 interrupted_repo_bookmark = interrupted_state["bookmarks"][repository]
-                
+
                 for stream in streams_to_test:
                     with self.subTest(stream=stream):
                         
@@ -127,14 +127,14 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
 
                         if expected_replication_method == self.INCREMENTAL:
                             expected_replication_key = next(iter(expected_replication_keys[stream]))
-                            
+
                             if stream in full_sync_bookmark.keys():
                                 full_sync_stream_bookmark = self.dt_to_ts(full_sync_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
                                 final_sync_stream_bookmark = self.dt_to_ts(final_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
                                 
                             if stream in interrupted_repo_bookmark.keys():
                                 interrupted_bookmark = self.dt_to_ts(interrupted_repo_bookmark[stream]["since"], self.BOOKMARK_FORMAT)
-                                
+
                                 for record in interrupted_records:
                                     rec_time = self.dt_to_ts(record[expected_replication_key], self.RECORD_REPLICATION_KEY_FORMAT)
                                     self.assertGreaterEqual(rec_time, interrupted_bookmark)
@@ -142,7 +142,7 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
                             else:
                                 # verify we collected records that have the same replication value as a bookmark for streams that are already synced
                                 self.assertGreater(interrupted_record_count, 0)
-                            
+
                             if stream != added_stream:
                                 
                                 # Verify state ends with the same value for common streams after both full and interrupted syncs
@@ -152,7 +152,7 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
 
                                     # Verify all interrupted recs are in full recs
                                     self.assertIn(record, full_records,  msg='incremental table record in interrupted sync not found in full sync')
-                                
+
                                 # Record count for all streams of interrupted sync match expectations
                                 full_records_after_interrupted_bookmark = 0
 
