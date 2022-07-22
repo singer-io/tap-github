@@ -194,4 +194,3 @@ def sync(client, config, state, catalog):
                 LOGGER.warning(message)
                 client.not_accessible_repos = set()
         update_currently_syncing_repo(state, None)
-
