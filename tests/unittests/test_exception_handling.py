@@ -54,7 +54,7 @@ class TestExceptionHandling(unittest.TestCase):
         mock_response = get_mock_http_response(409, "json_error")
 
         with self.assertRaises(tap_github.client.ConflictError) as e:
-            raise_for_error(mock_response, "")
+            raise_for_error(mock_response, "", "", "", True)
 
         # Verifying the message formed for the custom exception
         self.assertEqual(str(e.exception), "HTTP-error-code: 409, Error: The request could not be completed due to a conflict with the current state of the server.")
@@ -203,3 +203,17 @@ class TestExceptionHandling(unittest.TestCase):
 
         # Verifying success response
         self.assertEqual(json, resp.json())
+
+    def test_invalid_repo(self, mocked_parse_args, mocked_request, mock_verify_access):
+        """
+        Verify that `authed_get` raises 404 error if invalid organization in given in the config.
+        """
+        config = {'repository': 'singer-io12/*', "access_token": "TOKEN"}
+        test_client = GithubClient(config)
+        mocked_request.return_value = get_response(404, raise_error = True)
+
+        with self.assertRaises(tap_github.client.NotFoundException) as e:
+            test_client.extract_repos_from_config()
+
+        # Verifying the message formed for the custom exception
+        self.assertEqual(str(e.exception), "HTTP-error-code: 404, Error: Please check the organization name 'singer-io12' or you do not have sufficient permissions to access this organization.")

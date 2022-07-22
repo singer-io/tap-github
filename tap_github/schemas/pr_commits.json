@@ -33,63 +33,33 @@
             }
           },
           "files": {
-            "type": [
-              "null",
-              "array"
-            ],
+            "type": ["null","array"],
             "items": {
-              "type": [
-                "null",
-                "object"
-              ],
+              "type": ["null","object"],
               "properties": {
                 "filename": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null","string"]
                 },
                 "additions": {
-                  "type": [
-                    "null",
-                    "number"
-                  ]
+                  "type": ["null","number"]
                 },
                 "deletions": {
-                  "type": [
-                    "null",
-                    "number"
-                  ]
+                  "type": ["null","number"]
                 },
                 "changes": {
-                  "type": [
-                    "null",
-                    "number"
-                  ]
+                  "type": ["null","number"]
                 },
                 "status": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null","string"]
                 },
                 "raw_url": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null","string"]
                 },
                 "blob_url": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null","string"]
                 },
                 "patch": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
+                  "type": ["null","string"]
                 }
               }
             }
