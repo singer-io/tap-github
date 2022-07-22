@@ -225,9 +225,7 @@ class TestExceptionHandling(unittest.TestCase):
 
     def test_200_success(self, mocked_parse_args, mocked_request, mock_verify_access):
         """
-    def test_200_success(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` doen not raises error for success response.
+        Verify that `authed_get` does not raise an error for a successful response.
         """
         json = {"key": "value"}
         mocked_request.return_value = get_response(200, json)
