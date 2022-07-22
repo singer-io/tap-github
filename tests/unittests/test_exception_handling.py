@@ -191,9 +191,41 @@ class TestExceptionHandling(unittest.TestCase):
         # Verifying the message formed for the custom exception
         self.assertEqual(str(e.exception), "HTTP-error-code: 409, Error: The request could not be completed due to a conflict with the current state of the server.")
 
+    def test_501_error(self, mocked_parse_args, mocked_request, mock_verify_access):
+        """
+        Verify that `authed_get` raises 501 error with proper message and retries for 5 times.
+        """
+        mocked_request.return_value = get_response(501, raise_error = True)
+        test_client = GithubClient(self.config)
+
+        with self.assertRaises(tap_github.client.Server5xxError) as e:
+            test_client.authed_get("", "")
+
+        # Verifying the message formed for the custom exception
+        self.assertEqual(str(e.exception), "HTTP-error-code: 501, Error: Unknown Error")
+
+        # Verify that the tap retries for 5 times
+        self.assertEquals(5, mocked_request.call_count)
+
+    def test_429_error(self, mocked_parse_args, mocked_request, mock_verify_access):
+        """
+        Verify that `authed_get` raises 429 error with proper message and retries for 5 times.
+        """
+        mocked_request.return_value = get_response(429, raise_error = True)
+        test_client = GithubClient(self.config)
+
+        with self.assertRaises(tap_github.client.RateLimitExceeded) as e:
+            test_client.authed_get("", "")
+
+        # Verifying the message formed for the custom exception
+        self.assertEqual(str(e.exception), "HTTP-error-code: 429, Error: API rate limit exceeded.")
+
+        # Verify that the tap retries for 5 times
+        self.assertEquals(5, mocked_request.call_count)
+
     def test_200_success(self, mocked_parse_args, mocked_request, mock_verify_access):
         """
-        Verify that `authed_get` doen not raises error for success response.
+        Verify that `authed_get` does not raise an error for a successful response.
         """
         json = {"key": "value"}
         mocked_request.return_value = get_response(200, json)
