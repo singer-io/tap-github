@@ -266,7 +266,7 @@ class GithubClient:
                     should_skip_404 = False
                 ):
                     org_repos = response.json()
-                    LOGGER.info("Collecting repos for organization: %s", org)
+                    LOGGER.info("Collected repos for organization: %s", org)
 
                     for repo in org_repos:
                         repo_full_name = repo.get('full_name')

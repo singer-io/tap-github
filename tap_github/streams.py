@@ -168,7 +168,7 @@ class Stream:
                     # Loop through all the records of response
                     for record in records:
                         record['_sdc_repository'] = repo_path
-                        child_object.add_fields_at_1st_level(rec = record, parent_record = parent_record)
+                        child_object.add_fields_at_1st_level(record = record, parent_record = parent_record)
 
                         with singer.Transformer() as transformer:
 
@@ -190,7 +190,7 @@ class Stream:
                 else:
                     # Write JSON response directly if it is a single record only.
                     records['_sdc_repository'] = repo_path
-                    child_object.add_fields_at_1st_level(rec = records, parent_record = parent_record)
+                    child_object.add_fields_at_1st_level(record = records, parent_record = parent_record)
 
                     with singer.Transformer() as transformer:
 
@@ -200,7 +200,7 @@ class Stream:
                             singer.write_record(child_object.tap_stream_id, rec, time_extracted=extraction_time)
 
     # pylint: disable=unnecessary-pass
-    def add_fields_at_1st_level(self, rec = None, parent_record = None):
+    def add_fields_at_1st_level(self, record, parent_record = None):
         """
         Add fields in the record explicitly at the 1st level of JSON.
         """
@@ -238,7 +238,7 @@ class FullTableStream(Stream):
                 for record in records:
 
                     record['_sdc_repository'] = repo_path
-                    self.add_fields_at_1st_level(rec = record, parent_record = None)
+                    self.add_fields_at_1st_level(record = record, parent_record = None)
 
                     with singer.Transformer() as transformer:
                         rec = transformer.transform(record, stream_catalog['schema'], metadata=metadata.to_map(stream_catalog['metadata']))
@@ -309,7 +309,7 @@ class IncrementalStream(Stream):
                 for record in records:
 
                     record['_sdc_repository'] = repo_path
-                    self.add_fields_at_1st_level(rec = record, parent_record = None)
+                    self.add_fields_at_1st_level(record = record, parent_record = None)
 
                     with singer.Transformer() as transformer:
                         if record.get(self.replication_keys):
@@ -393,7 +393,7 @@ class IncrementalOrderedStream(Stream):
                 extraction_time = singer.utils.now()
                 for record in records:
                     record['_sdc_repository'] = repo_path
-                    self.add_fields_at_1st_level(rec = record, parent_record = None)
+                    self.add_fields_at_1st_level(record = record, parent_record = None)
 
                     updated_at = record.get(self.replication_keys)
 
@@ -460,11 +460,11 @@ class Reviews(IncrementalStream):
     id_keys = ['number']
     parent = 'pull_requests'
 
-    def add_fields_at_1st_level(self, rec = None, parent_record = None):
+    def add_fields_at_1st_level(self, record, parent_record = None):
         """
         Add fields in the record explicitly at the 1st level of JSON.
         """
-        rec['pr_id'] = parent_record['id']
+        record['pr_id'] = parent_record['id']
 
 class ReviewComments(IncrementalOrderedStream):
     '''
@@ -479,11 +479,11 @@ class ReviewComments(IncrementalOrderedStream):
     id_keys = ['number']
     parent = 'pull_requests'
 
-    def add_fields_at_1st_level(self, rec = None, parent_record = None):
+    def add_fields_at_1st_level(self, record, parent_record = None):
         """
         Add fields in the record explicitly at the 1st level of JSON.
         """
-        rec['pr_id'] = parent_record['id']
+        record['pr_id'] = parent_record['id']
 
 class PRCommits(IncrementalStream):
     '''
@@ -498,15 +498,15 @@ class PRCommits(IncrementalStream):
     id_keys = ['number']
     parent = 'pull_requests'
 
-    def add_fields_at_1st_level(self, rec = None, parent_record = None):
+    def add_fields_at_1st_level(self, record, parent_record = None):
         """
         Add fields in the record explicitly at the 1st level of JSON.
         """
-        rec['updated_at'] = rec['commit']['committer']['date']
+        record['updated_at'] = record['commit']['committer']['date']
 
-        rec['pr_number'] = parent_record.get('number')
-        rec['pr_id'] = parent_record.get('id')
-        rec['id'] = '{}-{}'.format(parent_record.get('id'), rec.get('sha'))
+        record['pr_number'] = parent_record.get('number')
+        record['pr_id'] = parent_record.get('id')
+        record['id'] = '{}-{}'.format(parent_record.get('id'), record.get('sha'))
 
 class PullRequests(IncrementalOrderedStream):
     '''
@@ -572,11 +572,11 @@ class TeamMemberships(FullTableStream):
     parent = 'team_members'
     id_keys = ["login"]
 
-    def add_fields_at_1st_level(self, rec = None, parent_record = None):
+    def add_fields_at_1st_level(self, record, parent_record = None):
         """
         Add fields in the record explicitly at the 1st level of JSON.
         """
-        rec['login'] = parent_record['login']
+        record['login'] = parent_record['login']
 
 class TeamMembers(FullTableStream):
     '''
@@ -594,11 +594,11 @@ class TeamMembers(FullTableStream):
     pk_child_fields = ['login']
 
 
-    def add_fields_at_1st_level(self, rec = None, parent_record = None):
+    def add_fields_at_1st_level(self, record, parent_record = None):
         """
         Add fields in the record explicitly at the 1st level of JSON.
         """
-        rec['team_slug'] = parent_record['slug']
+        record['team_slug'] = parent_record['slug']
 
 class Teams(FullTableStream):
     '''
@@ -623,11 +623,11 @@ class Commits(IncrementalStream):
     path = "commits"
     filter_param = True
 
-    def add_fields_at_1st_level(self, rec = None, parent_record = None):
+    def add_fields_at_1st_level(self, record, parent_record = None):
         """
         Add fields in the record explicitly at the 1st level of JSON.
         """
-        rec['updated_at'] = rec['commit']['committer']['date']
+        record['updated_at'] = record['commit']['committer']['date']
 
 class Comments(IncrementalOrderedStream):
     '''
@@ -737,11 +737,11 @@ class StarGazers(FullTableStream):
     path = "stargazers"
     headers = {'Accept': 'application/vnd.github.v3.star+json'}
 
-    def add_fields_at_1st_level(self, rec = None, parent_record = None):
+    def add_fields_at_1st_level(self, record, parent_record = None):
         """
         Add fields in the record explicitly at the 1st level of JSON.
         """
-        rec['user_id'] = rec['user']['id']
+        record['user_id'] = record['user']['id']
 
 
 # Dictionary of the stream classes
