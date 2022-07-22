@@ -139,6 +139,12 @@ def sync(client, config, state, catalog):
         LOGGER.info("Starting sync of repository: %s", repo)
         do_sync(catalog, streams_to_sync_for_repos, selected_stream_ids, client, start_date, state, repo)
 
+        if client.not_accessible_repos:
+            # Give warning messages for a repo that is not accessible by a stream or is invalid.
+            message = "Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository for following streams {}.".format(repo, ", ".join(client.not_accessible_repos))
+            LOGGER.warning(message)
+            client.not_accessible_repos = set()
+
 def do_sync(catalog, streams_to_sync, selected_stream_ids, client, start_date, state, repo):
     """
     Sync all other streams except teams, team_members and team_memberships for each repo.

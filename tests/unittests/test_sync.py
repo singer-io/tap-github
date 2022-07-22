@@ -44,6 +44,7 @@ class TestSyncFunctions(unittest.TestCase):
         client.extract_repos_from_config.return_value = ["test-repo"]
         client.authed_get_all_pages.return_value = []
         client.extract_orgs_from_config.return_value = ["singer-io"]
+        client.not_accessible_repos = {}
 
         sync(client, {'start_date': ""}, {}, mock_catalog)
 
@@ -71,6 +72,7 @@ class TestSyncFunctions(unittest.TestCase):
         client.extract_repos_from_config.return_value = ["test-repo"]
         client.authed_get_all_pages.return_value = []
         client.extract_orgs_from_config.return_value = ["singer-io"]
+        client.not_accessible_repos = {}
 
         sync(client, {'start_date': "2019-01-01T00:00:00Z"}, {}, mock_catalog)
 
@@ -99,6 +101,7 @@ class TestSyncFunctions(unittest.TestCase):
         client.extract_repos_from_config.return_value = ["test-repo"]
         client.authed_get_all_pages.return_value = []
         client.extract_orgs_from_config.return_value = ["singer-io"]
+        client.not_accessible_repos = {}
 
         sync(client, {'start_date': ""}, {}, mock_catalog)
 
