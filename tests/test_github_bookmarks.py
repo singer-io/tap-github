@@ -28,16 +28,7 @@ class TestGithubBookmarks(TestGithubBase):
         stream_to_calculated_state = {repo: {stream: "" for stream in current_state['bookmarks'][repo].keys()}}
         for stream, state in current_state['bookmarks'][repo].items():
             state_key, state_value = next(iter(state.keys())), next(iter(state.values()))
-            sync_messages = [record.get('data') for record in
-                                synced_records.get(stream, {'messages': []}).get('messages')
-                                if record.get('action') == 'upsert']
-
-            replication_key = next(iter(replication_keys.get(stream)))
-            max_record_values = [values.get(replication_key) for values in sync_messages]
-            max_value = max(max_record_values)
-
-            new_state_value = min(max_value, state_value)
-            state_as_datetime = dateutil.parser.parse(new_state_value)
+            state_as_datetime = dateutil.parser.parse(state_value)
 
             days, hours, minutes = timedelta_by_stream[stream]
             calculated_state_as_datetime = state_as_datetime - datetime.timedelta(days=days, hours=hours, minutes=minutes)
@@ -152,14 +143,14 @@ class TestGithubBookmarks(TestGithubBase):
                     # Verify the second sync bookmark is Equal or Greater than the first sync bookmark
                     self.assertGreaterEqual(second_bookmark_value_ts, first_bookmark_value_ts)
 
-                    REPLICATION_KEY_FORMAT = self.RECORD_REPLICATION_KEY_FORMAT
+                    replication_key_format = self.RECORD_REPLICATION_KEY_FORMAT
                     # For events stream replication key value is coming in different format
                     if stream == 'events':
-                        REPLICATION_KEY_FORMAT = self.EVENTS_RECORD_REPLICATION_KEY_FORMAT
+                        replication_key_format = self.EVENTS_RECORD_REPLICATION_KEY_FORMAT
                     
                     for record in first_sync_messages:
                         # Verify the first sync bookmark value is the max replication key value for a given stream
-                        replication_key_value = self.dt_to_ts(record.get(replication_key), REPLICATION_KEY_FORMAT)
+                        replication_key_value = self.dt_to_ts(record.get(replication_key), replication_key_format)
                         
                         self.assertLessEqual(
                             replication_key_value, first_bookmark_value_ts,
