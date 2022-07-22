@@ -1,4 +1,3 @@
-import copy
 from datetime import datetime
 import singer
 from singer import (metrics, bookmarks, metadata)
@@ -28,25 +27,27 @@ def get_child_full_url(domain, child_object, repo_path, parent_id, grand_parent_
     Build the child stream's URL based on the parent and the grandparent's ids.
     """
 
-    if child_object.is_repository:
-        # The `is_repository` represents that the url contains /repos and the repository name.
+    if child_object.use_repository:
+        # The `use_repository` represents that the url contains /repos and the repository name.
         child_full_url = '{}/repos/{}/{}'.format(
             domain,
             repo_path,
             child_object.path).format(*parent_id)
 
-    elif child_object.is_organization:
-        # The `is_organization` represents that the url contains the organization name.
+    elif child_object.use_organization:
+        # The `use_organization` represents that the url contains the organization name.
         org = repo_path.split('/')[0]
         child_full_url = '{}/{}'.format(
             domain,
             child_object.path).format(org, *parent_id, *grand_parent_id)
 
     else:
+        # Build and return url that does not contain the repos or the organization name.
+        # Example: https://base_url/projects/{project_id}/columns
         child_full_url = '{}/{}'.format(
             domain,
             child_object.path).format(*grand_parent_id)
-    LOGGER.info(child_full_url)
+    LOGGER.info("Final url is: %s", child_full_url)
 
     return child_full_url
 
@@ -62,14 +63,12 @@ class Stream:
     path = None
     filter_param = False
     id_keys = []
-    is_organization = False
+    use_organization = False
     children = []
-    is_repository = False
-    headers = None
+    pk_child_fields = []
+    use_repository = False
+    headers = {'Accept': '*/*'}
     parent = None
-
-    def add_fields_at_1st_level(self, rec, parent_record):
-        pass
 
     def build_url(self, base_url, repo_path, bookmark):
         """
@@ -81,18 +80,21 @@ class Stream:
         else:
             query_string = ''
 
-        if self.is_organization:
+        if self.use_organization:
+            # The `use_organization` represents that the url contains the organization name.
             org = repo_path.split('/')[0]
             full_url = '{}/{}'.format(
                 base_url,
                 self.path).format(org)
         else:
+            # The url that contains /repos and the repository name.
             full_url = '{}/repos/{}/{}{}'.format(
                 base_url,
                 repo_path,
                 self.path,
                 query_string)
 
+        LOGGER.info("Final url is: %s", full_url)
         return full_url
 
     def get_min_bookmark(self, stream, selected_streams, bookmark, repo_path, start_date, state):
@@ -155,16 +157,17 @@ class Stream:
         with metrics.record_counter(child_object.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
                 child_object.tap_stream_id,
-                child_full_url
+                child_full_url,
+                stream = child_object.tap_stream_id
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
 
                 if isinstance(records, list):
-                    # Loop through all the records
+                    # Loop through all the records of response
                     for record in records:
                         record['_sdc_repository'] = repo_path
-                        child_object.add_fields_at_1st_level(record, parent_record)
+                        child_object.add_fields_at_1st_level(record = record, parent_record = parent_record)
 
                         with singer.Transformer() as transformer:
 
@@ -177,12 +180,16 @@ class Stream:
                         # Loop thru each child and nested child in the parent and fetch all the child records.
                         for nested_child in child_object.children:
                             if nested_child in stream_to_sync:
+                                # Collect id of child record to pass in the API of its sub-child.
                                 child_id = tuple(record.get(key) for key in STREAMS[nested_child]().id_keys)
+                                # Here, grand_parent_id is the id of 1st level parent(main parent) which is required to
+                                # pass in the API of the current child's sub-child.
                                 child_object.get_child_records(client, catalog, nested_child, child_id, repo_path, state, start_date, bookmark_dttm, stream_to_sync, selected_stream_ids, grand_parent_id, record)
 
                 else:
+                    # Write JSON response directly if it is a single record only.
                     records['_sdc_repository'] = repo_path
-                    child_object.add_fields_at_1st_level(records, parent_record)
+                    child_object.add_fields_at_1st_level(record = records, parent_record = parent_record)
 
                     with singer.Transformer() as transformer:
 
@@ -190,6 +197,13 @@ class Stream:
                         if child_object.tap_stream_id in selected_stream_ids and records.get(child_object.replication_keys, start_date) >= child_bookmark_value :
 
                             singer.write_record(child_object.tap_stream_id, rec, time_extracted=extraction_time)
+
+    # pylint: disable=unnecessary-pass
+    def add_fields_at_1st_level(self, record, parent_record = None):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
+        pass
 
 class FullTableStream(Stream):
     def sync_endpoint(self,
@@ -208,17 +222,14 @@ class FullTableStream(Stream):
         # build full url
         full_url = self.build_url(client.base_url, repo_path, None)
 
-        headers = {}
-        if self.headers:
-            headers = self.headers
-
         stream_catalog = get_schema(catalog, self.tap_stream_id)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
                     self.tap_stream_id,
                     full_url,
-                    headers
+                    self.headers,
+                    stream = self.tap_stream_id
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -226,8 +237,7 @@ class FullTableStream(Stream):
                 for record in records:
 
                     record['_sdc_repository'] = repo_path
-                    parent_record = copy.copy(record)
-                    self.add_fields_at_1st_level(record, {})
+                    self.add_fields_at_1st_level(record = record, parent_record = None)
 
                     with singer.Transformer() as transformer:
                         rec = transformer.transform(record, stream_catalog['schema'], metadata=metadata.to_map(stream_catalog['metadata']))
@@ -240,8 +250,9 @@ class FullTableStream(Stream):
                     for child in self.children:
                         if child in stream_to_sync:
 
-                            parent_id = tuple(parent_record.get(key) for key in STREAMS[child]().id_keys)
+                            parent_id = tuple(record.get(key) for key in STREAMS[child]().id_keys)
 
+                            # Sync child stream, if it is selected or its nested child is selected.
                             self.get_child_records(client,
                                                 catalog,
                                                 child,
@@ -249,10 +260,10 @@ class FullTableStream(Stream):
                                                 repo_path,
                                                 state,
                                                 start_date,
-                                                parent_record.get(self.replication_keys),
+                                                record.get(self.replication_keys),
                                                 stream_to_sync,
                                                 selected_stream_ids,
-                                                parent_record = parent_record)
+                                                parent_record = record)
 
         return state
 
@@ -282,17 +293,14 @@ class IncrementalStream(Stream):
         # build full url
         full_url = self.build_url(client.base_url, repo_path, min_bookmark_value)
 
-        headers = {}
-        if self.headers:
-            headers = self.headers
-
         stream_catalog = get_schema(catalog, self.tap_stream_id)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
                     self.tap_stream_id,
                     full_url,
-                    headers
+                    self.headers,
+                    stream = self.tap_stream_id
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -300,8 +308,7 @@ class IncrementalStream(Stream):
                 for record in records:
 
                     record['_sdc_repository'] = repo_path
-                    self.add_fields_at_1st_level(record, {})
-                    parent_record = copy.copy(record)
+                    self.add_fields_at_1st_level(record = record, parent_record = None)
 
                     with singer.Transformer() as transformer:
                         if record.get(self.replication_keys):
@@ -323,7 +330,7 @@ class IncrementalStream(Stream):
                                 for child in self.children:
                                     if child in stream_to_sync:
 
-                                        parent_id = tuple(parent_record.get(key) for key in STREAMS[child]().id_keys)
+                                        parent_id = tuple(record.get(key) for key in STREAMS[child]().id_keys)
 
                                         # Sync child stream, if it is selected or its nested child is selected.
                                         self.get_child_records(client,
@@ -333,10 +340,10 @@ class IncrementalStream(Stream):
                                                             repo_path,
                                                             state,
                                                             start_date,
-                                                            parent_record.get(self.replication_keys),
+                                                            record.get(self.replication_keys),
                                                             stream_to_sync,
                                                             selected_stream_ids,
-                                                            parent_record = parent_record)
+                                                            parent_record = record)
                         else:
                             LOGGER.warning("Skipping this record for %s stream with %s = %s as it is missing replication key %s.",
                                         self.tap_stream_id, self.key_properties, record[self.key_properties], self.replication_keys)
@@ -374,25 +381,26 @@ class IncrementalOrderedStream(Stream):
         stream_catalog = get_schema(catalog, self.tap_stream_id)
 
         parent_bookmark_value = bookmark_value
-
+        record_counter = 0
         with metrics.record_counter(self.tap_stream_id) as counter:
             for response in client.authed_get_all_pages(
                     self.tap_stream_id,
-                    full_url
+                    full_url,
+                    stream = self.tap_stream_id
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
                 for record in records:
                     record['_sdc_repository'] = repo_path
-                    self.add_fields_at_1st_level(record, {})
-                    parent_record = copy.copy(record)
+                    self.add_fields_at_1st_level(record = record, parent_record = None)
 
                     updated_at = record.get(self.replication_keys)
 
-                    if counter.value == 0:
+                    if record_counter == 0 and updated_at > bookmark_value:
                         # Consider replication key value of 1st record as bookmark value.
                         # Because all records are in descending order of replication key value
                         bookmark_value = updated_at
+                    record_counter = record_counter + 1
 
                     if updated_at:
                         if bookmark_time and singer.utils.strptime_to_utc(updated_at) < bookmark_time:
@@ -412,7 +420,7 @@ class IncrementalOrderedStream(Stream):
 
                         for child in self.children:
                             if child in stream_to_sync:
-                                parent_id = tuple(parent_record.get(key) for key in STREAMS[child]().id_keys)
+                                parent_id = tuple(record.get(key) for key in STREAMS[child]().id_keys)
 
                                 # Sync child stream, if it is selected or its nested child is selected.
                                 self.get_child_records(client,
@@ -422,10 +430,10 @@ class IncrementalOrderedStream(Stream):
                                                     repo_path,
                                                     state,
                                                     start_date,
-                                                    parent_record.get(self.replication_keys),
+                                                    record.get(self.replication_keys),
                                                     stream_to_sync,
                                                     selected_stream_ids,
-                                                    parent_record = parent_record)
+                                                    parent_record = record)
                     else:
                         LOGGER.warning("Skipping this record for %s stream with %s = %s as it is missing replication key %s.",
                                     self.tap_stream_id, self.key_properties, record[self.key_properties], self.replication_keys)
@@ -447,22 +455,34 @@ class Reviews(IncrementalStream):
     replication_keys = "submitted_at"
     key_properties = ["id"]
     path = "pulls/{}/reviews"
-    is_repository = True
+    use_repository = True
     id_keys = ['number']
     parent = 'pull_requests'
 
+    def add_fields_at_1st_level(self, record, parent_record = None):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
+        record['pr_id'] = parent_record['id']
+
 class ReviewComments(IncrementalOrderedStream):
     '''
-    https://docs.github.com/en/rest/reference/pulls#list-review-comments-in-a-repository
+    https://docs.github.com/en/rest/pulls/comments#get-a-review-comment-for-a-pull-request
     '''
     tap_stream_id = "review_comments"
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
     key_properties = ["id"]
     path = "pulls/{}/comments?sort=updated_at&direction=desc"
-    is_repository = True
+    use_repository = True
     id_keys = ['number']
     parent = 'pull_requests'
+
+    def add_fields_at_1st_level(self, record, parent_record = None):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
+        record['pr_id'] = parent_record['id']
 
 class PRCommits(IncrementalStream):
     '''
@@ -473,16 +493,19 @@ class PRCommits(IncrementalStream):
     replication_keys = "updated_at"
     key_properties = ["id"]
     path = "pulls/{}/commits"
-    is_repository = True
+    use_repository = True
     id_keys = ['number']
     parent = 'pull_requests'
 
-    def add_fields_at_1st_level(self, rec, parent_record):
-        rec['updated_at'] = rec['commit']['committer']['date']
+    def add_fields_at_1st_level(self, record, parent_record = None):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
+        record['updated_at'] = record['commit']['committer']['date']
 
-        rec['pr_number'] = parent_record.get('number')
-        rec['pr_id'] = parent_record.get('id')
-        rec['id'] = '{}-{}'.format(parent_record.get('id'), rec.get('sha'))
+        record['pr_number'] = parent_record.get('number')
+        record['pr_id'] = parent_record.get('id')
+        record['id'] = '{}-{}'.format(parent_record.get('id'), record.get('sha'))
 
 class PullRequests(IncrementalOrderedStream):
     '''
@@ -494,6 +517,7 @@ class PullRequests(IncrementalOrderedStream):
     key_properties = ["id"]
     path = "pulls?state=all"
     children = ['reviews', 'review_comments', 'pr_commits']
+    pk_child_fields = ["number"]
 
 class ProjectCards(IncrementalStream):
     '''
@@ -505,7 +529,7 @@ class ProjectCards(IncrementalStream):
     key_properties = ["id"]
     path = "projects/columns/{}/cards"
     tap_stream_id = "project_cards"
-    parent = 'projects'
+    parent = 'project_columns'
     id_keys = ['id']
 
 class ProjectColumns(IncrementalStream):
@@ -543,9 +567,15 @@ class TeamMemberships(FullTableStream):
     replication_method = "FULL_TABLE"
     key_properties = ["url"]
     path = "orgs/{}/teams/{}/memberships/{}"
-    is_organization = True
-    parent = 'teams'
+    use_organization = True
+    parent = 'team_members'
     id_keys = ["login"]
+
+    def add_fields_at_1st_level(self, record, parent_record = None):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
+        record['login'] = parent_record['login']
 
 class TeamMembers(FullTableStream):
     '''
@@ -555,14 +585,19 @@ class TeamMembers(FullTableStream):
     replication_method = "FULL_TABLE"
     key_properties = ["team_slug", "id"]
     path = "orgs/{}/teams/{}/members"
-    is_organization = True
+    use_organization = True
     id_keys = ['slug']
     children= ["team_memberships"]
     has_children = True
     parent = 'teams'
+    pk_child_fields = ['login']
 
-    def add_fields_at_1st_level(self, rec, parent_record):
-        rec['team_slug'] = parent_record['slug']
+
+    def add_fields_at_1st_level(self, record, parent_record = None):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
+        record['team_slug'] = parent_record['slug']
 
 class Teams(FullTableStream):
     '''
@@ -572,12 +607,13 @@ class Teams(FullTableStream):
     replication_method = "FULL_TABLE"
     key_properties = ["id"]
     path = "orgs/{}/teams"
-    is_organization = True
+    use_organization = True
     children= ["team_members"]
+    pk_child_fields = ['slug']
 
 class Commits(IncrementalStream):
     '''
-    https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
+    https://docs.github.com/en/rest/commits/commits#list-commits-on-a-repository
     '''
     tap_stream_id = "commits"
     replication_method = "INCREMENTAL"
@@ -586,8 +622,11 @@ class Commits(IncrementalStream):
     path = "commits"
     filter_param = True
 
-    def add_fields_at_1st_level(self, rec, parent_record):
-        rec['updated_at'] = rec['commit']['committer']['date']
+    def add_fields_at_1st_level(self, record, parent_record = None):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
+        record['updated_at'] = record['commit']['committer']['date']
 
 class Comments(IncrementalOrderedStream):
     '''
@@ -602,7 +641,7 @@ class Comments(IncrementalOrderedStream):
 
 class Issues(IncrementalOrderedStream):
     '''
-    https://developer.github.com/v3/issues/#list-issues-for-a-repository
+    https://docs.github.com/en/rest/issues/issues#list-repository-issues
     '''
     tap_stream_id = "issues"
     replication_method = "INCREMENTAL"
@@ -613,7 +652,7 @@ class Issues(IncrementalOrderedStream):
 
 class Assignees(FullTableStream):
     '''
-    https://developer.github.com/v3/issues/assignees/#list-assignees
+    https://docs.github.com/en/rest/issues/assignees#list-assignees
     '''
     tap_stream_id = "assignees"
     replication_method = "FULL_TABLE"
@@ -631,7 +670,7 @@ class Releases(FullTableStream):
 
 class IssueLabels(FullTableStream):
     '''
-    https://developer.github.com/v3/issues/labels/
+    https://docs.github.com/en/rest/issues/labels#list-labels-for-a-repository
     '''
     tap_stream_id = "issue_labels"
     replication_method = "FULL_TABLE"
@@ -660,7 +699,7 @@ class Events(IncrementalStream):
 
 class CommitComments(IncrementalStream):
     '''
-    https://developer.github.com/v3/repos/comments/
+    https://docs.github.com/en/rest/commits/comments#list-commit-comments-for-a-repository
     '''
     tap_stream_id = "commit_comments"
     replication_method = "INCREMENTAL"
@@ -670,7 +709,7 @@ class CommitComments(IncrementalStream):
 
 class IssueMilestones(IncrementalOrderedStream):
     '''
-    https://developer.github.com/v3/issues/milestones/#list-milestones-for-a-repository
+    https://docs.github.com/en/rest/issues/milestones#list-milestones
     '''
     tap_stream_id = "issue_milestones"
     replication_method = "INCREMENTAL"
@@ -680,7 +719,7 @@ class IssueMilestones(IncrementalOrderedStream):
 
 class Collaborators(FullTableStream):
     '''
-    https://developer.github.com/v3/repos/collaborators/#list-collaborators
+    https://docs.github.com/en/rest/collaborators/collaborators#list-repository-collaborators
     '''
     tap_stream_id = "collaborators"
     replication_method = "FULL_TABLE"
@@ -689,7 +728,7 @@ class Collaborators(FullTableStream):
 
 class StarGazers(FullTableStream):
     '''
-    https://developer.github.com/v3/activity/starring/#list-stargazers
+    https://docs.github.com/en/rest/activity/starring#list-stargazers
     '''
     tap_stream_id = "stargazers"
     replication_method = "FULL_TABLE"
@@ -697,8 +736,11 @@ class StarGazers(FullTableStream):
     path = "stargazers"
     headers = {'Accept': 'application/vnd.github.v3.star+json'}
 
-    def add_fields_at_1st_level(self, rec, parent_record):
-        rec['user_id'] = rec['user']['id']
+    def add_fields_at_1st_level(self, record, parent_record = None):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
+        record['user_id'] = record['user']['id']
 
 
 # Dictionary of the stream classes

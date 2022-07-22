@@ -38,6 +38,9 @@
     "submitted_at": {
       "type": ["null", "string"],
       "format": "date-time"
+    },
+    "pr_id": {
+      "type": ["null", "string"]
     }
   }
 }
