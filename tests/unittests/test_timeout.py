@@ -229,3 +229,4 @@ class TestTimeoutAndConnnectionErrorBackoff(unittest.TestCase):
 
         # verify that we backoff 5 times
         self.assertEqual(5, mocked_request.call_count)
+
