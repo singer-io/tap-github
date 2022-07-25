@@ -8,6 +8,9 @@
             "type": ["null", "string"],
             "description": "The git commit hash"
           },
+          "node_id": {
+            "type": ["null","string"]
+          },
           "url": {
             "type": ["null", "string"]
           },
@@ -58,6 +61,12 @@
                 "blob_url": {
                   "type": ["null","string"]
                 },
+                "contents_url": {
+                  "type": ["null","string"]
+                },
+                "sha": {
+                  "type": ["null","string"]
+                },
                 "patch": {
                   "type": ["null","string"]
                 }
@@ -94,6 +103,24 @@
               },
               "author": {
                 "$ref": "shared/user.json#/"
+              },
+              "verification": {
+                "title": "Verification",
+                "type": "object",
+                "properties": {
+                  "verified": {
+                    "type": ["null", "boolean"]
+                  },
+                  "reason": {
+                    "type": ["null", "string"]
+                  },
+                  "payload": {
+                    "type": ["null", "string"]
+                  },
+                  "signature": {
+                    "type": ["null", "string"]
+                  }
+                }
               },
               "message": {
                 "type": ["null", "string"],

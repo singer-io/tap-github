@@ -236,6 +236,10 @@
         },
         "url": {
           "type": ["null", "string"]
+        },
+        "merged_at": {
+          "type": ["null", "string"],
+          "format": "date-time"
         }
       },
       "type": ["null", "object"]
@@ -264,6 +268,12 @@
     },
     "comments_url": {
       "type": ["null", "string"]
+    },
+    "body_text": {
+      "type": ["null", "string"]
+    },
+    "draft": {
+      "type": ["null", "boolean"]
     }
   },
   "type": [

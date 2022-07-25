@@ -184,6 +184,10 @@
     "published_at": {
       "type": ["null", "string"],
       "format": "date-time"
+    },
+    "discussion_url": {
+      "type": ["null", "string"],
+      "format": "date-time"
     }
   }
 }

@@ -4,6 +4,9 @@
     "_sdc_repository": {
       "type": ["string"]
     },
+    "node_id": {
+      "type": ["null", "string"]
+    },
     "updated_at": {
       "type": ["null", "string"],
       "format": "date-time"
@@ -99,6 +102,26 @@
           "$ref": "shared/user.json#/"
         },
         "comment_count": {
+          "type": ["null", "integer"]
+        }
+      }
+    },
+    "committer": {
+      "$ref": "shared/user.json#/"
+    },
+    "author": {
+      "$ref": "shared/user.json#/"
+    },
+    "stats": {
+      "type": ["null", "object"],
+      "properties": {
+        "additions": {
+          "type": ["null", "integer"]
+        },
+        "deletions": {
+          "type": ["null", "integer"]
+        },
+        "total": {
           "type": ["null", "integer"]
         }
       }
