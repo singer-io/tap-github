@@ -55,15 +55,18 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
         full_sync_records = runner.get_records_from_target_output()
         full_sync_state = menagerie.get_state(conn_id)
         
+        # Create new connection for another sync
+        conn_id_2 = connections.ensure_connection(self)
+
         # Add a stream between syncs
         streams_to_test = streams_to_test - {removed_stream}
-        found_catalogs = self.run_and_verify_check_mode(conn_id)
+        found_catalogs = self.run_and_verify_check_mode(conn_id_2)
         
         test_catalogs = [catalog for catalog in found_catalogs
                            if catalog.get('stream_name') in streams_to_test]
 
         # Add new stream to selected list
-        self.perform_and_verify_table_and_field_selection(conn_id, test_catalogs, select_all_fields=True)
+        self.perform_and_verify_table_and_field_selection(conn_id_2, test_catalogs, select_all_fields=True)
 
         # Set state in which all streams of one repo(singer-io/singer-python) have completed a sync.
         #   And one stream (pull_requests) of other repo(singer-io/test-repo) is syncing currently.
@@ -94,14 +97,14 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
             }
         }
 
-        menagerie.set_state(conn_id, interrupted_state)
+        menagerie.set_state(conn_id_2, interrupted_state)
 
         # Run another sync
-        self.run_and_verify_sync(conn_id)
+        self.run_and_verify_sync(conn_id_2)
 
         # Acquire records from target output
         interrupted_sync_records = runner.get_records_from_target_output()
-        final_state = menagerie.get_state(conn_id)
+        final_state = menagerie.get_state(conn_id_2)
         currently_syncing = final_state.get('currently_syncing')
 
         # Checking resuming sync resulted in a successfully saved state
