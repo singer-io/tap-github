@@ -7,7 +7,7 @@ class TestGithubInterruptedSync(TestGithubBase):
 
     @staticmethod
     def name():
-        return "tap_c_tester_github_interrupted_sync_test"
+        return "tt_github_interrupted_sync_test"
 
     def get_properties(self):
         """

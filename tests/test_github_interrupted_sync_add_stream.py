@@ -7,7 +7,7 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
 
     @staticmethod
     def name():
-        return "tap_b_tester_github_interrupted_sync_add_stream_test"
+        return "tt_github_interrupted_sync_add_stream_test"
 
     def get_properties(self):
         """

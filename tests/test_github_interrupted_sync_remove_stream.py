@@ -7,7 +7,7 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
 
     @staticmethod
     def name():
-        return "tap_a_tester_github_interrupted_sync_remove_stream_test"
+        return "tt_github_interrupted_sync_remove_stream_test"
 
     def get_properties(self):
         """
@@ -179,7 +179,7 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
                                                         msg="Expected {} records in each sync".format(full_records_after_interrupted_bookmark))
                                 else:
                                     # Verify the bookmark has not advanced for the removed stream
-                                    self.assertEqual(final_sync_stream_bookmark, interrupted_bookmark)
+                                    self.assertEqual(final_sync_stream_bookmark, full_sync_stream_bookmark)
                             else:
                                 # verify we collected records that have the same replication value as a bookmark for streams that are already synced
                                 self.assertGreater(interrupted_record_count, 0)
