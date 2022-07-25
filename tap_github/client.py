@@ -269,7 +269,7 @@ class GithubClient:
 
         # If any repos found in repos_with_errors, raise an exception
         if repos_with_errors:
-            raise GithubException("Please provide valid organization/repository for: {}".format(repos_with_errors))
+            raise GithubException("Please provide valid organization/repository for: {}".format(sorted(repos_with_errors)))
 
         if orgs_with_all_repos:
             # Remove any wildcard "org/*" occurrences from `repo_paths`

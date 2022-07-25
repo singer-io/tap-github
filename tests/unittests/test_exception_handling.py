@@ -1,8 +1,9 @@
 from unittest import mock
 import tap_github
-from tap_github.client import GithubClient, raise_for_error
+from tap_github.client import GithubClient, raise_for_error, ConflictError, BadRequestException, BadCredentialsException, AuthException, InternalServerError
 import unittest
 import requests
+from parameterized import parameterized
 
 class Mockresponse:
     """ Mock response object class."""
@@ -35,6 +36,7 @@ def get_response(status_code, json={}, raise_error=False, content=None):
     """ Returns required mock response. """
     return Mockresponse(status_code, json, raise_error, content=content)
 
+@mock.patch("time.sleep")
 @mock.patch("tap_github.client.GithubClient.verify_access_for_repo", return_value = None)
 @mock.patch("requests.Session.request")
 @mock.patch("singer.utils.parse_args")
@@ -44,75 +46,53 @@ class TestExceptionHandling(unittest.TestCase):
     Test Error handling for `authed_get` method in client.
     """
 
-    config = {"access_token": "", "repository": "org/test-repo"}
+    config = {"access_token": "", "repository": "org/test-repo, singer-io12/*"}
 
-    def test_json_decoder_error(self, mocked_parse_args, mocked_request, mock_verify_access):
+    def test_json_decoder_error(self, mocked_parse_args, mocked_request, mock_verify_access, mock_sleep):
         """
         Verify handling of JSONDecoderError from the response.
         """
 
         mock_response = get_mock_http_response(409, "json_error")
 
-        with self.assertRaises(tap_github.client.ConflictError) as e:
+        with self.assertRaises(ConflictError) as e:
             raise_for_error(mock_response, "", "", "", True)
 
         # Verifying the message formed for the custom exception
         self.assertEqual(str(e.exception), "HTTP-error-code: 409, Error: The request could not be completed due to a conflict with the current state of the server.")
 
-    def test_zero_content_length(self, mocked_parse_args, mocked_request, mock_verify_access):
+    @parameterized.expand([
+        [400, "The request is missing or has a bad parameter.", BadRequestException, '', {}, 1],
+        [401, "Invalid authorization credentials.", BadCredentialsException, '', {}, 1],
+        [403, "User doesn't have permission to access the resource.", AuthException, '', {}, 1],
+        [500, "An error has occurred at Github's end.", InternalServerError, '', {}, 5],
+        [301, "The resource you are looking for is moved to another URL.", tap_github.client.MovedPermanentlyError, '', {}, 1],
+        [304, "The requested resource has not been modified since the last time you accessed it.", tap_github.client.NotModifiedError, '', {}, 1],
+        [409, "The request could not be completed due to a conflict with the current state of the server.", tap_github.client.ConflictError, '', {}, 1],
+        [422, "The request was not able to process right now.", tap_github.client.UnprocessableError, '', {}, 1],
+        [501, "Unknown Error", tap_github.client.Server5xxError, '', {}, 5],
+        [429, "API rate limit exceeded.", tap_github.client.RateLimitExceeded, '', {}, 5],
+    ])
+    def test_error_message_and_call_count(self, mocked_parse_args, mocked_request, mock_verify_access, mock_sleep, erro_code, error_msg, error_class, content, json_msg, call_count):
         """
-        Verify that `authed_get` raises 400 error with proper message for no content.
+        - Verify that `authed_get` raises an error with the proper message for different error codes.
+        - Verify that tap retries 5 times for Server5xxError and RateLimitExceeded error.
         """
-        mocked_request.return_value = get_response(400, raise_error = True, content='')
+        mocked_request.return_value = get_response(erro_code, json = json_msg, raise_error = True, content = content)
         test_client = GithubClient(self.config)
-
-        with self.assertRaises(tap_github.client.BadRequestException) as e:
-            test_client.authed_get("", "")
-
-        # Verifying the message formed for the custom exception
-        self.assertEqual(str(e.exception), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
-
-    def test_400_error(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` raises 400 error with proper message.
-        """
-        mocked_request.return_value = get_response(400, raise_error = True)
-        test_client = GithubClient(self.config)
-
-        with self.assertRaises(tap_github.client.BadRequestException) as e:
-            test_client.authed_get("", "")
-
-        # Verifying the message formed for the custom exception
-        self.assertEqual(str(e.exception), "HTTP-error-code: 400, Error: The request is missing or has a bad parameter.")
-
-    def test_401_error(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` raises 401 error with proper message.
-        """
-        mocked_request.return_value = get_response(401, raise_error = True)
-        test_client = GithubClient(self.config)
-
-        with self.assertRaises(tap_github.client.BadCredentialsException) as e:
-            test_client.authed_get("", "")
-
-        # Verifying the message formed for the custom exception
-        self.assertEqual(str(e.exception), "HTTP-error-code: 401, Error: Invalid authorization credentials.")
-
-    def test_403_error(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` raises 403 error with proper message.
-        """
-        mocked_request.return_value = get_response(403, raise_error = True)
-        test_client = GithubClient(self.config)
+        expected_error_message = "HTTP-error-code: {}, Error: {}".format(erro_code, error_msg)
         
-        with self.assertRaises(tap_github.client.AuthException) as e:
+        with self.assertRaises(error_class) as e:
             test_client.authed_get("", "")
 
         # Verifying the message formed for the custom exception
-        self.assertEqual(str(e.exception), "HTTP-error-code: 403, Error: User doesn't have permission to access the resource.")
+        self.assertEqual(str(e.exception), expected_error_message)
+
+        # Verify the call count for each error.
+        self.assertEquals(call_count, mocked_request.call_count)
 
     @mock.patch("tap_github.client.LOGGER.warning")
-    def test_404_error(self, mock_logger,  mocked_parse_args, mocked_request, mock_verify_access):
+    def test_skip_404_error(self, mock_logger,  mocked_parse_args, mocked_request, mock_verify_access, mock_sleep):
         """
         Verify that `authed_get` skip 404 error and print the log message with the proper message.
         """
@@ -126,119 +106,9 @@ class TestExceptionHandling(unittest.TestCase):
         # Verifying the message formed for the custom exception
         self.assertEqual(mock_logger.mock_calls[0], mock.call(expected_message))
 
-    def test_500_error(self, mocked_parse_args, mocked_request, mock_verify_access):
+    def test_raise_404_error_for_invalid_repo(self, mocked_parse_args, mocked_request, mock_verify_access, mock_sleep):
         """
-        Verify that `authed_get` raises 500 error with proper message.
-        """
-        mocked_request.return_value = get_response(500, raise_error = True)
-        test_client = GithubClient(self.config)
-
-        with self.assertRaises(tap_github.client.InternalServerError) as e:
-            test_client.authed_get("", "")
-
-        # Verifying the message formed for the custom exception
-        self.assertEqual(str(e.exception), "HTTP-error-code: 500, Error: An error has occurred at Github's end.")
-
-    def test_301_error(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` raises 301 error with proper message.
-        """
-        mocked_request.return_value = get_response(301, raise_error = True)
-        test_client = GithubClient(self.config)
-
-        with self.assertRaises(tap_github.client.MovedPermanentlyError) as e:
-            test_client.authed_get("", "")
-
-        # Verifying the message formed for the custom exception
-        self.assertEqual(str(e.exception), "HTTP-error-code: 301, Error: The resource you are looking for is moved to another URL.")
-
-    def test_304_error(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` raises 304 error with proper message.
-        """
-        mocked_request.return_value = get_response(304, raise_error = True)
-        test_client = GithubClient(self.config)
-
-        with self.assertRaises(tap_github.client.NotModifiedError) as e:
-            test_client.authed_get("", "")
-
-        # Verifying the message formed for the custom exception
-        self.assertEqual(str(e.exception), "HTTP-error-code: 304, Error: The requested resource has not been modified since the last time you accessed it.")
-
-    def test_422_error(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` raises 422 error with proper message.
-        """
-        mocked_request.return_value = get_response(422, raise_error = True)
-        test_client = GithubClient(self.config)
-
-        with self.assertRaises(tap_github.client.UnprocessableError) as e:
-            test_client.authed_get("", "")
-
-        # Verifying the message formed for the custom exception
-        self.assertEqual(str(e.exception), "HTTP-error-code: 422, Error: The request was not able to process right now.")
-
-    def test_409_error(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` raises 409 error with proper message.
-        """
-        mocked_request.return_value = get_response(409, raise_error = True)
-        test_client = GithubClient(self.config)
-
-        with self.assertRaises(tap_github.client.ConflictError) as e:
-            test_client.authed_get("", "")
-
-        # Verifying the message formed for the custom exception
-        self.assertEqual(str(e.exception), "HTTP-error-code: 409, Error: The request could not be completed due to a conflict with the current state of the server.")
-
-    def test_501_error(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` raises 501 error with proper message and retries for 5 times.
-        """
-        mocked_request.return_value = get_response(501, raise_error = True)
-        test_client = GithubClient(self.config)
-
-        with self.assertRaises(tap_github.client.Server5xxError) as e:
-            test_client.authed_get("", "")
-
-        # Verifying the message formed for the custom exception
-        self.assertEqual(str(e.exception), "HTTP-error-code: 501, Error: Unknown Error")
-
-        # Verify that the tap retries for 5 times
-        self.assertEquals(5, mocked_request.call_count)
-
-    def test_429_error(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` raises 429 error with proper message and retries for 5 times.
-        """
-        mocked_request.return_value = get_response(429, raise_error = True)
-        test_client = GithubClient(self.config)
-
-        with self.assertRaises(tap_github.client.RateLimitExceeded) as e:
-            test_client.authed_get("", "")
-
-        # Verifying the message formed for the custom exception
-        self.assertEqual(str(e.exception), "HTTP-error-code: 429, Error: API rate limit exceeded.")
-
-        # Verify that the tap retries for 5 times
-        self.assertEquals(5, mocked_request.call_count)
-
-    def test_200_success(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` does not raise an error for a successful response.
-        """
-        json = {"key": "value"}
-        mocked_request.return_value = get_response(200, json)
-        test_client = GithubClient(self.config)
-
-        resp = test_client.authed_get("", "")
-
-        # Verifying success response
-        self.assertEqual(json, resp.json())
-
-    def test_invalid_repo(self, mocked_parse_args, mocked_request, mock_verify_access):
-        """
-        Verify that `authed_get` raises 404 error if invalid organization in given in the config.
+        Verify that `extract_repos_from_config` raises 404 error if invalid organization in given in the config.
         """
         config = {'repository': 'singer-io12/*', "access_token": "TOKEN"}
         test_client = GithubClient(config)
@@ -249,3 +119,4 @@ class TestExceptionHandling(unittest.TestCase):
 
         # Verifying the message formed for the custom exception
         self.assertEqual(str(e.exception), "HTTP-error-code: 404, Error: Please check the organization name 'singer-io12' or you do not have sufficient permissions to access this organization.")
+
