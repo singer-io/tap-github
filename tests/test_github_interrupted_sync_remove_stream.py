@@ -2,12 +2,12 @@ from tap_tester import connections, runner, menagerie
 from base import TestGithubBase
 
 
-class TestGithubInterruptedSyncRemoveCurrentlySyncing(TestGithubBase):
+class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
     """Test tap's ability to recover from an interrupted sync"""
 
     @staticmethod
     def name():
-        return "tap_tester_github_interrupted_sync_remove_currently_syncing_test"
+        return "tap_tester_github_interrupted_sync_remove_stream_test"
 
     def get_properties(self):
         """
@@ -19,24 +19,31 @@ class TestGithubInterruptedSyncRemoveCurrentlySyncing(TestGithubBase):
         }
 
     def test_run(self):
+
+        # Test for removing any stream from state
+        self.run_interrupted_sync("issue_events")
+
+        # Test for removing currently syncing stream from state
+        self.run_interrupted_sync("pull_requests")
+
+    def run_interrupted_sync(self, removed_stream):
         """
-        Testing that if a sync job is interrupted and state is saved with `currently_syncing`,
-        the next sync job kicks off and the tap picks back up on that `currently_syncing` stream.
-        - Verify behavior is consistent when the currently syncing stream is removed from the selected list between initial and resuming sync.
+        Testing that if a sync job is interrupted and state is saved with `currently_syncing`(stream) and `currently_syncing_repo`,
+        the next sync job kicks off and the tap picks back up on that `currently_syncing` stream of `currently_syncing_repo`.
+        - Verify behavior is consistent when a stream is removed from the selected list between initial and resuming sync.
         """
         streams_to_test = {"issues", "stargazers", "pull_requests", "issue_events"}
         conn_id = connections.ensure_connection(self)
         expected_replication_methods = self.expected_replication_method()
         expected_replication_keys = self.expected_bookmark_keys()
-        repo_1, repo_2 = self.get_properties().get("repository").split()
         repo_key = "_sdc_repository"
-
-        start_date = self.get_bookmark_formatted(self.get_properties().get("start_date"))
+        
+        start_date = self.dt_to_ts(self.get_properties().get("start_date"), self.BOOKMARK_FORMAT)
 
         # Run a discovery job
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
-        # partition catalogs for use in table/field selection
+        # Partition catalogs for use in table/field selection
         test_catalogs = [catalog for catalog in found_catalogs
                            if catalog.get('stream_name') in streams_to_test]
         self.perform_and_verify_table_and_field_selection(conn_id, test_catalogs, select_all_fields=True)
@@ -44,12 +51,11 @@ class TestGithubInterruptedSyncRemoveCurrentlySyncing(TestGithubBase):
         # Run a sync
         self.run_and_verify_sync(conn_id)
 
-        # acquire records from target output
+        # Acquire records from target output
         full_sync_records = runner.get_records_from_target_output()
         full_sync_state = menagerie.get_state(conn_id)
         
         # Add a stream between syncs
-        removed_stream = 'pull_requests'
         streams_to_test = streams_to_test - {removed_stream}
         found_catalogs = self.run_and_verify_check_mode(conn_id)
         
@@ -107,7 +113,7 @@ class TestGithubInterruptedSyncRemoveCurrentlySyncing(TestGithubBase):
             # Verify bookmarks are saved
             self.assertIsNotNone(final_state.get('bookmarks'))
 
-        for repository in [repo_1, repo_2]:
+        for repository in self.get_properties().get("repository").split():
             with self.subTest(repository=repository):
             
                 full_sync_bookmark = full_sync_state["bookmarks"][repository]
@@ -139,13 +145,13 @@ class TestGithubInterruptedSyncRemoveCurrentlySyncing(TestGithubBase):
                             expected_replication_key = next(iter(expected_replication_keys[stream]))
                             
                             if stream in full_sync_bookmark.keys():
-                                full_sync_stream_bookmark = self.get_bookmark_formatted(full_sync_bookmark.get(stream, {}).get("since"))
-                                final_sync_stream_bookmark = self.get_bookmark_formatted(final_bookmark.get(stream, {}).get("since"))
+                                full_sync_stream_bookmark = self.dt_to_ts(full_sync_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
                                 
                             if stream in interrupted_repo_bookmark.keys():
-                                interrupted_bookmark = self.get_bookmark_formatted(interrupted_repo_bookmark[stream]["since"])
+                                interrupted_bookmark = self.dt_to_ts(interrupted_repo_bookmark[stream]["since"], self.BOOKMARK_FORMAT)
                             
                                 if stream != removed_stream:
+                                    final_sync_stream_bookmark = self.dt_to_ts(final_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
 
                                     # Verify state ends with the same value for common streams after both full and interrupted syncs
                                     self.assertEqual(full_sync_stream_bookmark, final_sync_stream_bookmark)
@@ -154,7 +160,7 @@ class TestGithubInterruptedSyncRemoveCurrentlySyncing(TestGithubBase):
                                     # the interrupted_state for streams that completed were replicated during the interrupted sync.
                                     for record in interrupted_records:
                                         with self.subTest(record_primary_key=record[expected_primary_keys[0]]):
-                                            rec_time = self.get_bookmark_formatted(record[expected_replication_key])
+                                            rec_time = self.dt_to_ts(record[expected_replication_key], self.RECORD_REPLICATION_KEY_FORMAT)
                                             self.assertGreaterEqual(rec_time, interrupted_bookmark)
 
                                             # Verify all interrupted recs are in full recs
@@ -163,10 +169,10 @@ class TestGithubInterruptedSyncRemoveCurrentlySyncing(TestGithubBase):
                                     # Record count for all streams of interrupted sync match expectations
                                     full_records_after_interrupted_bookmark = 0
                                     for record in full_records:
-                                        rec_time = self.get_bookmark_formatted(record[expected_replication_key])
+                                        rec_time = self.dt_to_ts(record[expected_replication_key], self.RECORD_REPLICATION_KEY_FORMAT)
                                         self.assertGreater(rec_time, start_date, msg=f"{expected_replication_key} {stream} {repository} {record}")
 
-                                        if (rec_time >= interrupted_bookmark): 
+                                        if (rec_time >= interrupted_bookmark):
                                             full_records_after_interrupted_bookmark += 1
 
                                     self.assertEqual(full_records_after_interrupted_bookmark, interrupted_record_count, \
@@ -174,7 +180,6 @@ class TestGithubInterruptedSyncRemoveCurrentlySyncing(TestGithubBase):
                                 else:
                                     # Verify the bookmark has not advanced for the removed stream
                                     self.assertEqual(final_sync_stream_bookmark, interrupted_bookmark)
-
                             else:
                                 # verify we collected records that have the same replication value as a bookmark for streams that are already synced
                                 self.assertGreater(interrupted_record_count, 0)
