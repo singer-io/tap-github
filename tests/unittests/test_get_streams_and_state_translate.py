@@ -1,5 +1,6 @@
 import unittest
 from tap_github.sync import get_selected_streams, translate_state, get_stream_to_sync
+from parameterized import parameterized
 
 def get_stream_catalog(stream_name, selected_in_metadata = False):
     """Return catalog for stream"""
@@ -87,27 +88,14 @@ class TestGetStreamsToSync(unittest.TestCase):
             ]
         }
 
-    def test_parent_selected(self):
-        """Test if only parents selected"""
-        expected_streams = ["assignees", "projects", "teams"]
-        catalog = self.get_catalog(parent=True)
-        sync_streams = get_stream_to_sync(catalog)
-        
-        self.assertEqual(sync_streams, expected_streams)
-    
-    def test_mid_child_selected(self):
-        """Test if only mid child selected"""
-        expected_streams = ["projects", "project_columns", "teams", "team_members"]
-        catalog = self.get_catalog(mid_child=True)
-        sync_streams = get_stream_to_sync(catalog)
-        
-        self.assertEqual(sync_streams, expected_streams)
-    
-    def test_lowest_child_selected(self):
-        """Test if only lower child selected"""
-        expected_streams = ["projects", "project_columns", "project_cards", 
-                            "teams", "team_members", "team_memberships"]
-        catalog = self.get_catalog(child=True)
+    @parameterized.expand([
+        ['test_parent_selected', ["assignees", "projects", "teams"], True, False, False],
+        ['test_mid_child_selected', ["projects", "project_columns", "teams", "team_members"], False, True, False],
+        ['test_lowest_child_selected', ["projects", "project_columns", "project_cards", "teams", "team_members", "team_memberships"], False, False, True]
+    ])
+    def test_stream_selection(self, name, expected_streams, is_parent, is_mid_child, is_child):
+        """Test that if an only child or mid-child is selected in the catalog, then `get_stream_to_sync` returns the parent stream also"""
+        catalog = self.get_catalog(parent=is_parent, mid_child=is_mid_child, child=is_child)
         sync_streams = get_stream_to_sync(catalog)
         
         self.assertEqual(sync_streams, expected_streams)
