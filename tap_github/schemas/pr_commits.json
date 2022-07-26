@@ -267,7 +267,7 @@
                 }
               },
               "comment_count": {
-                "type": ["null", "integer"],
+                "type": ["null", "integer"]
               }
             }
         },
