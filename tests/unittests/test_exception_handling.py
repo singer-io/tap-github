@@ -71,7 +71,7 @@ class TestExceptionHandling(unittest.TestCase):
         [409, "The request could not be completed due to a conflict with the current state of the server.", tap_github.client.ConflictError, '', {}, 1],
         [422, "The request was not able to process right now.", tap_github.client.UnprocessableError, '', {}, 1],
         [501, "Unknown Error", tap_github.client.Server5xxError, '', {}, 5],
-        [429, "API rate limit exceeded.", tap_github.client.RateLimitExceeded, '', {}, 5],
+        [429, "Too many requests occurred.", tap_github.client.TooManyRequests, '', {}, 5],
     ])
     def test_error_message_and_call_count(self, mocked_parse_args, mocked_request, mock_verify_access, mock_sleep, erro_code, error_msg, error_class, content, json_msg, call_count):
         """

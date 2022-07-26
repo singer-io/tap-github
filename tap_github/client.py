@@ -47,6 +47,9 @@ class ConflictError(GithubException):
 class RateLimitExceeded(GithubException):
     pass
 
+class TooManyRequests(GithubException):
+    pass
+
 
 ERROR_CODE_EXCEPTION_MAPPING = {
     301: {
@@ -82,8 +85,8 @@ ERROR_CODE_EXCEPTION_MAPPING = {
         "message": "The request was not able to process right now."
     },
     429: {
-        "raise_exception": RateLimitExceeded,
-        "message": "API rate limit exceeded."
+        "raise_exception": TooManyRequests,
+        "message": "Too many requests occurred."
     },
     500: {
         "raise_exception": InternalServerError,
@@ -180,7 +183,7 @@ class GithubClient:
     # pylint: disable=dangerous-default-value
     # During 'Timeout' error there is also possibility of 'ConnectionError',
     # hence added backoff for 'ConnectionError' too.
-    @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError, RateLimitExceeded), max_tries=5, factor=2)
+    @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError, TooManyRequests), max_tries=5, factor=2)
     def authed_get(self, source, url, headers={}, stream="", should_skip_404 = True):
         """
         Call rest API and return the response in case of status code 200.
