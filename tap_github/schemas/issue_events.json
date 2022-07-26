@@ -232,7 +232,7 @@
               "type": ["null", "string"]
             },
             "license": {
-              "type": "object",
+              "type": ["null", "object"],
               "properties": {
                 "key": {
                   "type": ["null", "string"]
