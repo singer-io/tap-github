@@ -8,6 +8,9 @@
             "type": ["null", "string"],
             "description": "The git commit hash"
           },
+          "node_id": {
+            "type": ["null","string"]
+          },
           "url": {
             "type": ["null", "string"]
           },
@@ -58,6 +61,12 @@
                 "blob_url": {
                   "type": ["null","string"]
                 },
+                "contents_url": {
+                  "type": ["null","string"]
+                },
+                "sha": {
+                  "type": ["null","string"]
+                },
                 "patch": {
                   "type": ["null","string"]
                 }
@@ -93,25 +102,23 @@
                 }
               },
               "author": {
-                "type": ["null", "object"],
-                "additionalProperties": false,
+                "$ref": "shared/user.json#/"
+              },
+              "verification": {
+                "title": "Verification",
+                "type": "object",
                 "properties": {
-                  "date": {
-                    "type": ["null", "string"],
-                    "format": "date-time",
-                    "description": "The date the author committed the change"
+                  "verified": {
+                    "type": ["null", "boolean"]
                   },
-                  "name": {
-                    "type": ["null", "string"],
-                    "description": "The author's name"
+                  "reason": {
+                    "type": ["null", "string"]
                   },
-                  "email": {
-                    "type": ["null", "string"],
-                    "description": "The author's email"
+                  "payload": {
+                    "type": ["null", "string"]
                   },
-                  "login": {
-                    "type": ["null", "string"],
-                    "description": "The author's login"
+                  "signature": {
+                    "type": ["null", "string"]
                   }
                 }
               },
@@ -120,27 +127,7 @@
                 "description": "The commit message"
               },
               "committer": {
-                "type": ["null", "object"],
-                "additionalProperties": false,
-                "properties": {
-                  "date": {
-                    "type": ["null", "string"],
-                    "format": "date-time",
-                    "description": "The date the committer committed the change"
-                  },
-                  "name": {
-                    "type": ["null", "string"],
-                    "description": "The committer's name"
-                  },
-                  "email": {
-                    "type": ["null", "string"],
-                    "description": "The committer's email"
-                  },
-                  "login": {
-                    "type": ["null", "string"],
-                    "description": "The committer's login"
-                  }
-                }
+                "$ref": "shared/user.json#/"
               },
               "comment_count": {
                 "type": ["null", "integer"],

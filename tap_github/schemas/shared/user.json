@@ -64,9 +64,6 @@
     },
     "starred_at": {
       "type": ["null", "string"]
-    },
-    "_sdc_repository": {
-      "type": ["null", "string"]
     }
   }
 }

@@ -53,6 +53,9 @@
         },
         "url": {
           "type": ["null", "string"]
+        },
+        "display_login": {
+          "type": ["null", "string"]
         }
       }
     },
@@ -115,6 +118,32 @@
                 "type": ["null", "string"]
               },
               "url": {
+                "type": ["null", "string"]
+              }
+            }
+          }
+        },
+        "pages": {
+          "type": ["null", "array"],
+          "items": {
+            "type": ["null", "object"],
+            "properties": {
+              "page_name": {
+                "type": ["null", "string"]
+              },
+              "title": {
+                "type": ["null", "string"]
+              },
+              "summary": {
+                "type": ["null", "string"]
+              },
+              "action": {
+                "type": ["null", "string"]
+              },
+              "sha": {
+                "type": ["null", "string"]
+              },
+              "html_url": {
                 "type": ["null", "string"]
               }
             }
