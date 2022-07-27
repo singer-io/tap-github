@@ -298,6 +298,23 @@
       "id": {
         "type": ["null", "string"]
       },
+      "author": {
+        "$ref": "shared/user.json#/"
+      },
+      "stats": {
+        "type": ["null", "object"],
+        "properties": {
+          "additions": {
+            "type": ["null", "integer"]
+          },
+          "deletions": {
+            "type": ["null", "integer"]
+          },
+          "total": {
+            "type": ["null", "integer"]
+          }
+        }
+      },
       "updated_at": {
         "type": ["null", "string"],
         "format": "date-time"
