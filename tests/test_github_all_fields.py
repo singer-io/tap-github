@@ -27,7 +27,8 @@ KNOWN_MISSING_FIELDS = {
         'stats',
     },
     'pr_commits': {
-        'files'
+        'files',
+        'stats'
     },
     'review_comments': {
         'assignees',
