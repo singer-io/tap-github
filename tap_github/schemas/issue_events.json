@@ -94,9 +94,6 @@
         "closed_by": {
           "$ref": "shared/user.json#/"
         },
-        "draft": {
-          "type": ["null", "boolean"]
-        },
         "closed_at": {
           "type": ["null", "string"],
           "format": "date-time"
@@ -969,6 +966,9 @@
           "type": ["null", "string"]
         }
       }
+    },
+    "draft": {
+      "type": ["null", "boolean"]
     },
     "author_association": {
       "type": ["null", "string"]
