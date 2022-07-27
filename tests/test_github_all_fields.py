@@ -99,7 +99,8 @@ KNOWN_MISSING_FIELDS = {
     'issue_events': {
         'dismissed_review',
         'requested_team',
-        'author_association'
+        'author_association',
+        'draft'
     },
 }
 
