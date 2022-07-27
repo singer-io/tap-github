@@ -1,6 +1,6 @@
 {
-  "type": ["null", "object"],
-  "properties": {
+    "type": ["null", "object"],
+    "properties": {
       "_sdc_repository": {
         "type": ["string"]
       },
