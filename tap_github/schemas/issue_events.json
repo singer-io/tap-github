@@ -108,7 +108,7 @@
           "type": ["null", "string"]
         },
         "performed_via_github_app": {
-          "type": ["null", "string"]
+          "$ref": "shared/performed_via_github_app.json#/"
         },
         "assignee": {
           "$ref": "shared/user.json#/"
