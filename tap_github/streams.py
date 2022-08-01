@@ -630,7 +630,7 @@ class Commits(IncrementalStream):
 
 class Comments(IncrementalOrderedStream):
     '''
-    https://developer.github.com/v3/issues/comments/#list-comments-in-a-repository
+    https://docs.github.com/en/rest/issues/comments#list-comments-in-a-repository
     '''
     tap_stream_id = "comments"
     replication_method = "INCREMENTAL"
@@ -661,7 +661,7 @@ class Assignees(FullTableStream):
 
 class Releases(FullTableStream):
     '''
-    https://docs.github.com/en/rest/reference/pulls#list-reviews-for-a-pull-request
+    https://docs.github.com/en/rest/releases/releases#list-releases
     '''
     tap_stream_id = "releases"
     replication_method = "FULL_TABLE"
@@ -689,7 +689,7 @@ class IssueEvents(IncrementalOrderedStream):
 
 class Events(IncrementalStream):
     '''
-    https://developer.github.com/v3/issues/events/#list-events-for-a-repository
+    https://docs.github.com/en/rest/activity/events#list-repository-events
     '''
     tap_stream_id = "events"
     replication_method = "INCREMENTAL"
