@@ -159,7 +159,7 @@ class TestGithubBookmarks(TestGithubBase):
 
                     for record in second_sync_messages:
                         # Verify the second sync bookmark value is the max replication key value for a given stream
-                        replication_key_value = self.dt_to_ts(record.get(replication_key), REPLICATION_KEY_FORMAT)
+                        replication_key_value = self.dt_to_ts(record.get(replication_key), replication_key_format)
                         
                         self.assertGreaterEqual(replication_key_value, simulated_bookmark_value,
                                                 msg="Second sync records do not respect the previous bookmark.")
