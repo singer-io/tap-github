@@ -146,21 +146,19 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
 
                         if expected_replication_method == self.INCREMENTAL:
                             expected_replication_key = next(iter(expected_replication_keys[stream]))
-                            
-                            if stream in full_sync_bookmark.keys():
-                                full_sync_stream_bookmark = self.dt_to_ts(full_sync_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
+                            full_sync_stream_bookmark = self.dt_to_ts(full_sync_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
                                 
                             if stream in interrupted_repo_bookmark.keys():
                                 interrupted_bookmark = self.dt_to_ts(interrupted_repo_bookmark[stream]["since"], self.BOOKMARK_FORMAT)
-                            
+                                final_sync_stream_bookmark = self.dt_to_ts(final_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
+
                                 if stream != removed_stream:
-                                    final_sync_stream_bookmark = self.dt_to_ts(final_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
 
                                     # Verify state ends with the same value for common streams after both full and interrupted syncs
                                     self.assertEqual(full_sync_stream_bookmark, final_sync_stream_bookmark)
 
                                     # Verify resuming sync only replicates records with replication key values greater or equal to
-                                    # the interrupted_state for streams that completed were replicated during the interrupted sync.
+                                    # the interrupted_state for streams that were completed, replicated during the interrupted sync.
                                     for record in interrupted_records:
                                         with self.subTest(record_primary_key=record[expected_primary_keys[0]]):
                                             rec_time = self.dt_to_ts(record[expected_replication_key], self.RECORD_REPLICATION_KEY_FORMAT)
@@ -182,13 +180,13 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
                                                         msg="Expected {} records in each sync".format(full_records_after_interrupted_bookmark))
                                 else:
                                     # Verify the bookmark has not advanced for the removed stream
-                                    self.assertEqual(final_sync_stream_bookmark, full_sync_stream_bookmark)
+                                    self.assertEqual(final_sync_stream_bookmark, interrupted_bookmark)
                             else:
                                 # verify we collected records that have the same replication value as a bookmark for streams that are already synced
                                 self.assertGreater(interrupted_record_count, 0)
 
                         else:
-                            # Verify full table streams do not save bookmarked values at the conclusion of a successful sync
+                            # Verify full table streams do not save bookmarked values after a successful sync
                             self.assertNotIn(stream, full_sync_bookmark.keys())
                             self.assertNotIn(stream, final_bookmark.keys())
 
