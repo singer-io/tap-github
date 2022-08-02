@@ -69,7 +69,7 @@ class TestBuildUrl(unittest.TestCase):
         Test the `build_url` method for filter param or organization name only.
         """
         test_streams = stream_class()
-        full_url = test_streams.build_url("org/test-repo", "2022-01-01T00:00:00Z")
+        full_url = test_streams.build_url("https://api.github.com", "org/test-repo", "2022-01-01T00:00:00Z")
 
         # verify returned url is expected
         self.assertEqual(expected_url, full_url)
@@ -185,5 +185,5 @@ class TestGetChildUrl(unittest.TestCase):
         Test for a stream with one child
         """
         child_stream = stream_class()
-        full_url = get_child_full_url(child_stream, "org1/test-repo", parent_id, grand_parent_id)
+        full_url = get_child_full_url(self.domain, child_stream, "org1/test-repo", parent_id, grand_parent_id)
         self.assertEqual(expected_url, full_url)
