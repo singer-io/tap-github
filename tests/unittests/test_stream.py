@@ -1,11 +1,12 @@
 import unittest
 from unittest import mock
 from tap_github.streams import Comments, ProjectColumns, Projects, Reviews, TeamMemberships, Teams, PullRequests, get_schema, get_child_full_url, get_bookmark
+from parameterized import parameterized
 
 
 class TestGetSchema(unittest.TestCase):
     """
-    Test `get_schema` method of stream class
+    Test `get_schema` method of the stream class
     """
 
     def test_get_schema(self):
@@ -30,7 +31,7 @@ class TestGetBookmark(unittest.TestCase):
     
     def test_with_out_repo_path(self):
         """
-        Test if state does not contains repo path
+        Test if the state does not contain a repo path
         """
         state = {
             "bookmarks": {
@@ -42,7 +43,7 @@ class TestGetBookmark(unittest.TestCase):
         
     def test_with_repo_path(self):
         """
-        Test if state does contains repo path
+        Test if the state does contains a repo path
         """
         state = {
             "bookmarks": {
@@ -54,29 +55,20 @@ class TestGetBookmark(unittest.TestCase):
         returned_bookmark = get_bookmark(state, "org/test-repo", "projects", "since", "2021-01-01T00:00:00Z")
         self.assertEqual(returned_bookmark, "2022-01-01T00:00:00Z")
 
-
 class TestBuildUrl(unittest.TestCase):
     """
-    Test `build_url` method of stream class
+    Test the `build_url` method of the stream class
     """
-    
-    def test_stream_with_filter_params(self):
-        """
-        Test for stream with filter param
-        """
-        test_streams = Comments()
-        expected_url = "https://api.github.com/repos/org/test-repo/issues/comments?sort=updated&direction=desc?since=2022-01-01T00:00:00Z"
-        full_url = test_streams.build_url("org/test-repo", "2022-01-01T00:00:00Z")
 
-        # verify returned url is expected
-        self.assertEqual(expected_url, full_url)
-
-    def test_stream_with_organization(self):
+    @parameterized.expand([
+        ["test_stream_with_filter_params", "https://api.github.com/repos/org/test-repo/issues/comments?sort=updated&direction=desc?since=2022-01-01T00:00:00Z", Comments],
+        ["test_stream_with_organization", "https://api.github.com/orgs/org/teams", Teams]
+    ])
+    def test_build_url(self, name, expected_url, stream_class):
         """
-        Test for stream that uses organization
+        Test the `build_url` method for filter param or organization name only.
         """
-        test_streams = Teams()
-        expected_url = "https://api.github.com/orgs/org/teams"
+        test_streams = stream_class()
         full_url = test_streams.build_url("org/test-repo", "2022-01-01T00:00:00Z")
 
         # verify returned url is expected
@@ -88,6 +80,7 @@ class GetMinBookmark(unittest.TestCase):
     Test `get_min_bookmark` method of stream class
     """
 
+    start_date = "2020-04-01T00:00:00Z"
     state = {
         "bookmarks": {
             "org/test-repo": {
@@ -102,55 +95,28 @@ class GetMinBookmark(unittest.TestCase):
         }
     }
 
-    def test_multiple_children(self):
+    @parameterized.expand([
+        ["test_multiple_children", PullRequests, "pull_requests", ["pull_requests","review_comments", "pr_commits"], "2022-04-01T00:00:00Z", "2022-02-01T00:00:00Z"],
+        ["test_children_with_only_parent_selected", PullRequests, "pull_requests", ["pull_requests"], "2022-04-01T00:00:00Z", "2022-04-01T00:00:00Z"],
+        ["test_for_mid_child_in_stream", Projects, "projects", ["projects", "project_columns"], "2022-03-29T00:00:00Z", "2022-03-01T00:00:00Z"],
+        ["test_nested_child_bookmark", Projects, "projects", ["projects", "project_cards"], "2022-03-29T00:00:00Z", "2022-03-14T00:00:00Z"]
+    ])
+    def test_multiple_children(self, name, stream_class, stream_name, stream_to_sync, current_date, expected_bookmark):
         """
-        Test for stream with multiple children
+        Test that `get_min_bookmark` method returns the minimum bookmark from the parent and its corresponding child bookmarks. 
         """
-        test_stream = PullRequests()
-        bookmark = test_stream.get_min_bookmark("pull_requests", ["pull_requests","review_comments", "pr_commits"],
-                                     "2022-04-01T00:00:00Z", "org/test-repo", "2020-04-01T00:00:00Z", self.state)
+        test_stream = stream_class()
+        bookmark = test_stream.get_min_bookmark(stream_name, stream_to_sync,
+                                     current_date, "org/test-repo", self.start_date, self.state)
 
         # Verify returned bookmark is expected
-        self.assertEqual(bookmark, "2022-02-01T00:00:00Z")
-    
-    def test_children_with_only_parent_selected(self):
-        """
-        Test for stream with multiple children and only parent is selected
-        """
-        test_stream = PullRequests()
-        bookmark = test_stream.get_min_bookmark("pull_requests", ["pull_requests"],
-                                     "2022-04-01T00:00:00Z", "org/test-repo", "2020-04-01T00:00:00Z", self.state)
-
-        # Verify returned bookmark is expected
-        self.assertEqual(bookmark, "2022-04-01T00:00:00Z")
-    
-    def test_for_mid_child_in_stream(self):
-        """
-        Test for stream with multiple children and mid_child is selected
-        """
-        test_stream = Projects()
-        bookmark = test_stream.get_min_bookmark("projects", ["projects", "project_columns"],
-                                     "2022-03-29T00:00:00Z", "org/test-repo", "2020-04-01T00:00:00Z", self.state)
-
-        # Verify returned bookmark is expected
-        self.assertEqual(bookmark, "2022-03-01T00:00:00Z")
-    
-    def test_nested_child_bookmark(self):
-        """
-        Test for stream with multiple children and nested child is selected
-        """
-        test_stream = PullRequests()
-        bookmark = test_stream.get_min_bookmark("projects", ["projects", "project_cards"],
-                                     "2022-03-29T00:00:00Z", "org/test-repo", "2020-04-01T00:00:00Z", self.state)
-
-        # Verify returned bookmark is expected
-        self.assertEqual(bookmark, "2022-03-14T00:00:00Z")
+        self.assertEqual(bookmark, expected_bookmark)
 
 
 @mock.patch("singer.write_bookmark")
 class TestWriteBookmark(unittest.TestCase):
     """
-    Test `write_bookmarks` method of stream class
+    Test the `write_bookmarks` method of the stream class
     """
 
     state = {
@@ -169,7 +135,7 @@ class TestWriteBookmark(unittest.TestCase):
 
     def test_multiple_child(self, mock_write_bookmark):
         """
-        Test for stream with multiple children is selected
+        Test for a stream with multiple children is selected
         """
         test_stream = PullRequests()
         test_stream.write_bookmarks("pull_requests", ["pull_requests","review_comments", "pr_commits"],
@@ -190,7 +156,7 @@ class TestWriteBookmark(unittest.TestCase):
 
     def test_nested_child(self, mock_write_bookmark):
         """
-        Test for stream if nested child is selected
+        Test for the stream if the nested child is selected
         """
         test_stream = Projects()
         test_stream.write_bookmarks("projects", ["project_cards"],
@@ -207,32 +173,16 @@ class TestGetChildUrl(unittest.TestCase):
     Test `get_child_full_url` method of stream class
     """
 
-    def test_child_stream(self):
-        """
-        Test for stream with one child
-        """
-        child_stream = ProjectColumns()
-        expected_url = "https://api.github.com/projects/1309875/columns"
-        full_url = get_child_full_url(child_stream, "org1/test-repo",
-                                                       None, (1309875,))
-        self.assertEqual(expected_url, full_url)
+    @parameterized.expand([
+        ["test_child_stream", ProjectColumns, "https://api.github.com/projects/1309875/columns", None, (1309875,)],
+        ["test_child_is_repository", Reviews, "https://api.github.com/repos/org1/test-repo/pulls/11/reviews", (11,), None],
+        ["test_child_is_organization", TeamMemberships, "https://api.github.com/orgs/org1/teams/dev-team/memberships/demo-user-1", ("dev-team",), ("demo-user-1",)]
+    ])
 
-    def test_child_is_repository(self):
+    def test_child_stream(self, name, stream_class, expected_url, parent_id, grand_parent_id):
         """
-        Test for child stream with reposatory
+        Test for a stream with one child
         """
-        child_stream = Reviews()
-        expected_url = "https://api.github.com/repos/org1/test-repo/pulls/11/reviews"
-        full_url = get_child_full_url(child_stream, "org1/test-repo",
-                                                       (11,), None)
-        self.assertEqual(expected_url, full_url)
-
-    def test_child_is_organization(self):
-        """
-        Test for child stream with organization
-        """
-        child_stream = TeamMemberships()
-        expected_url = "https://api.github.com/orgs/org1/teams/dev-team/memberships/demo-user-1"
-        full_url = get_child_full_url(child_stream, "org1/test-repo",
-                                                       ("dev-team",), ("demo-user-1",))
+        child_stream = stream_class()
+        full_url = get_child_full_url(child_stream, "org1/test-repo", parent_id, grand_parent_id)
         self.assertEqual(expected_url, full_url)
