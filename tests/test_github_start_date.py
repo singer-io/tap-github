@@ -1,6 +1,6 @@
 import os
 import requests
-from tap_tester import connections, runner
+from tap_tester import connections, runner, LOGGER
 
 from base import TestGithubBase
 from datetime import datetime, timedelta
@@ -89,8 +89,7 @@ class GithubStartDateTest(TestGithubBase):
 
         # run check mode
         found_catalogs_1 = self.run_and_verify_check_mode(conn_id_1)
-        # print(found_catalogs_1)
-
+        
         # table and field selection
         test_catalogs_1_all_fields = [catalog for catalog in found_catalogs_1
                                       if catalog.get('stream_name') in expected_streams]
@@ -104,7 +103,7 @@ class GithubStartDateTest(TestGithubBase):
         ### Update START DATE Between Syncs
         ##########################################################################
 
-        print("REPLICATION START DATE CHANGE: {} ===>>> {} ".format(self.START_DATE, self.start_date_2))
+        LOGGER.info("REPLICATION START DATE CHANGE: {} ===>>> {} ".format(self.START_DATE, self.start_date_2))
         self.START_DATE = self.start_date_2
 
         ##########################################################################
