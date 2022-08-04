@@ -1,3 +1,5 @@
+from math import ceil
+
 from tap_tester import runner, connections
 
 from base import TestGithubBase
@@ -78,15 +80,26 @@ class GitHubPaginationTest(TestGithubBase):
                                      for message in synced_records.get(stream).get('messages')
                                      if message.get('action') == 'upsert']
 
-                # Verify records are more than page size so multiple page is working
-                self.assertGreater(record_count_sync, page_size)
+                # Verify that for each stream you can get multiple pages of data
+                self.assertGreater(record_count_sync, page_size,
+                                   msg="The number of records is not over the stream max limit")
+                
+                # Chunk the replicated records (just primary keys) into expected pages
+                pages = []
+                page_count = ceil(len(primary_keys_list) / page_size)
+                for page_index in range(page_count):
+                    page_start = page_index * page_size
+                    page_end = (page_index + 1) * page_size
+                    pages.append(set(primary_keys_list[page_start:page_end]))
 
-                primary_keys_list_1 = primary_keys_list[:page_size]
-                primary_keys_list_2 = primary_keys_list[page_size:2*page_size]
+                # Verify by primary keys that data is unique for each page
+                for current_index, current_page in enumerate(pages):
+                    with self.subTest(current_page_primary_keys=current_page):
 
-                primary_keys_page_1 = set(primary_keys_list_1)
-                primary_keys_page_2 = set(primary_keys_list_2)
+                        for other_index, other_page in enumerate(pages):
+                            if current_index == other_index:
+                                continue  # don't compare the page to itself
 
-                # Verify by private keys that data is unique for page
-                self.assertEqual(len(primary_keys_page_1), page_size)
-                self.assertTrue(primary_keys_page_1.isdisjoint(primary_keys_page_2))
+                            self.assertTrue(
+                                current_page.isdisjoint(other_page), msg=f'other_page_primary_keys={other_page}'
+                            )

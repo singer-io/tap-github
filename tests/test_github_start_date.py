@@ -1,6 +1,6 @@
 import os
 import requests
-from tap_tester import connections, runner
+from tap_tester import connections, runner, LOGGER
 
 from base import TestGithubBase
 from datetime import datetime, timedelta
@@ -89,8 +89,7 @@ class GithubStartDateTest(TestGithubBase):
 
         # run check mode
         found_catalogs_1 = self.run_and_verify_check_mode(conn_id_1)
-        # print(found_catalogs_1)
-
+        
         # table and field selection
         test_catalogs_1_all_fields = [catalog for catalog in found_catalogs_1
                                       if catalog.get('stream_name') in expected_streams]
@@ -104,7 +103,7 @@ class GithubStartDateTest(TestGithubBase):
         ### Update START DATE Between Syncs
         ##########################################################################
 
-        print("REPLICATION START DATE CHANGE: {} ===>>> {} ".format(self.START_DATE, self.start_date_2))
+        LOGGER.info("REPLICATION START DATE CHANGE: {} ===>>> {} ".format(self.START_DATE, self.start_date_2))
         self.START_DATE = self.start_date_2
 
         ##########################################################################
@@ -151,6 +150,9 @@ class GithubStartDateTest(TestGithubBase):
                 primary_keys_sync_1 = set(primary_keys_list_1)
                 primary_keys_sync_2 = set(primary_keys_list_2)
 
+                # verify that sync 2 has at least one record synced
+                self.assertGreater(record_count_sync_2, 0)
+
                 if expected_metadata.get(self.OBEYS_START_DATE):
                     
                     # Expected bookmark key is one element in set so directly access it
@@ -162,15 +164,15 @@ class GithubStartDateTest(TestGithubBase):
                     bookmark_key_sync_1 = set(bookmark_keys_list_1)
                     bookmark_key_sync_2 = set(bookmark_keys_list_2)
 
-                    REPLICATION_KEY_FORMAT = self.RECORD_REPLICATION_KEY_FORMAT
+                    replication_key_format = self.RECORD_REPLICATION_KEY_FORMAT
                     # For events stream replication key value is coming in different format
                     if stream == 'events':
-                        REPLICATION_KEY_FORMAT = self.EVENTS_RECORD_REPLICATION_KEY_FORMAT
+                        replication_key_format = self.EVENTS_RECORD_REPLICATION_KEY_FORMAT
 
                     # Verify bookmark key values are greater than or equal to start date of sync 1
                     for bookmark_key_value in bookmark_key_sync_1:
                         self.assertGreaterEqual(
-                            self.dt_to_ts(bookmark_key_value, REPLICATION_KEY_FORMAT), start_date_1_epoch,
+                            self.dt_to_ts(bookmark_key_value, replication_key_format), start_date_1_epoch,
                             msg="Report pertains to a date prior to our start date.\n" +
                             "Sync start_date: {}\n".format(self.start_date_1) +
                                 "Record date: {} ".format(bookmark_key_value)
@@ -179,7 +181,7 @@ class GithubStartDateTest(TestGithubBase):
                     # Verify bookmark key values are greater than or equal to start date of sync 2
                     for bookmark_key_value in bookmark_key_sync_2:
                         self.assertGreaterEqual(
-                            self.dt_to_ts(bookmark_key_value, REPLICATION_KEY_FORMAT), start_date_2_epoch,
+                            self.dt_to_ts(bookmark_key_value, replication_key_format), start_date_2_epoch,
                             msg="Report pertains to a date prior to our start date.\n" +
                             "Sync start_date: {}\n".format(self.start_date_2) +
                                 "Record date: {} ".format(bookmark_key_value)

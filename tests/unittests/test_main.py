@@ -50,7 +50,7 @@ class TestSyncMode(unittest.TestCase):
         mock_args.return_value = MockArgs(config=self.mock_config, properties=self.mock_catalog)
         main()
         
-        # Verify `_sync` is called with ecpected arguments
+        # Verify `_sync` is called with expected arguments
         mock_sync.assert_called_with("mock_client", self.mock_config, {}, self.mock_catalog)
         
         # verify `_discover` function is not called
@@ -65,20 +65,20 @@ class TestSyncMode(unittest.TestCase):
         mock_args.return_value = MockArgs(config=self.mock_config)
         main()
         
-        # Verify `_sync` is called with ecpected arguments
+        # Verify `_sync` is called with expected arguments
         mock_sync.assert_called_with("mock_client", self.mock_config, {}, {"schema": "", "metadata": ""})
 
         # verify `_discover` function is  called
         self.assertTrue(mock_discover.called)
 
     def test_sync_with_state(self, mock_sync, mock_args, mock_client):
-        """Test sync mode with state gicen in args"""
+        """Test sync mode with state given in args"""
         mock_state = {"bookmarks": {"projec ts": ""}}
         mock_client.return_value = "mock_client"
         mock_args.return_value = MockArgs(config=self.mock_config, properties=self.mock_catalog, state=mock_state)
         main()
         
-        # Verify `_sync` is called with ecpected arguments
+        # Verify `_sync` is called with expected arguments
         mock_sync.assert_called_with("mock_client", self.mock_config, mock_state, self.mock_catalog)
 
 @mock.patch("tap_github.GithubClient")
@@ -99,5 +99,5 @@ class TestDiscover(unittest.TestCase):
         with self.assertRaises(Exception):
             discover(mock_client)
 
-        # Verify logger called 3 times when exception arises.
+        # Verify logger called 3 times when an exception arises.
         self.assertEqual(mock_logger.call_count, 3)

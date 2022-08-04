@@ -29,7 +29,7 @@ jobs:
           name: 'Unit Tests'
           command: |
             source /usr/local/share/virtualenvs/tap-github/bin/activate
-            pip install nose coverage
+            pip install nose coverage parameterized
             nosetests --with-coverage --cover-erase --cover-package=tap_github --cover-html-dir=htmlcov tests/unittests
             coverage html
           when: always
