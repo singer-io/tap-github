@@ -163,11 +163,11 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
                                     if (rec_time >= interrupted_bookmark):
                                         full_records_after_interrupted_bookmark += 1
                                         
-                                self.assertEqual(full_records_after_interrupted_bookmark, interrupted_record_count, \
-                                                    msg="Expected {} records in each sync".format(full_records_after_interrupted_bookmark))
+                                self.assertGreaterEqual(full_records_after_interrupted_bookmark, interrupted_record_count, \
+                                                    msg="Expected max {} records in each sync".format(full_records_after_interrupted_bookmark))
 
                         else:
-                            # Verify full table streams do not save bookmarked values at the conclusion of a successful sync
+                            # Verify full table streams do not save bookmarked values after a successful sync
                             self.assertNotIn(stream, full_sync_bookmark.keys())
                             self.assertNotIn(stream, final_bookmark.keys())
 

@@ -176,8 +176,8 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
                                         if (rec_time >= interrupted_bookmark):
                                             full_records_after_interrupted_bookmark += 1
 
-                                    self.assertEqual(full_records_after_interrupted_bookmark, interrupted_record_count, \
-                                                        msg="Expected {} records in each sync".format(full_records_after_interrupted_bookmark))
+                                    self.assertGreaterEqual(full_records_after_interrupted_bookmark, interrupted_record_count, \
+                                                        msg="Expected max {} records in each sync".format(full_records_after_interrupted_bookmark))
                                 else:
                                     # Verify the bookmark has not advanced for the removed stream
                                     self.assertEqual(final_sync_stream_bookmark, interrupted_bookmark)
