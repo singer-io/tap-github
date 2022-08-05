@@ -55,8 +55,7 @@
       "type": ["null", "string"]
     },
     "assignee": {
-      "type": ["null", "object"],
-      "properties": {}
+      "$ref": "shared/user.json#/"
     },
     "assignees": {
       "type": [
