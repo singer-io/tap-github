@@ -23,7 +23,7 @@ class TestGithubDiscovery(TestGithubBase):
         • verify that primary keys are given the inclusion of automatic.
         • verify that all other fields have inclusion of available metadata.
         """
-        streams_to_test = self.expected_streams()
+        expected_streams = self.expected_streams()
 
         conn_id = connections.ensure_connection(self)
 
@@ -34,7 +34,7 @@ class TestGithubDiscovery(TestGithubBase):
         self.assertTrue(all([re.fullmatch(r"[a-z_]+",  name) for name in found_catalog_names]),
                         msg="One or more streams don't follow standard naming")
 
-        for stream in streams_to_test:
+        for stream in expected_streams:
             with self.subTest(stream=stream):
 
                 # Verify ensure the catalog is found for a given stream
@@ -42,14 +42,15 @@ class TestGithubDiscovery(TestGithubBase):
                                      if catalog["stream_name"] == stream]))
                 self.assertIsNotNone(catalog)
 
-                # collecting expected values
+                # Collecting expected values
                 expected_primary_keys = self.expected_primary_keys()[stream]
-                expected_automatic_fields = expected_primary_keys
+                expected_automatic_keys = self.expected_automatic_keys().get(stream)
 
-                # collecting actual values...
+                # Collecting actual values...
                 schema_and_metadata = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
                 metadata = schema_and_metadata["metadata"]
                 stream_properties = [item for item in metadata if item.get("breadcrumb") == []]
+                actual_fields = [md_entry.get("breadcrumb")[1] for md_entry in metadata if md_entry.get("breadcrumb") != []]
                 actual_primary_keys = set(
                     stream_properties[0].get(
                         "metadata", {self.PRIMARY_KEYS: []}).get(self.PRIMARY_KEYS, [])
@@ -60,24 +61,40 @@ class TestGithubDiscovery(TestGithubBase):
                     if item.get("metadata").get("inclusion") == "automatic"
                 )
 
+                actual_replication_method = stream_properties[0].get(
+                    "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
+
                 ##########################################################################
                 ### metadata assertions
                 ##########################################################################
 
-                # verify there is only 1 top level breadcrumb in metadata
+                # Verify there is only 1 top level breadcrumb in metadata
                 self.assertTrue(len(stream_properties) == 1,
                                 msg="There is NOT only one top level breadcrumb for {}".format(stream) + \
                                 "\nstream_properties | {}".format(stream_properties))
 
-                # verify primary key(s) match expectations
+                # Verify there are no duplicate metadata entries
+                self.assertEqual(len(actual_fields), 
+                                len(set(actual_fields)), 
+                                msg = "duplication in the retrieved fields")
+                
+                # Verify primary key(s) match expectations
                 self.assertSetEqual(
                     expected_primary_keys, actual_primary_keys,
                 )
 
-                # verify that primary keys are given the inclusion of automatic in metadata.
-                self.assertSetEqual(expected_automatic_fields, actual_automatic_fields)
+                # Verify that primary keys and replication keys are given the inclusion of automatic in metadata.
+                self.assertSetEqual(expected_automatic_keys, actual_automatic_fields)
 
-                # verify that all other fields have inclusion of available
+                # Verify the actual replication matches our expected replication method
+                self.assertEqual(
+                    self.expected_replication_method().get(stream, None),
+                    actual_replication_method,
+                    msg="The actual replication method {} doesn't match the expected {}".format(
+                        actual_replication_method,
+                        self.expected_replication_method().get(stream, None)))
+                
+                # Verify that all other fields have inclusion of available
                 # This assumes there are no unsupported fields for SaaS sources
                 self.assertTrue(
                     all({item.get("metadata").get("inclusion") == "available"
