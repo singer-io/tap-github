@@ -633,12 +633,6 @@ def get_all_teams(schemas, repo_path, state, mdata, _start_date):
 def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
     org = repo_path.split('/')[0]
 
-    # Only fetch this once per org
-    if process_globals == False or has_org_cache(org, 'team_members'):
-        return state
-
-    set_has_org_cache(org, 'team_members')
-
     with metrics.record_counter('team_members') as counter:
         for response in authed_get_all_pages(
                 'team_members',
@@ -659,12 +653,6 @@ def get_all_team_members(team_slug, schemas, repo_path, state, mdata):
 
 def get_all_team_memberships(team_slug, schemas, repo_path, state, mdata):
     org = repo_path.split('/')[0]
-
-    # Only fetch this once per org
-    if process_globals == False or has_org_cache(org, 'team_memberships'):
-        return state
-
-    set_has_org_cache(org, 'team_memberships')
 
     for response in authed_get_all_pages(
             'team_members',
