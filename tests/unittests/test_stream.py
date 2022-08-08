@@ -17,7 +17,7 @@ class TestGetSchema(unittest.TestCase):
             {"tap_stream_id": "events"},
         ]
         expected_schema = {"tap_stream_id": "comments"}
-        
+
         # Verify returned schema is same as exected schema 
         self.assertEqual(get_schema(catalog, "comments"), expected_schema)
 
@@ -28,7 +28,7 @@ class TestGetBookmark(unittest.TestCase):
     """
 
     test_stream = Comments()
-    
+
     def test_with_out_repo_path(self):
         """
         Test if the state does not contain a repo path
@@ -40,7 +40,7 @@ class TestGetBookmark(unittest.TestCase):
         }
         returned_bookmark = get_bookmark(state, "org/test-repo", "projects", "since", "2021-01-01T00:00:00Z")
         self.assertEqual(returned_bookmark, "2021-01-01T00:00:00Z")
-        
+
     def test_with_repo_path(self):
         """
         Test if the state does contains a repo path
@@ -69,7 +69,7 @@ class TestBuildUrl(unittest.TestCase):
         Test the `build_url` method for filter param or organization name only.
         """
         test_streams = stream_class()
-        full_url = test_streams.build_url(param, "2022-01-01T00:00:00Z")
+        full_url = test_streams.build_url("https://api.github.com", param, "2022-01-01T00:00:00Z")
 
         # verify returned url is expected
         self.assertEqual(expected_url, full_url)
@@ -77,7 +77,7 @@ class TestBuildUrl(unittest.TestCase):
 
 class GetMinBookmark(unittest.TestCase):
     """
-    Test `get_min_bookmark` method of stream class
+    Test `get_min_bookmark` method of the stream class
     """
 
     start_date = "2020-04-01T00:00:00Z"
@@ -172,6 +172,7 @@ class TestGetChildUrl(unittest.TestCase):
     """
     Test `get_child_full_url` method of stream class
     """
+    domain = 'https://api.github.com'
 
     @parameterized.expand([
         ["test_child_stream", ProjectColumns, "org1/test-repo", "https://api.github.com/projects/1309875/columns", None, (1309875,)],
@@ -184,5 +185,5 @@ class TestGetChildUrl(unittest.TestCase):
         Test for a stream with one child
         """
         child_stream = stream_class()
-        full_url = get_child_full_url(child_stream, param, parent_id, grand_parent_id)
+        full_url = get_child_full_url(self.domain, child_stream, param, parent_id, grand_parent_id)
         self.assertEqual(expected_url, full_url)
