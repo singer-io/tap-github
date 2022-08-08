@@ -229,7 +229,7 @@ class GithubClient:
         """
         For all the repositories mentioned in the config, check the access for each repos.
         """
-        repositories, org = self.extract_repos_from_config()
+        repositories, org = self.extract_repos_from_config() # pylint: disable=unused-variable
 
         for repo in repositories:
 
