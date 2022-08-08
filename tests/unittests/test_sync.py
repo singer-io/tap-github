@@ -41,7 +41,7 @@ class TestSyncFunctions(unittest.TestCase):
         ]}
 
         client = mock.Mock()
-        client.extract_repos_from_config.return_value = ["test-repo"]
+        client.extract_repos_from_config.return_value = (["test-repo"], set())
         client.authed_get_all_pages.return_value = []
         client.not_accessible_repos = {}
 
@@ -68,7 +68,7 @@ class TestSyncFunctions(unittest.TestCase):
         ]}
 
         client = mock.Mock()
-        client.extract_repos_from_config.return_value = ["test-repo"]
+        client.extract_repos_from_config.return_value = (["test-repo"], {"org"})
         client.authed_get_all_pages.return_value = []
         client.not_accessible_repos = {}
 
@@ -96,7 +96,7 @@ class TestSyncFunctions(unittest.TestCase):
         ]}
 
         client = mock.Mock()
-        client.extract_repos_from_config.return_value = ["test-repo"]
+        client.extract_repos_from_config.return_value = (["test-repo"], {"org"})
         client.authed_get_all_pages.return_value = []
         client.not_accessible_repos = {}
 
@@ -105,9 +105,8 @@ class TestSyncFunctions(unittest.TestCase):
         # Verify write schema is called for selected streams
         self.assertEqual(mock_write_schemas.call_count, 2)
 
-        self.assertEqual(mock_write_schemas.mock_calls[0], mock.call("projects", mock.ANY, mock.ANY))
-        self.assertEqual(mock_write_schemas.mock_calls[1], mock.call("teams", mock.ANY, mock.ANY))
-
+        self.assertEqual(mock_write_schemas.mock_calls[0], mock.call("teams", mock.ANY, mock.ANY))
+        self.assertEqual(mock_write_schemas.mock_calls[1], mock.call("projects", mock.ANY, mock.ANY))
 
 @mock.patch("singer.write_schema")
 class TestWriteSchemas(unittest.TestCase):
