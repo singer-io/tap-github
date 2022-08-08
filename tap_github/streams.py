@@ -36,10 +36,9 @@ def get_child_full_url(domain, child_object, repo_path, parent_id, grand_parent_
 
     elif child_object.use_organization:
         # The `use_organization` represents that the url contains the organization name.
-        org = repo_path.split('/')[0]
         child_full_url = '{}/{}'.format(
             domain,
-            child_object.path).format(org, *parent_id, *grand_parent_id)
+            child_object.path).format(repo_path, *parent_id, *grand_parent_id)
 
     else:
         # Build and return url that does not contain the repos or the organization name.
@@ -82,10 +81,9 @@ class Stream:
 
         if self.use_organization:
             # The `use_organization` represents that the url contains the organization name.
-            org = repo_path.split('/')[0]
             full_url = '{}/{}'.format(
                 base_url,
-                self.path).format(org)
+                self.path).format(repo_path)
         else:
             # The url that contains /repos and the repository name.
             full_url = '{}/repos/{}/{}{}'.format(
