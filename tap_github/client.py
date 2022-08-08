@@ -229,7 +229,7 @@ class GithubClient:
         """
         For all the repositories mentioned in the config, check the access for each repos.
         """
-        repositories = self.extract_repos_from_config()
+        repositories, org = self.extract_repos_from_config()
 
         for repo in repositories:
 
