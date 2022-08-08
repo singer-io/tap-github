@@ -219,7 +219,7 @@ class TestGithubBase(unittest.TestCase):
 
     def expected_primary_keys(self):
         """
-        Return a dictionary with key of table name
+        Return a dictionary with the key of the table name
         and value as a set of primary key fields
         """
         return {table: properties.get(self.PRIMARY_KEYS, set())
@@ -228,7 +228,7 @@ class TestGithubBase(unittest.TestCase):
 
     def expected_bookmark_keys(self):
         """
-        Return a dictionary with key of table name 
+        Return a dictionary with the key of the table name
         and value as a set of bookmark key fields
         """
         return {table: properties.get(self.BOOKMARK, set())
@@ -237,8 +237,8 @@ class TestGithubBase(unittest.TestCase):
 
     def expected_foreign_keys(self):
         """
-        Return dictionary with key of table name and
-        value is set of foreign keys
+        Return dictionary with the key of table name and
+        value is a set of foreign keys
         """
         return {}
 
@@ -254,7 +254,7 @@ class TestGithubBase(unittest.TestCase):
 
     def expected_automatic_keys(self):
         """
-        Return a dictionary with key of table name 
+        Return a dictionary with the key of the table name
         and value as a set of automatic key fields
         """
         return {table: ((self.expected_primary_keys().get(table) or set()) |

@@ -22,10 +22,51 @@ def get_selected_streams(catalog):
 
     return selected_streams
 
+def update_currently_syncing(state, stream_name):
+    """
+    Updates currently syncing stream in the state.
+    """
+    if not stream_name and singer.get_currently_syncing(state):
+        del state['currently_syncing']
+    else:
+        singer.set_currently_syncing(state, stream_name)
+    singer.write_state(state)
+
+def update_currently_syncing_repo(state, repo_path):
+    """
+     Updates currently syncing repository in the state.
+    and flushes `currently_syncing_repo` when all repositories are synced.
+    """
+    if (not repo_path) and ('currently_syncing_repo' in state):
+        del state['currently_syncing_repo']
+    else:
+        state['currently_syncing_repo'] = repo_path
+    singer.write_state(state)
+
+def get_ordered_stream_list(currently_syncing, streams_to_sync):
+    """
+    Get an ordered list of remaining streams to sync other streams followed by synced streams.
+    """
+    stream_list = list(sorted(streams_to_sync))
+    if currently_syncing in stream_list:
+        index = stream_list.index(currently_syncing)
+        stream_list = stream_list[index:] + stream_list[:index]
+    return stream_list
+
+def get_ordered_repos(state, repositories):
+    """
+    Get an ordered list of remaining repos to sync followed by synced repos.
+    """
+    syncing_repo = state.get("currently_syncing_repo")
+    if syncing_repo in repositories:
+        index = repositories.index(syncing_repo)
+        repositories = repositories[index:] + repositories[:index]
+    return repositories
+
 def translate_state(state, catalog, repositories):
     '''
     This tap used to only support a single repository, in which case the
-    state took the shape of:
+    the state took the shape of:
     {
       "bookmarks": {
         "commits": {
@@ -34,7 +75,7 @@ def translate_state(state, catalog, repositories):
       }
     }
     The tap now supports multiple repos, so this function should be called
-    at the beginning of each run to ensure the state is translate to the
+    at the beginning of each run to ensure the state is translated to the
     new format:
     {
       "bookmarks": {
@@ -71,17 +112,14 @@ def get_stream_to_sync(catalog):
     streams_to_sync = []
     selected_streams = get_selected_streams(catalog)
     for stream_name, stream_obj in STREAMS.items():
-        if stream_name in selected_streams:
-            # Append the selected stream into the list
-            streams_to_sync.append(stream_name)
-        elif is_any_child_selected(stream_obj,selected_streams):
-            # Append unselected parent stream into the list, if its child or nested child is selected.
+        if stream_name in selected_streams or is_any_child_selected(stream_obj, selected_streams):
+            # Append the selected stream or unselected parent stream into the list, if its child or nested child is selected.
             streams_to_sync.append(stream_name)
     return streams_to_sync
 
 def is_any_child_selected(stream_obj,selected_streams):
     """
-    Check if any of the child stream is selected for the parent.
+    Check if any of the child streams is selected for the parent.
     """
     if stream_obj.children:
         for child in stream_obj.children:
@@ -89,13 +127,12 @@ def is_any_child_selected(stream_obj,selected_streams):
                 return True
 
             if STREAMS[child].children:
-                # Return True if any child or its nested child is selected
-                return False or is_any_child_selected(STREAMS[child],selected_streams)
+                return is_any_child_selected(STREAMS[child], selected_streams)
     return False
 
 def write_schemas(stream_id, catalog, selected_streams):
     """
-    Write the schemas for the selected parent and its child stream.
+    Write the schemas for each stream.
     """
     stream_obj = STREAMS[stream_id]()
 
@@ -109,13 +146,14 @@ def write_schemas(stream_id, catalog, selected_streams):
 
 def sync(client, config, state, catalog):
     """
-    sync selected streams.
+    Sync selected streams.
     """
 
     start_date = config['start_date']
 
     # Get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
+
     streams_to_sync = get_stream_to_sync(catalog)
     LOGGER.info('Sync stream %s', streams_to_sync)
 
@@ -127,34 +165,38 @@ def sync(client, config, state, catalog):
     # Sync `teams`, `team_members`and `team_memberships` streams just single time for any organization.
     streams_to_sync_for_orgs = set(streams_to_sync).intersection(STREAM_TO_SYNC_FOR_ORGS)
     # Loop through all organizations
-    for orgs in organizations:
-        LOGGER.info("Starting sync of organization: %s", orgs)
-        do_sync(catalog, streams_to_sync_for_orgs, selected_stream_ids, client, start_date, state, orgs)
+    if selected_stream_ids:
+        for orgs in organizations:
+            LOGGER.info("Starting sync of organization: %s", orgs)
+            do_sync(catalog, streams_to_sync_for_orgs, selected_stream_ids, client, start_date, state, orgs)
 
-    # Sync other streams for all repos
-    streams_to_sync_for_repos = set(streams_to_sync) - streams_to_sync_for_orgs
-    # pylint: disable=too-many-nested-blocks
-    for repo in repositories:
-        LOGGER.info("Starting sync of repository: %s", repo)
-        do_sync(catalog, streams_to_sync_for_repos, selected_stream_ids, client, start_date, state, repo)
+        # Sync other streams for all repos
+        streams_to_sync_for_repos = set(streams_to_sync) - streams_to_sync_for_orgs
+        # pylint: disable=too-many-nested-blocks
+        # Sync repositories only if any streams are selected
+        for repo in get_ordered_repos(state, repositories):
+            LOGGER.info("Starting sync of repository: %s", repo)
+            do_sync(catalog, streams_to_sync_for_repos, selected_stream_ids, client, start_date, state, repo)
 
-        if client.not_accessible_repos:
-            # Give warning messages for a repo that is not accessible by a stream or is invalid.
-            message = "Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository for following streams {}.".format(repo, ", ".join(client.not_accessible_repos))
-            LOGGER.warning(message)
-            client.not_accessible_repos = set()
+            if client.not_accessible_repos:
+                # Give warning messages for a repo that is not accessible by a stream or is invalid.
+                message = "Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository for following streams {}.".format(repo, ", ".join(client.not_accessible_repos))
+                LOGGER.warning(message)
+                client.not_accessible_repos = set()
 
 def do_sync(catalog, streams_to_sync, selected_stream_ids, client, start_date, state, repo):
     """
     Sync all other streams except teams, team_members and team_memberships for each repo.
     """
-    for stream in catalog['streams']:
-        stream_id = stream['tap_stream_id']
+    currently_syncing = singer.get_currently_syncing(state)
+    update_currently_syncing_repo(state, repo)
+    for stream_id in get_ordered_stream_list(currently_syncing, streams_to_sync):
         stream_obj = STREAMS[stream_id]()
 
-        # If it is a "sub_stream", it will be synced as part of parent stream
+        # If it is a "sub_stream", it will be synced as part of the parent stream
         if stream_id in streams_to_sync and not stream_obj.parent:
             write_schemas(stream_id, catalog, selected_stream_ids)
+            update_currently_syncing(state, stream_id)
 
             state = stream_obj.sync_endpoint(client = client,
                                               state = state,
@@ -166,3 +208,4 @@ def do_sync(catalog, streams_to_sync, selected_stream_ids, client, start_date, s
                                             )
 
             singer.write_state(state)
+        update_currently_syncing(state, None)
