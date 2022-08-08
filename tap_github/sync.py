@@ -4,6 +4,7 @@ from singer import bookmarks
 from tap_github.streams import STREAMS
 
 LOGGER = singer.get_logger()
+STREAM_TO_SYNC_FOR_ORGS = ['teams', 'team_members', 'team_memberships']
 
 def get_selected_streams(catalog):
     '''
@@ -156,41 +157,55 @@ def sync(client, config, state, catalog):
     streams_to_sync = get_stream_to_sync(catalog)
     LOGGER.info('Sync stream %s', streams_to_sync)
 
-    repositories = list(sorted(client.extract_repos_from_config()))
+    repositories, organizations = client.extract_repos_from_config()
 
     state = translate_state(state, catalog, repositories)
     singer.write_state(state)
 
-    # pylint: disable=too-many-nested-blocks
+    # Sync `teams`, `team_members`and `team_memberships` streams just single time for any organization.
+    streams_to_sync_for_orgs = set(streams_to_sync).intersection(STREAM_TO_SYNC_FOR_ORGS)
+    # Loop through all organizations
     if selected_stream_ids:
+        for orgs in organizations:
+            LOGGER.info("Starting sync of organization: %s", orgs)
+            do_sync(catalog, streams_to_sync_for_orgs, selected_stream_ids, client, start_date, state, orgs)
+
+        # Sync other streams for all repos
+        streams_to_sync_for_repos = set(streams_to_sync) - streams_to_sync_for_orgs
+        # pylint: disable=too-many-nested-blocks
         # Sync repositories only if any streams are selected
         for repo in get_ordered_repos(state, repositories):
             LOGGER.info("Starting sync of repository: %s", repo)
-            currently_syncing = singer.get_currently_syncing(state)
-            update_currently_syncing_repo(state, repo)
+            do_sync(catalog, streams_to_sync_for_repos, selected_stream_ids, client, start_date, state, repo)
 
-            for stream_id in get_ordered_stream_list(currently_syncing, streams_to_sync):
-                stream_obj = STREAMS[stream_id]()
-
-                # If it is a "sub_stream", it will be synced as part of parent stream
-                if not stream_obj.parent:
-                    write_schemas(stream_id, catalog, selected_stream_ids)
-                    update_currently_syncing(state, stream_id)
-
-                    state = stream_obj.sync_endpoint(client = client,
-                                                    state = state,
-                                                    catalog = catalog['streams'],
-                                                    repo_path = repo,
-                                                    start_date = start_date,
-                                                    selected_stream_ids = selected_stream_ids,
-                                                    stream_to_sync = streams_to_sync
-                                                    )
-
-                    singer.write_state(state)
-            update_currently_syncing(state, None)
             if client.not_accessible_repos:
                 # Give warning messages for a repo that is not accessible by a stream or is invalid.
                 message = "Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository for following streams {}.".format(repo, ", ".join(client.not_accessible_repos))
                 LOGGER.warning(message)
                 client.not_accessible_repos = set()
-        update_currently_syncing_repo(state, None)
+
+def do_sync(catalog, streams_to_sync, selected_stream_ids, client, start_date, state, repo):
+    """
+    Sync all other streams except teams, team_members and team_memberships for each repo.
+    """
+    currently_syncing = singer.get_currently_syncing(state)
+    update_currently_syncing_repo(state, repo)
+    for stream_id in get_ordered_stream_list(currently_syncing, streams_to_sync):
+        stream_obj = STREAMS[stream_id]()
+
+        # If it is a "sub_stream", it will be synced as part of the parent stream
+        if stream_id in streams_to_sync and not stream_obj.parent:
+            write_schemas(stream_id, catalog, selected_stream_ids)
+            update_currently_syncing(state, stream_id)
+
+            state = stream_obj.sync_endpoint(client = client,
+                                              state = state,
+                                              catalog = catalog['streams'],
+                                              repo_path = repo,
+                                              start_date = start_date,
+                                              selected_stream_ids = selected_stream_ids,
+                                              stream_to_sync = streams_to_sync
+                                            )
+
+            singer.write_state(state)
+        update_currently_syncing(state, None)

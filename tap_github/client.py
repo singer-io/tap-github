@@ -7,6 +7,7 @@ from singer import metrics
 
 LOGGER = singer.get_logger()
 DEFAULT_SLEEP_SECONDS = 600
+DEFAULT_DOMAIN = "https://api.github.com"
 
 # Set default timeout of 300 seconds
 REQUEST_TIMEOUT = 300
@@ -152,12 +153,11 @@ class GithubClient:
     def __init__(self, config):
         self.config = config
         self.session = requests.Session()
-        self.base_url = "https://api.github.com"
+        self.base_url = config['base_url'] if config.get('base_url') else DEFAULT_DOMAIN
         self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
         self.set_auth_in_session()
         self.not_accessible_repos = set()
 
-    # Return the 'timeout'
     def get_request_timeout(self):
         """
         Get the request timeout from the config, if not present use the default 300 seconds.
@@ -167,7 +167,6 @@ class GithubClient:
 
         # Only return the timeout value if it is passed in the config and the value is not 0, "0" or ""
         if config_request_timeout and float(config_request_timeout):
-            # Return the timeout from config
             return float(config_request_timeout)
 
         # Return default timeout
@@ -240,6 +239,15 @@ class GithubClient:
             # Verifying for Repo access
             self.verify_repo_access(url_for_repo, repo)
 
+    def extract_orgs_from_config(self):
+        """
+        Extracts all organizations from the config
+        """
+        repo_paths = list(filter(None, self.config['repository'].split(' ')))
+        orgs_paths = [repo.split('/')[0] for repo in repo_paths]
+
+        return set(orgs_paths)
+
     def extract_repos_from_config(self):
         """
         Extracts all repositories from the config and calls get_all_repos()
@@ -256,10 +264,13 @@ class GithubClient:
         repo_paths = list(set(repo_paths))
 
         orgs_with_all_repos = []
+        orgs = []
         repos_with_errors = []
         for repo in repo_paths:
             # Split the repo_path by `/` as we are passing org/repo_name in the config.
             split_repo_path = repo.split('/')
+            # Prepare list of organizations
+            orgs.append(split_repo_path[0])
             # Check for the second element in the split list only if the length is greater than 1 and the first/second
             # element is not empty (for scenarios such as: `org/` or `/repo` which is invalid)
             if len(split_repo_path) > 1 and split_repo_path[1] != '' and split_repo_path[0] != '':
@@ -284,7 +295,7 @@ class GithubClient:
             # Update repo_paths
             repo_paths.extend(all_repos)
 
-        return repo_paths
+        return repo_paths, set(orgs)
 
     def get_all_repos(self, organizations: list):
         """

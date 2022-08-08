@@ -17,7 +17,7 @@ class TestGetSchema(unittest.TestCase):
             {"tap_stream_id": "events"},
         ]
         expected_schema = {"tap_stream_id": "comments"}
-        
+
         # Verify returned schema is same as exected schema 
         self.assertEqual(get_schema(catalog, "comments"), expected_schema)
 
@@ -28,7 +28,7 @@ class TestGetBookmark(unittest.TestCase):
     """
 
     test_stream = Comments()
-    
+
     def test_with_out_repo_path(self):
         """
         Test if the state does not contain a repo path
@@ -40,7 +40,7 @@ class TestGetBookmark(unittest.TestCase):
         }
         returned_bookmark = get_bookmark(state, "org/test-repo", "projects", "since", "2021-01-01T00:00:00Z")
         self.assertEqual(returned_bookmark, "2021-01-01T00:00:00Z")
-        
+
     def test_with_repo_path(self):
         """
         Test if the state does contains a repo path
@@ -61,15 +61,15 @@ class TestBuildUrl(unittest.TestCase):
     """
 
     @parameterized.expand([
-        ["test_stream_with_filter_params", "https://api.github.com/repos/org/test-repo/issues/comments?sort=updated&direction=desc?since=2022-01-01T00:00:00Z", Comments],
-        ["test_stream_with_organization", "https://api.github.com/orgs/org/teams", Teams]
+        ["test_stream_with_filter_params", "org/test-repo", "https://api.github.com/repos/org/test-repo/issues/comments?sort=updated&direction=desc?since=2022-01-01T00:00:00Z", Comments],
+        ["test_stream_with_organization", "org", "https://api.github.com/orgs/org/teams", Teams]
     ])
-    def test_build_url(self, name, expected_url, stream_class):
+    def test_build_url(self, name, param, expected_url, stream_class):
         """
         Test the `build_url` method for filter param or organization name only.
         """
         test_streams = stream_class()
-        full_url = test_streams.build_url("org/test-repo", "2022-01-01T00:00:00Z")
+        full_url = test_streams.build_url("https://api.github.com", param, "2022-01-01T00:00:00Z")
 
         # verify returned url is expected
         self.assertEqual(expected_url, full_url)
@@ -77,7 +77,7 @@ class TestBuildUrl(unittest.TestCase):
 
 class GetMinBookmark(unittest.TestCase):
     """
-    Test `get_min_bookmark` method of stream class
+    Test `get_min_bookmark` method of the stream class
     """
 
     start_date = "2020-04-01T00:00:00Z"
@@ -172,17 +172,18 @@ class TestGetChildUrl(unittest.TestCase):
     """
     Test `get_child_full_url` method of stream class
     """
+    domain = 'https://api.github.com'
 
     @parameterized.expand([
-        ["test_child_stream", ProjectColumns, "https://api.github.com/projects/1309875/columns", None, (1309875,)],
-        ["test_child_is_repository", Reviews, "https://api.github.com/repos/org1/test-repo/pulls/11/reviews", (11,), None],
-        ["test_child_is_organization", TeamMemberships, "https://api.github.com/orgs/org1/teams/dev-team/memberships/demo-user-1", ("dev-team",), ("demo-user-1",)]
+        ["test_child_stream", ProjectColumns, "org1/test-repo", "https://api.github.com/projects/1309875/columns", None, (1309875,)],
+        ["test_child_is_repository", Reviews, "org1/test-repo", "https://api.github.com/repos/org1/test-repo/pulls/11/reviews", (11,), None],
+        ["test_child_is_organization", TeamMemberships, "org1", "https://api.github.com/orgs/org1/teams/dev-team/memberships/demo-user-1", ("dev-team",), ("demo-user-1",)]
     ])
 
-    def test_child_stream(self, name, stream_class, expected_url, parent_id, grand_parent_id):
+    def test_child_stream(self, name, stream_class, param, expected_url, parent_id, grand_parent_id):
         """
         Test for a stream with one child
         """
         child_stream = stream_class()
-        full_url = get_child_full_url(child_stream, "org1/test-repo", parent_id, grand_parent_id)
+        full_url = get_child_full_url(self.domain, child_stream, param, parent_id, grand_parent_id)
         self.assertEqual(expected_url, full_url)
