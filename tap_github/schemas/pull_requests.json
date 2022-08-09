@@ -18,10 +18,7 @@
       "type": ["null", "boolean"]
     },
     "requested_reviewers": {
-      "type": [
-        "null",
-        "array"
-      ],
+      "type": ["null", "array"],
       "items": {
         "type": ["null", "object"],
         "properties": {
@@ -447,10 +444,7 @@
               "type": ["null", "boolean"]
             },
             "template_repository": {
-              "type": [
-                "null",
-                "object"
-              ],
+              "type": ["null", "object"],
               "properties": {
                 "id": {
                   "type": ["null", "integer"]
@@ -762,10 +756,7 @@
       "type": ["null", "string"]
     },
     "auto_merge": {
-      "type": [
-        "null",
-        "object"
-      ],
+      "type": ["null", "object"],
       "properties": {
         "enabled_by": {
           "$ref": "shared/user.json#/"
@@ -785,10 +776,7 @@
       "type": ["null", "boolean"]
     },
     "assignees": {
-      "type": [
-        "null",
-        "array"
-      ],
+      "type": ["null", "array"],
       "items": {
         "$ref": "shared/user.json#/"
       }
@@ -926,10 +914,7 @@
       "type": ["null", "string"]
     },
     "requested_teams": {
-      "type": [
-        "null",
-        "array"
-      ],
+      "type": ["null", "array"],
       "items": {
         "type": ["null", "object"],
         "properties": {
@@ -1333,10 +1318,7 @@
               "type": ["null", "boolean"]
             },
             "template_repository": {
-              "type": [
-                "null",
-                "object"
-              ],
+              "type": ["null", "object"],
               "properties": {
                 "id": {
                   "type": ["null", "integer"]

@@ -1,8 +1,5 @@
 {
-  "type": [
-    "null",
-    "object"
-  ],
+  "type": ["null", "object"],
   "properties": {
     "_sdc_repository": {
       "type": ["null", "string"]
@@ -961,10 +958,7 @@
           "type": ["null", "string"]
         },
         "commits": {
-          "type": [
-            "null",
-            "array"
-          ],
+          "type": ["null", "array"],
           "items": {
             "type": ["null", "object"],
             "properties": {

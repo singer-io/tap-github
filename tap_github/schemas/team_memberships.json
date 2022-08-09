@@ -1,8 +1,5 @@
 {
-  "type": [
-    "null",
-    "object"
-  ],
+  "type": ["null", "object"],
   "properties": {
     "url": {
       "type": ["null", "string"]
@@ -14,10 +11,7 @@
       "type": ["null", "string"]
     },
     "login": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "_sdc_repository": {
       "type": ["null", "string"]

@@ -58,10 +58,7 @@
       "$ref": "shared/user.json#/"
     },
     "assignees": {
-      "type": [
-        "null",
-        "array"
-      ],
+      "type": ["null", "array"],
       "items": {
         "$ref": "shared/user.json#/"
       }
@@ -275,8 +272,5 @@
       "type": ["null", "boolean"]
     }
   },
-  "type": [
-    "null",
-    "object"
-  ]
+  "type": ["null", "object"]
 }

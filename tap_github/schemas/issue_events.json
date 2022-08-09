@@ -1,8 +1,5 @@
 {
-  "type": [
-    "null",
-    "object"
-  ],
+  "type": ["null", "object"],
   "properties": {
     "commit_id": {
       "type": ["null", "string"]
@@ -21,10 +18,7 @@
       "type": ["null", "string"]
     },
     "issue": {
-      "type": [
-        "null",
-        "object"
-      ],
+      "type": ["null", "object"],
       "properties": {
         "user": {
           "$ref": "shared/user.json#/"
@@ -176,15 +170,9 @@
           "type": ["null", "string"]
         },
         "labels": {
-          "type": [
-            "null",
-            "array"
-          ],
+          "type": ["null", "array"],
           "items": {
-            "type": [
-              "null",
-              "object"
-            ],
+            "type": ["null", "object"],
             "properties": {
               "name": {
                 "type": ["null", "string"]
@@ -474,10 +462,7 @@
               "type": ["null", "boolean"]
             },
             "template_repository": {
-              "type": [
-                "object",
-                "null"
-              ],
+              "type": ["null", "object"],
               "properties": {
                 "id": {
                   "type": ["null", "integer"]
@@ -778,10 +763,7 @@
           }
         },
         "assignees": {
-          "type": [
-            "null",
-            "array"
-          ],
+          "type": ["null", "array"],
           "items": {
             "$ref": "shared/user.json#/"
           }
@@ -804,10 +786,7 @@
       "type": ["null", "string"]
     },
     "rename": {
-      "type": [
-        "null",
-        "object"
-      ],
+      "type": ["null", "object"],
       "properties": {
         "to": {
           "type": ["null", "string"]
@@ -818,10 +797,7 @@
       }
     },
     "label": {
-      "type": [
-        "null",
-        "object"
-      ],
+      "type": ["null", "object"],
       "properties": {
         "name": {
           "type": ["null", "string"]
