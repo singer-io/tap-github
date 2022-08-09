@@ -175,6 +175,7 @@ def sync(client, config, state, catalog):
         # pylint: disable=too-many-nested-blocks
         # Sync repositories only if any streams are selected
         for repo in get_ordered_repos(state, repositories):
+            update_currently_syncing_repo(state, repo)
             LOGGER.info("Starting sync of repository: %s", repo)
             do_sync(catalog, streams_to_sync_for_repos, selected_stream_ids, client, start_date, state, repo)
 
@@ -183,13 +184,13 @@ def sync(client, config, state, catalog):
                 message = "Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository for following streams {}.".format(repo, ", ".join(client.not_accessible_repos))
                 LOGGER.warning(message)
                 client.not_accessible_repos = set()
+        update_currently_syncing_repo(state, None)
 
 def do_sync(catalog, streams_to_sync, selected_stream_ids, client, start_date, state, repo):
     """
     Sync all other streams except teams, team_members and team_memberships for each repo.
     """
     currently_syncing = singer.get_currently_syncing(state)
-    update_currently_syncing_repo(state, repo)
     for stream_id in get_ordered_stream_list(currently_syncing, streams_to_sync):
         stream_obj = STREAMS[stream_id]()
 
