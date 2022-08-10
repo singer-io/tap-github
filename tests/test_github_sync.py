@@ -8,6 +8,14 @@ class TestGithubSync(TestGithubBase):
     def name():
         return "tap_tester_github_sync_test"
 
+    def get_properties(self):
+
+        return {
+            'start_date' : '2021-10-01T00:00:00Z',
+            'base_url': 'https://api.github.com',
+            'repository': 'singer-io/test-repo'
+        }
+
     def test_run(self):
         """
         Testing that sync creates the appropriate catalog with valid metadata.
