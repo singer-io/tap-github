@@ -41,7 +41,7 @@ class TestSyncFunctions(unittest.TestCase):
         ]}
 
         client = mock.Mock()
-        client.extract_repos_from_config.return_value = ["test-repo"]
+        client.extract_repos_from_config.return_value = (["test-repo"], set())
         client.authed_get_all_pages.return_value = []
         client.not_accessible_repos = {}
 
@@ -68,7 +68,7 @@ class TestSyncFunctions(unittest.TestCase):
         ]}
 
         client = mock.Mock()
-        client.extract_repos_from_config.return_value = ["test-repo"]
+        client.extract_repos_from_config.return_value = (["test-repo"], {"org"})
         client.authed_get_all_pages.return_value = []
         client.not_accessible_repos = {}
 
@@ -96,7 +96,7 @@ class TestSyncFunctions(unittest.TestCase):
         ]}
 
         client = mock.Mock()
-        client.extract_repos_from_config.return_value = ["test-repo"]
+        client.extract_repos_from_config.return_value = (["test-repo"], {"org"})
         client.authed_get_all_pages.return_value = []
         client.not_accessible_repos = {}
 
@@ -105,8 +105,45 @@ class TestSyncFunctions(unittest.TestCase):
         # Verify write schema is called for selected streams
         self.assertEqual(mock_write_schemas.call_count, 2)
 
-        self.assertEqual(mock_write_schemas.mock_calls[0], mock.call("projects", mock.ANY, mock.ANY))
-        self.assertEqual(mock_write_schemas.mock_calls[1], mock.call("teams", mock.ANY, mock.ANY))
+        self.assertEqual(mock_write_schemas.mock_calls[0], mock.call("teams", mock.ANY, mock.ANY))
+        self.assertEqual(mock_write_schemas.mock_calls[1], mock.call("projects", mock.ANY, mock.ANY))
+
+    @mock.patch("tap_github.sync.get_stream_to_sync", return_value = [])
+    @mock.patch("tap_github.sync.get_selected_streams", return_value = [])
+    @mock.patch("tap_github.sync.update_currently_syncing_repo")
+    def test_no_streams_selected(self, mock_update_curr_sync, mock_selected_streams, mock_sync_streams, 
+                                 mock_incremental, mock_write_schemas, mock_write_state):
+        """
+        Test if no streams are selected then the state does not update,
+        and `update_currently_syncing_repo` function is not called.
+        """
+
+        state = {
+                    "currently_syncing_repo": "singer-io/test-repo",
+                    "bookmarks": {},
+                    "currently_syncing": "teams"
+                }
+        mock_catalog = {"streams": [
+            get_stream_catalog("projects"),
+            get_stream_catalog("project_columns", True),
+            get_stream_catalog("teams"),
+            get_stream_catalog("team_members", True)
+        ]}
+
+        expected_state = {
+                            "currently_syncing_repo": "singer-io/test-repo",
+                            "bookmarks": {},
+                            "currently_syncing": "teams"
+                        }
+        client = mock.Mock()
+        client.extract_repos_from_config.return_value = ["test-repo"], ["org1"]
+        sync(client, {'start_date': ""}, state, mock_catalog)
+
+        # Verify state is not changed
+        self.assertEqual(state, expected_state)
+
+        # Verify updated_currently_syncing_repo was not called
+        self.assertFalse(mock_update_curr_sync.called)
 
 
 @mock.patch("singer.write_schema")
