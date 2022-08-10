@@ -30,6 +30,9 @@ KNOWN_MISSING_FIELDS = {
         'files',
         'stats'
     },
+    'pr_commits': {
+        'files'
+    },
     'review_comments': {
         'assignees',
         'commits_url',
