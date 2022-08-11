@@ -521,11 +521,11 @@ def refresh_app_token(pem=None, appid=None, org=None):
 def getReposForOrg(org):
     orgRepos = []
     for response in authed_get_all_pages(
-        'installation_repositories',
-        'https://api.github.com/installation/repositories?per_page=100'
+        'repositories',
+        f'https://api.github.com/orgs/{org}/repos?per_page=100'
     ):
         repos = response.json()
-        for repo in repos['repositories']:
+        for repo in repos:
             # Preserve the case used for the org name originally
             namesplit = repo['full_name'].split('/')
             orgRepos.append(org + '/' + namesplit[1])
@@ -1811,6 +1811,20 @@ def get_all_stargazers(schema, repo_path, state, mdata, _start_date):
 
     return state
 
+def get_repository_data(schema, repo_path, state, mdata, _start_date):    
+    with metrics.record_counter('repositories') as counter:
+        extraction_time = singer.utils.now()
+        repo = {}
+        repo['id'] = 'github:' + repo_path
+        repo['source'] = 'github'
+        repo['org_name'] = repo_path.split('/')[0]
+        repo['repo_name'] = repo_path.split('/')[1]
+        with singer.Transformer() as transformer:
+            rec = transformer.transform(repo, schema, metadata=metadata.to_map(mdata))
+        singer.write_record('repositories', rec, time_extracted=extraction_time)
+        counter.increment()
+    return state
+
 def get_selected_streams(catalog):
     '''
     Gets selected streams.  Checks schema's 'selected'
@@ -1853,6 +1867,7 @@ SYNC_FUNCTIONS = {
     'issue_labels': get_all_issue_labels,
     'projects': get_all_projects,
     'commit_comments': get_all_commit_comments,
+    'repositories': get_repository_data,
     'teams': get_all_teams
 }
 
