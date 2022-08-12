@@ -1,2 +1,3 @@
 include LICENSE
 include tap_github/schemas/*.json
+include tap_github/schemas/shared/*.json

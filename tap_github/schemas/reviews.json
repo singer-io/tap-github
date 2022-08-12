@@ -8,17 +8,41 @@
     "id": {
       "type": ["null", "integer"]
     },
-    "user": {
+    "_links": {
       "type": ["null", "object"],
-      "additionalProperties": false,
       "properties": {
-        "login": {
-          "type": ["null", "string"]
+        "html": {
+          "type": ["null", "object"],
+          "properties": {
+            "href": {
+              "type": ["null", "string"]
+            }
+          }
         },
-        "id": {
-          "type": ["null", "integer"]
+        "pull_request": {
+          "type": ["null", "object"],
+          "properties": {
+            "href": {
+              "type": ["null", "string"]
+            }
+          }
         }
       }
+    },
+    "body_html": {
+      "type": ["null", "string"]
+    },
+    "body_text": {
+      "type": ["null", "string"]
+    },
+    "node_id": {
+      "type": ["null", "string"]
+    },
+    "author_association": {
+      "type": ["null", "string"]
+    },
+    "user": {
+      "$ref": "shared/user.json#/"
     },
     "body": {
       "type": ["null", "string"]

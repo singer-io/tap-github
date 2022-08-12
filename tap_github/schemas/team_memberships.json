@@ -1,26 +1,17 @@
 {
-  "type": [
-    "null",
-    "object"
-  ],
+  "type": ["null", "object"],
   "properties": {
     "url": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "role": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     },
     "state": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
+    },
+    "login": {
+      "type": ["null", "string"]
     },
     "login": {
       "type": [
@@ -29,10 +20,7 @@
       ]
     },
     "_sdc_repository": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": ["null", "string"]
     }
   }
 }

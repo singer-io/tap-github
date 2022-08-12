@@ -4,7 +4,7 @@ from tap_tester import runner, connections, menagerie
 
 from base import TestGithubBase
 
-# As we are not able to generate following fields by Github UI, so removed it form expectation list.
+# As we are not able to generate the following fields by Github UI, so removed them from the expectation list.
 KNOWN_MISSING_FIELDS = {
     'events': {
         'ref',
@@ -15,13 +15,20 @@ KNOWN_MISSING_FIELDS = {
     },
     'project_cards': {
         'name',
-        'cards_url'
+        'cards_url',
+        'column_name',
+        'project_id'
     },
     'commits': {
-        'files'
+        'files',
+        'pr_id',
+        'id',
+        'pr_number',
+        'stats',
     },
     'pr_commits': {
-        'files'
+        'files',
+        'stats'
     },
     'review_comments': {
         'assignees',
@@ -41,11 +48,61 @@ KNOWN_MISSING_FIELDS = {
         'labels',
         'base',
         'merge_commit_sha',
-        'locked'
+        'locked',
+        'body_text',
+        'body_html'
     },
     'comments': {
-        'home_url'
-    }
+        'home_url',
+        'body_text',
+        'body_html'
+    },
+    'team_members': {
+        'email',
+        'starred_at',
+        'name',
+    },
+    'issues': {
+        'body_text',
+        'closed_by',
+        'body_html'
+    },
+    'releases': {
+        'discussion_url',
+        'body_html',
+        'body_text',
+        'mentions_count',
+        'reactions'
+    },
+    'collaborators': {
+        'email',
+        'name'
+    },
+    'reviews': {
+        'body_text',
+        'body_html'
+    },
+    'teams': {
+        'permissions'
+    },
+    'projects': {
+        'organization_permission',
+        'private'
+    },
+    'assignees': {
+        'email',
+        'starred_at',
+        'name'
+    },
+    'pull_requests': {
+        'issues_url'
+    },
+    'issue_events': {
+        'dismissed_review',
+        'requested_team',
+        'author_association',
+        'draft'
+    },
 }
 
 class TestGithubAllFields(TestGithubBase):

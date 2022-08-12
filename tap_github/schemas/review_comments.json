@@ -9,21 +9,71 @@
       "type": ["null", "integer"]
     },
     "user": {
-      "type": ["null", "object"],
-      "additionalProperties": false,
-      "properties": {
-        "login": {
-          "type": ["null", "string"]
-        },
-        "id": {
-          "type": ["null", "integer"]
-        }
-      }
+      "$ref": "shared/user.json#/"
     },
     "body": {
       "type": ["null", "string"]
     },
     "node_id": {
+      "type": ["null", "string"]
+    },
+    "_links": {
+      "type": ["null", "object"],
+      "properties": {
+        "self": {
+          "type": ["null", "object"],
+          "properties": {
+            "href": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "html": {
+          "type": ["null", "object"],
+          "properties": {
+            "href": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "pull_request": {
+          "type": ["null", "object"],
+          "properties": {
+            "href": {
+              "type": ["null", "string"]
+            }
+          }
+        }
+      }
+    },
+    "url": {
+      "type": ["null", "string"]
+    },
+    "original_start_line": {
+      "type": ["null", "integer"]
+    },
+    "start_side": {
+      "type": ["null", "string"]
+    },
+    "body_text": {
+      "type": ["null", "string"]
+    },
+    "original_line": {
+      "type": ["null", "integer"]
+    },
+    "reactions": {
+      "$ref": "shared/reactions.json#/"
+    },
+    "start_line": {
+      "type": ["null", "integer"]
+    },
+    "body_html": {
+      "type": ["null", "string"]
+    },
+    "line": {
+      "type": ["null", "integer"]
+    },
+    "side": {
       "type": ["null", "string"]
     },
     "pull_request_review_id": {
@@ -86,9 +136,6 @@
       "type": ["null", "string"]
     },
     "head": {
-      "type": ["null", "string"]
-    },
-    "html_url": {
       "type": ["null", "string"]
     },
     "issue_url": {
