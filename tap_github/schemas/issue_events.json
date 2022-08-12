@@ -33,7 +33,8 @@
           "type": ["null", "object"],
           "properties": {
             "closed_at": {
-              "type": ["null", "string"]
+              "type": ["null", "string"],
+              "format": "date-time"
             },
             "closed_issues": {
               "type": ["null", "integer"]
