@@ -145,7 +145,7 @@ class TestGithubInterruptedSync(TestGithubBase):
                                         rec_time = self.dt_to_ts(record[expected_replication_key], self.RECORD_REPLICATION_KEY_FORMAT)
                                         self.assertGreaterEqual(rec_time, start_date)
 
-                                        if (rec_time > interrupted_bookmark):
+                                        if (rec_time >= interrupted_bookmark):
                                             full_records_after_interrupted_bookmark += 1
                                             
                                     self.assertEqual(full_records_after_interrupted_bookmark, len(interrupted_records), \
