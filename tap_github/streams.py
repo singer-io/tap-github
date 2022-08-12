@@ -513,7 +513,7 @@ class PullRequests(IncrementalOrderedStream):
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
     key_properties = ["id"]
-    path = "pulls?state=all"
+    path = "pulls?state=all&sort=updated&direction=desc"
     children = ['reviews', 'review_comments', 'pr_commits']
     pk_child_fields = ["number"]
 
