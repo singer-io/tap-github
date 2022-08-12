@@ -133,7 +133,7 @@ class TestGithubInterruptedSync(TestGithubBase):
 
                                     for record in interrupted_records:
                                         rec_time = self.dt_to_ts(record[expected_replication_key], self.RECORD_REPLICATION_KEY_FORMAT)
-                                        self.assertGreater(rec_time, interrupted_bookmark)
+                                        self.assertGreaterEqual(rec_time, interrupted_bookmark)
 
                                         # Verify all interrupted recs are in full recs
                                         self.assertIn(record, full_records,  msg='incremental table record in interrupted sync not found in full sync')
@@ -143,7 +143,7 @@ class TestGithubInterruptedSync(TestGithubBase):
 
                                     for record in full_records:
                                         rec_time = self.dt_to_ts(record[expected_replication_key], self.RECORD_REPLICATION_KEY_FORMAT)
-                                        self.assertGreater(rec_time, start_date)
+                                        self.assertGreaterEqual(rec_time, start_date)
 
                                         if (rec_time > interrupted_bookmark):
                                             full_records_after_interrupted_bookmark += 1
@@ -152,7 +152,7 @@ class TestGithubInterruptedSync(TestGithubBase):
                                                         msg="Expected {} records in each sync".format(full_records_after_interrupted_bookmark))
                                 else:
                                     # Verify we collected records that have the same replication value as a bookmark for streams that are already synced
-                                    self.assertGreater(interrupted_record_count, 0)
+                                    self.assertGreaterEqual(interrupted_record_count, 0)
                             else:
                                 # Verify resuming sync replicates all records that were found in the full sync (uninterrupted)
                                 for record in interrupted_records:
