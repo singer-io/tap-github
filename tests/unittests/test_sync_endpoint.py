@@ -240,7 +240,7 @@ class TestIncrementalOrderedStream(unittest.TestCase):
         test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["pull_requests"], ["pull_requests"])
 
         # Verify that the authed_get_all_pages() is called with the expected url
-        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all", stream='pull_requests')
+        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all&sort=updated&direction=desc", stream='pull_requests')
 
 
     @mock.patch("tap_github.streams.Stream.get_child_records")
@@ -257,7 +257,7 @@ class TestIncrementalOrderedStream(unittest.TestCase):
         test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["pull_requests", "review_comments"], ["pull_requests","review_comments"])
 
         # Verify that the authed_get_all_pages() is called with the expected url
-        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all", stream='pull_requests')
+        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all&sort=updated&direction=desc", stream='pull_requests')
         
         # Verify that the get_child_records() is called as the PullRequests stream has a child stream
         self.assertTrue(mock_get_child_records.called)
@@ -281,7 +281,7 @@ class TestIncrementalOrderedStream(unittest.TestCase):
         self.assertEqual(mock_authed_get_all_pages.call_count, 2)
         
         print(mock_authed_get_all_pages.mock_calls)
-        exp_call_1 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all", stream='pull_requests')
+        exp_call_1 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/pulls?state=all&sort=updated&direction=desc", stream='pull_requests')
         exp_call_2 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/pulls/1/comments?sort=updated_at&direction=desc", stream='review_comments')
 
         # Verify that the API calls are done as expected with the correct url
