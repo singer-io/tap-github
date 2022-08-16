@@ -1,5 +1,5 @@
 import tap_github
-from tap_github.client import rate_throttling
+from tap_github.client import rate_throttling, GithubException
 import unittest
 from unittest import mock
 import time
@@ -54,7 +54,7 @@ class TestRateLimit(unittest.TestCase):
 
     def test_rate_limit_not_exceeded(self, mocked_sleep):
         """
-        Test `rate_throttling` if sleep time does not exceed limit
+        Test `rate_throttling` if sleep time not exceeding limit
         """
 
         mocked_sleep.side_effect = None
@@ -67,3 +67,16 @@ class TestRateLimit(unittest.TestCase):
 
         # Verify that `time.sleep` is not called
         self.assertFalse(mocked_sleep.called)
+
+    def test_rate_limt_header_not_found(self, mocked_sleep):
+        """
+        Test that the `rate_throttling` function raises an exception if `X-RateLimit-Reset` key is not found in the header.
+        """
+        resp = api_call()
+        resp.headers={}
+        
+        with self.assertRaises(GithubException) as e:
+            rate_throttling(resp, DEFAULT_SLEEP_SECONDS)
+        
+        # Verifying the message formed for the invalid base URL
+        self.assertEqual(str(e.exception), "The API call using the specified base url was unsuccessful. Please double-check the provided base URL.")
