@@ -136,15 +136,20 @@ def rate_throttling(response, max_sleep_seconds):
     """
     For rate limit errors, get the remaining time before retrying and calculate the time to sleep before making a new request.
     """
-    if int(response.headers['X-RateLimit-Remaining']) == 0:
-        seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
+    if 'X-RateLimit-Remaining' in response.headers:
+        if int(response.headers['X-RateLimit-Remaining']) == 0:
+            seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
-        if seconds_to_sleep > max_sleep_seconds:
-            message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
-            raise RateLimitExceeded(message) from None
+            if seconds_to_sleep > max_sleep_seconds:
+                message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
+                raise RateLimitExceeded(message) from None
 
-        LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
-        time.sleep(seconds_to_sleep)
+            LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
+            time.sleep(seconds_to_sleep)
+    else:
+        # Raise an exception if `X-RateLimit-Remaining` is not found in the header.
+        # API does include this key header if provided base URL is not a valid github custom domain.
+        raise GithubException("The API call using the specified base url was unsuccessful. Please double-check the provided base URL.")
 
 class GithubClient:
     """
