@@ -529,6 +529,7 @@ def getReposForOrg(org):
             # Preserve the case used for the org name originally
             namesplit = repo['full_name'].split('/')
             orgRepos.append(org + '/' + namesplit[1])
+            repo_cache[repo['full_name']] = repo
 
     return orgRepos
 
@@ -1811,7 +1812,9 @@ def get_all_stargazers(schema, repo_path, state, mdata, _start_date):
 
     return state
 
-def get_repository_data(schema, repo_path, state, mdata, _start_date):    
+def get_repository_data(schema, repo_path, state, mdata, _start_date):
+    repo_metadata = get_repo_metadata(repo_path)
+
     with metrics.record_counter('repositories') as counter:
         extraction_time = singer.utils.now()
         repo = {}
@@ -1819,6 +1822,10 @@ def get_repository_data(schema, repo_path, state, mdata, _start_date):
         repo['source'] = 'github'
         repo['org_name'] = repo_path.split('/')[0]
         repo['repo_name'] = repo_path.split('/')[1]
+        repo['is_source_public'] = repo_metadata['visibility'] == 'public'
+        repo['fork_org_name'] = None # TODO: make `forks` API call to get this
+        repo['fork_repo_name'] = None # TODO: make `forks` API call to get this
+        repo['description'] = repo_metadata['description']
         with singer.Transformer() as transformer:
             rec = transformer.transform(repo, schema, metadata=metadata.to_map(mdata))
         singer.write_record('repositories', rec, time_extracted=extraction_time)
