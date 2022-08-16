@@ -54,7 +54,7 @@ class TestRateLimit(unittest.TestCase):
 
     def test_rate_limit_not_exceeded(self, mocked_sleep):
         """
-        Test `rate_throttling` if sleep time not exceeding limit
+        Test `rate_throttling` if sleep time does not exceed limit
         """
 
         mocked_sleep.side_effect = None
