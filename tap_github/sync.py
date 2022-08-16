@@ -109,18 +109,20 @@ def translate_state(state, catalog, repositories):
 
         # Case 1:
         # Check if it is the stream name or not. Older connections `bookmarks` contain stream names.
-        # Mark `all_repos_deselected` as `False` if at least one stream name is found in the previous state's keys because we want
+        # Mark `deselected_repos` as `False` if at least one stream name is found in the previous state's keys because we want
         # to migrate each stream's bookmark into the repo name.
         # Example: {`bookmarks`: {`stream_a`: `bookmark_a`}} to {`bookmarks`: {`repo_a`: {`stream_a`: `bookmark_a`}}}
 
         # Case 2:
         # Check if the key is available in the list of currently selected repo's list or not. Newer format `bookmarks` contain repo names.
-        # Mark `all_repos_deselected` as `False` if at least one repo name matches the previous state's keys.
+        # Mark `deselected_repos` as `False` if at least one repo name matches the previous state's keys.
 
-        # At last, if `all_repos_deselected` remain True, then we will return the state itself.
+        # At last, if `deselected_repos` remain True, then we will return the state itself. Because If the state contains a bookmark
+        # for `repo_a` and `repo_b` and the user deselects these both repos and adds another repo
+        # then in that case this function was returning an empty state. Now this change will return the existing state instead of the empty state.
 
         if key in stream_names or key in repositories:
-            all_repos_deselected=False
+            deselected_repos=False
 
     # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.
     if deselected_repos:
