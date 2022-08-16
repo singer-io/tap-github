@@ -100,33 +100,24 @@ def translate_state(state, catalog, repositories):
     # Collect stream names from the catalog
     stream_names = [stream['tap_stream_id'] for stream in catalog['streams']]
 
-    deselected_repos=True
-    # If the state contains bookmark for `repo_a` and `repo_b` and the user deselects these both repos and adds another repo
-    # then in that case this function was returning an empty state. Now this change will return the existing state instead of the empty state.
-   
     for key in previous_state_keys:
         # Loop through each key of `bookmarks` available in the previous state.
 
         # Case 1:
-        # Check if it is the stream name or not. Older connections `bookmarks` contain stream names.
-        # Mark `deselected_repos` as `False` if at least one stream name is found in the previous state's keys because we want
-        # to migrate each stream's bookmark into the repo name.
+        # Older connections `bookmarks` contain stream names so check if it is the stream name or not.
+        # If the previous state's key is found in the stream name list then continue to check other keys. Because we want
+        # to migrate each stream's bookmark into the repo name as mentioned below:
         # Example: {`bookmarks`: {`stream_a`: `bookmark_a`}} to {`bookmarks`: {`repo_a`: {`stream_a`: `bookmark_a`}}}
 
         # Case 2:
         # Check if the key is available in the list of currently selected repo's list or not. Newer format `bookmarks` contain repo names.
-        # Mark `deselected_repos` as `False` if at least one repo name matches the previous state's keys.
+        # Return the state if the previous state's key is not found in the repo name list or stream name list.
 
-        # At last, if `deselected_repos` remain True, then we will return the state itself. Because If the state contains a bookmark
-        # for `repo_a` and `repo_b` and the user deselects these both repos and adds another repo
+        # If the state contains a bookmark for `repo_a` and `repo_b` and the user deselects these both repos and adds another repo
         # then in that case this function was returning an empty state. Now this change will return the existing state instead of the empty state.
-
-        if key in stream_names or key in repositories:
-            deselected_repos=False
-
-    # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.
-    if deselected_repos:
-        return state
+        if key not in stream_names and key not in repositories:
+            # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.
+            return state
 
     for stream in catalog['streams']:
         stream_name = stream['tap_stream_id']
