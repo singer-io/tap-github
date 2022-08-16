@@ -95,15 +95,26 @@ def translate_state(state, catalog, repositories):
     nested_dict = lambda: collections.defaultdict(nested_dict)
     new_state = nested_dict()
 
-    # Collect keys(repo_name for update state or stream_name for older state) from state available in the `bookmarks`
+    # Collect keys(repo_name for update state or stream_name for older state) from state available in the `bookmarks``
     previous_state_keys = state.get('bookmarks', {}).keys()
     # Collect stream names from the catalog
     stream_names = [stream['tap_stream_id'] for stream in catalog['streams']]
 
+    all_repos_unselected=True
     for key in previous_state_keys:
-        # Return the existing state if all repos from the previous state are unselected in the current sync.
-        if key not in stream_names and key not in repositories:
-            return state
+        # Loop through each key of `bookmarks` available in the previous state.
+        # Check if it is the stream name or not. Older connections `bookmarks` contain stream names.
+        # Mark `all_repos_unselected` as `False` if at least one stream name is found in the previous state's keys because we want 
+        # to migrate each stream's bookmark into the repo name.
+        # Example: {`bookmarks`: {`stream_a`: `bookmark_a`}} to {`bookmarks`: {`repo_a`: {`stream_a`: `bookmark_a`}}}
+        # Check if the key is available in the list of currently selected repo's list or not. Newer format `bookmarks` contain repo names.
+        # Mark `all_repos_unselected` as `False` if at least one repo name matches the previous state's keys.
+        if key in stream_names or key in repositories:
+            all_repos_unselected=False
+
+    # Return the existing state if all repos from the previous state are unselected(not found) in the current sync.
+    if all_repos_unselected:
+        return state
 
     for stream in catalog['streams']:
         stream_name = stream['tap_stream_id']
