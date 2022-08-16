@@ -95,6 +95,16 @@ def translate_state(state, catalog, repositories):
     nested_dict = lambda: collections.defaultdict(nested_dict)
     new_state = nested_dict()
 
+    # Collect keys(repo_name for update state or stream_name for older state) from state available in the `bookmarks`
+    previous_state_keys = state.get('bookmarks', {}).keys()
+    # Collect stream names from the catalog
+    stream_names = [stream['tap_stream_id'] for stream in catalog['streams']]
+
+    for key in previous_state_keys:
+        # Return the existing state if all repos from the previous state are unselected in the current sync.
+        if key not in stream_names and key not in repositories:
+            return state
+
     for stream in catalog['streams']:
         stream_name = stream['tap_stream_id']
         for repo in repositories:
