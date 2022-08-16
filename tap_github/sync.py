@@ -100,20 +100,23 @@ def translate_state(state, catalog, repositories):
     # Collect stream names from the catalog
     stream_names = [stream['tap_stream_id'] for stream in catalog['streams']]
 
-    all_repos_unselected=True
+    all_repos_deselected=True
     for key in previous_state_keys:
         # Loop through each key of `bookmarks` available in the previous state.
         # Check if it is the stream name or not. Older connections `bookmarks` contain stream names.
-        # Mark `all_repos_unselected` as `False` if at least one stream name is found in the previous state's keys because we want 
+        # Mark `all_repos_deselected` as `False` if at least one stream name is found in the previous state's keys because we want 
         # to migrate each stream's bookmark into the repo name.
         # Example: {`bookmarks`: {`stream_a`: `bookmark_a`}} to {`bookmarks`: {`repo_a`: {`stream_a`: `bookmark_a`}}}
         # Check if the key is available in the list of currently selected repo's list or not. Newer format `bookmarks` contain repo names.
-        # Mark `all_repos_unselected` as `False` if at least one repo name matches the previous state's keys.
+        # Mark `all_repos_deselected` as `False` if at least one repo name matches the previous state's keys.
+        # At last, if `all_repos_deselected` remain True, then we will return the state itself.
+        # If the state contains bookmark for `repo_a` and `repo_b` and the user deselects these both repos and adds another repo
+        # then in that case this function was returning an empty state. Now this change will return the existing state instead of the empty state.
         if key in stream_names or key in repositories:
-            all_repos_unselected=False
+            all_repos_deselected=False
 
-    # Return the existing state if all repos from the previous state are unselected(not found) in the current sync.
-    if all_repos_unselected:
+    # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.
+    if all_repos_deselected:
         return state
 
     for stream in catalog['streams']:
@@ -134,7 +137,7 @@ def get_stream_to_sync(catalog):
     selected_streams = get_selected_streams(catalog)
     for stream_name, stream_obj in STREAMS.items():
         if stream_name in selected_streams or is_any_child_selected(stream_obj, selected_streams):
-            # Append the selected stream or unselected parent stream into the list, if its child or nested child is selected.
+            # Append the selected stream or deselected parent stream into the list, if its child or nested child is selected.
             streams_to_sync.append(stream_name)
     return streams_to_sync
 
