@@ -95,6 +95,30 @@ def translate_state(state, catalog, repositories):
     nested_dict = lambda: collections.defaultdict(nested_dict)
     new_state = nested_dict()
 
+    # Collect keys(repo_name for update state or stream_name for older state) from state available in the `bookmarks``
+    previous_state_keys = state.get('bookmarks', {}).keys()
+    # Collect stream names from the catalog
+    stream_names = [stream['tap_stream_id'] for stream in catalog['streams']]
+
+    for key in previous_state_keys:
+        # Loop through each key of `bookmarks` available in the previous state.
+
+        # Case 1:
+        # Older connections `bookmarks` contain stream names so check if it is the stream name or not.
+        # If the previous state's key is found in the stream name list then continue to check other keys. Because we want
+        # to migrate each stream's bookmark into the repo name as mentioned below:
+        # Example: {`bookmarks`: {`stream_a`: `bookmark_a`}} to {`bookmarks`: {`repo_a`: {`stream_a`: `bookmark_a`}}}
+
+        # Case 2:
+        # Check if the key is available in the list of currently selected repo's list or not. Newer format `bookmarks` contain repo names.
+        # Return the state if the previous state's key is not found in the repo name list or stream name list.
+
+        # If the state contains a bookmark for `repo_a` and `repo_b` and the user deselects these both repos and adds another repo
+        # then in that case this function was returning an empty state. Now this change will return the existing state instead of the empty state.
+        if key not in stream_names and key not in repositories:
+            # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.
+            return state
+
     for stream in catalog['streams']:
         stream_name = stream['tap_stream_id']
         for repo in repositories:
@@ -113,7 +137,7 @@ def get_stream_to_sync(catalog):
     selected_streams = get_selected_streams(catalog)
     for stream_name, stream_obj in STREAMS.items():
         if stream_name in selected_streams or is_any_child_selected(stream_obj, selected_streams):
-            # Append the selected stream or unselected parent stream into the list, if its child or nested child is selected.
+            # Append the selected stream or deselected parent stream into the list, if its child or nested child is selected.
             streams_to_sync.append(stream_name)
     return streams_to_sync
 
