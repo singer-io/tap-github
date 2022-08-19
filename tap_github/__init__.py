@@ -533,18 +533,28 @@ def getReposForOrg(org):
 
     return orgRepos
 
-def set_auth_headers(config, repo):
+def getOrgs():
+    orgs = []
+    for response in authed_get_all_pages(
+        'repositories',
+        f'https://api.github.com/user/orgs?per_page=100'
+    ):
+        orgPayloads = response.json()
+        for org in orgPayloads:
+            orgs.append(org['login'])
+
+    return orgs
+
+def set_auth_headers(config, org = None):
     access_token = config['access_token']
 
     # If we don't have a personal access token, use the github app to get an installation access
     # token
     if not access_token or len(access_token) == 0:
+        if not org:
+            raise Exception('Org value must be provided when authorizing with an app installation key')
         pem = config['app_pem']
         appid = config['app_id']
-        # Extract github org from repo parameter
-        repoSplit = repo.split('/')
-        org = repoSplit[0]
-
         access_token = refresh_app_token(pem, appid, org)
     else:
         session.headers.update({'authorization': 'token ' + access_token})
@@ -1897,14 +1907,25 @@ def do_sync(config, state, catalog):
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
 
-    repositories = list(filter(None, config['repository'].split(' ')))
+    # Expand */* into the full list of orgs (e.g minwareco/*, otherorg/*)
+    if config['repository'] == '*/*':
+        if not config['access_token'] or len(config['access_token']) == 0:
+            raise Exception('Cannot use org wildcard without a PAT (access_token).')
+        access_token = set_auth_headers(config)
+        repositories = list()
+        orgs = getOrgs()
+        for org in orgs:
+            repositories.append(f'{org}/*')
+    else:
+        repositories = list(filter(None, config['repository'].split(' ')))
 
     # Expand org/*
     allRepos = []
     for repo in repositories:
         repoSplit = repo.split('/')
         if repoSplit[1] == '*':
-            access_token = set_auth_headers(config, repo)
+            org = repoSplit[0]
+            access_token = set_auth_headers(config, org)
             orgRepos = getReposForOrg(repoSplit[0])
             allRepos.extend(orgRepos)
         else:
@@ -1928,7 +1949,8 @@ def do_sync(config, state, catalog):
     for repo in allRepos:
         logger.info("Starting sync of repository: %s", repo)
 
-        access_token = set_auth_headers(config, repo)
+        org = repo.split('/')[0]
+        access_token = set_auth_headers(config, org)
 
         gitLocal = GitLocal({
             'access_token': access_token,
