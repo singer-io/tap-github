@@ -13,12 +13,6 @@
     "login": {
       "type": ["null", "string"]
     },
-    "login": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
     "_sdc_repository": {
       "type": ["null", "string"]
     }
