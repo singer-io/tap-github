@@ -558,7 +558,7 @@ def set_auth_headers(config, org = None):
     if not access_token or len(access_token) == 0:
         if not org:
             raise Exception('Org value must be provided when authorizing with an app installation key')
-        elif cached_app_tokens[org]:
+        elif org in cached_app_tokens:
             return cached_app_tokens[org]
         pem = config['app_pem']
         appid = config['app_id']
