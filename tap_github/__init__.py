@@ -474,6 +474,7 @@ def get_installation_token(installation_id):
 # Cache the set of installations for the duration of this script so we don't neeed to keep hitting
 # the installation list endpoint.
 cached_installations = False
+cached_app_tokens = {}
 last_token_pem=False
 last_token_appid=False
 last_token_org=False
@@ -516,6 +517,10 @@ def refresh_app_token(pem=None, appid=None, org=None):
 
     # Update session auth headers to use this token
     session.headers.update({'authorization': 'token ' + installation_token})
+
+    # cache the token to avoid possibility of requesting another one until it expires
+    cached_app_tokens[org] = installation_token
+
     return installation_token
 
 def getReposForOrg(org):
@@ -553,6 +558,8 @@ def set_auth_headers(config, org = None):
     if not access_token or len(access_token) == 0:
         if not org:
             raise Exception('Org value must be provided when authorizing with an app installation key')
+        elif cached_app_tokens[org]:
+            return cached_app_tokens[org]
         pem = config['app_pem']
         appid = config['app_id']
         access_token = refresh_app_token(pem, appid, org)
