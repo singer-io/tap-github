@@ -1,13 +1,27 @@
 {
   "type": ["null", "object"],
-  "additionalProperties": false,
   "properties": {
     "_sdc_repository": {
       "type": ["string"]
     },
-    "sha": {
+    "node_id": {
+      "type": ["null", "string"]
+    },
+    "pr_id": {
+      "type": ["null", "string"]
+    },
+    "pr_number": {
+      "type": ["null", "integer"]
+    },
+    "id": {
+      "type": ["null", "string"]
+    },
+    "updated_at": {
       "type": ["null", "string"],
-      "description": "The git commit hash"
+      "format": "date-time"
+    },
+    "sha": {
+      "type": ["null", "string"]
     },
     "url": {
       "type": ["null", "string"]
@@ -19,97 +33,61 @@
         "additionalProperties": false,
         "properties": {
           "sha": {
-            "type": ["null", "string"],
-            "description": "The git hash of the parent commit"
+            "type": ["null", "string"]
           },
           "url": {
-            "type": ["null", "string"],
-            "description": "The URL to the parent commit"
+            "type": ["null", "string"]
           },
           "html_url": {
-            "type": ["null", "string"],
-            "description": "The HTML URL to the parent commit"
+            "type": ["null", "string"]
           }
         }
       }
     },
     "files": {
-      "type": [
-        "null",
-        "array"
-      ],
+      "type": ["null", "array"],
       "items": {
-        "type": [
-          "null",
-          "object"
-        ],
+        "type": ["null", "object"],
         "properties": {
           "filename": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           },
           "additions": {
-            "type": [
-              "null",
-              "number"
-            ]
+            "type": ["null", "number"]
           },
           "deletions": {
-            "type": [
-              "null",
-              "number"
-            ]
+            "type": ["null", "number"]
           },
           "changes": {
-            "type": [
-              "null",
-              "number"
-            ]
+            "type": ["null", "number"]
           },
           "status": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           },
           "raw_url": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           },
           "blob_url": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           },
           "patch": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": ["null", "string"]
           }
         }
       }
     },
     "html_url": {
-      "type": ["null", "string"],
-      "description": "The HTML URL to the commit"
+      "type": ["null", "string"]
     },
     "comments_url": {
-      "type": ["null", "string"],
-      "description": "The URL to the commit's comments page"
+      "type": ["null", "string"]
     },
     "commit": {
       "type": ["null", "object"],
       "additionalProperties": false,
       "properties": {
         "url": {
-          "type": ["null", "string"],
-          "description": "The URL to the commit"
+          "type": ["null", "string"]
         },
         "tree": {
           "type": ["null", "object"],
@@ -125,57 +103,173 @@
         },
         "author": {
           "type": ["null", "object"],
-          "additionalProperties": false,
           "properties": {
-            "date": {
-              "type": ["null", "string"],
-              "format": "date-time",
-              "description": "The date the author committed the change"
-            },
             "name": {
-              "type": ["null", "string"],
-              "description": "The author's name"
+              "type": ["null", "string"]
             },
             "email": {
-              "type": ["null", "string"],
-              "description": "The author's email"
+              "type": ["null", "string"]
             },
             "login": {
+              "type": ["null", "string"]
+            },
+            "id": {
+              "type": ["null", "integer"]
+            },
+            "node_id": {
+              "type": ["null", "string"]
+            },
+            "avatar_url": {
+              "type": ["null", "string"]
+            },
+            "gravatar_id": {
+              "type": ["null", "string"]
+            },
+            "url": {
+              "type": ["null", "string"]
+            },
+            "html_url": {
+              "type": ["null", "string"]
+            },
+            "followers_url": {
+              "type": ["null", "string"]
+            },
+            "following_url": {
+              "type": ["null", "string"]
+            },
+            "gists_url": {
+              "type": ["null", "string"]
+            },
+            "starred_url": {
+              "type": ["null", "string"]
+            },
+            "subscriptions_url": {
+              "type": ["null", "string"]
+            },
+            "organizations_url": {
+              "type": ["null", "string"]
+            },
+            "repos_url": {
+              "type": ["null", "string"]
+            },
+            "events_url": {
+              "type": ["null", "string"]
+            },
+            "received_events_url": {
+              "type": ["null", "string"]
+            },
+            "type": {
+              "type": ["null", "string"]
+            },
+            "site_admin": {
+              "type": ["null", "boolean"]
+            },
+            "starred_at": {
+              "type": ["null", "string"]
+            },
+            "date": {
               "type": ["null", "string"],
-              "description": "The author's login"
+              "format": "date-time"
             }
           }
         },
         "message": {
-          "type": ["null", "string"],
-          "description": "The commit message"
+          "type": ["null", "string"]
         },
         "committer": {
           "type": ["null", "object"],
-          "additionalProperties": false,
           "properties": {
-            "date": {
-              "type": ["null", "string"],
-              "format": "date-time",
-              "description": "The date the committer committed the change"
-            },
             "name": {
-              "type": ["null", "string"],
-              "description": "The committer's name"
+              "type": ["null", "string"]
             },
             "email": {
-              "type": ["null", "string"],
-              "description": "The committer's email"
+              "type": ["null", "string"]
             },
             "login": {
+              "type": ["null", "string"]
+            },
+            "id": {
+              "type": ["null", "integer"]
+            },
+            "node_id": {
+              "type": ["null", "string"]
+            },
+            "avatar_url": {
+              "type": ["null", "string"]
+            },
+            "gravatar_id": {
+              "type": ["null", "string"]
+            },
+            "url": {
+              "type": ["null", "string"]
+            },
+            "html_url": {
+              "type": ["null", "string"]
+            },
+            "followers_url": {
+              "type": ["null", "string"]
+            },
+            "following_url": {
+              "type": ["null", "string"]
+            },
+            "gists_url": {
+              "type": ["null", "string"]
+            },
+            "starred_url": {
+              "type": ["null", "string"]
+            },
+            "subscriptions_url": {
+              "type": ["null", "string"]
+            },
+            "organizations_url": {
+              "type": ["null", "string"]
+            },
+            "repos_url": {
+              "type": ["null", "string"]
+            },
+            "events_url": {
+              "type": ["null", "string"]
+            },
+            "received_events_url": {
+              "type": ["null", "string"]
+            },
+            "type": {
+              "type": ["null", "string"]
+            },
+            "site_admin": {
+              "type": ["null", "boolean"]
+            },
+            "starred_at": {
+              "type": ["null", "string"]
+            },
+            "date": {
               "type": ["null", "string"],
-              "description": "The committer's login"
+              "format": "date-time"
             }
           }
         },
         "comment_count": {
-          "type": ["null", "integer"],
-          "description": "The number of comments on the commit"
+          "type": ["null", "integer"]
+        }
+      }
+    },
+    "committer": {
+      "$ref": "shared/user.json#/"
+    },
+    "author": {
+      "$ref": "shared/user.json#/"
+    },
+    "stats": {
+      "type": ["null", "object"],
+      "properties": {
+        "additions": {
+          "type": ["null", "integer"]
+        },
+        "deletions": {
+          "type": ["null", "integer"]
+        },
+        "total": {
+          "type": ["null", "integer"]
         }
       }
     }

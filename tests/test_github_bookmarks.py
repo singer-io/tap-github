@@ -8,77 +8,54 @@ from base import TestGithubBase
 
 
 class TestGithubBookmarks(TestGithubBase):
+    """Test tap sets a bookmark and respects it for the next sync of a stream"""
+
     @staticmethod
     def name():
         return "tap_tester_github_bookmarks"
-
-    @staticmethod
-    def convert_state_to_utc(date_str):
-        """
-        Convert a saved bookmark value of the form '2020-08-25T13:17:36-07:00' to
-        a string formatted utc datetime,
-        in order to compare against json formatted datetime values
-        """
-        date_object = dateutil.parser.parse(date_str)
-        date_object_utc = date_object.astimezone(tz=pytz.UTC)
-        return datetime.datetime.strftime(date_object_utc, "%Y-%m-%dT%H:%M:%SZ")
 
     def calculated_states_by_stream(self, current_state, synced_records, replication_keys):
         """
         Look at the bookmarks from a previous sync and set a new bookmark
         value based off timedelta expectations. This ensures the subsequent sync will replicate
         at least 1 record but, fewer records than the previous sync.
-
-        If the test data is changed in the future this will break expectations for this test.
         """
         timedelta_by_stream = {stream: [90,0,0]  # {stream_name: [days, hours, minutes], ...}
                                for stream in self.expected_streams()}
-        timedelta_by_stream['comments'] = [7, 0, 0]
-        timedelta_by_stream['commit_comments'] = [0, 0, 1]
-        timedelta_by_stream['commits'] = [0, 17, 0]
-        timedelta_by_stream['issue_events'] = [1, 0, 0]
-        timedelta_by_stream['issue_milestones'] = [0, 1, 0]
-        timedelta_by_stream['issues'] = [7, 0, 0]
-        timedelta_by_stream['pull_requests'] = [7, 0, 0]
 
         repo = self.get_properties().get('repository')
 
-        stream_to_calculated_state = {stream: "" for stream in current_state['bookmarks'][repo].keys()}
+        stream_to_calculated_state = {repo: {stream: "" for stream in current_state['bookmarks'][repo].keys()}}
         for stream, state in current_state['bookmarks'][repo].items():
             state_key, state_value = next(iter(state.keys())), next(iter(state.values()))
-            sync_messages = [record.get('data') for record in
-                                synced_records.get(stream, {'messages': []}).get('messages')
-                                if record.get('action') == 'upsert']
-
-            # the `commits` and `pr_commits` streams don't have a top level replication_key field
-            if stream in ('commits', 'pr_commits'):
-                max_record_values = [values.get('commit', {}).get('committer', {}).get('date')
-                    for values in sync_messages]
-                max_value = max(max_record_values)
-            else:
-                replication_key = next(iter(replication_keys.get(stream)))
-                max_record_values = [values.get(replication_key) for values in sync_messages]
-                max_value = max(max_record_values)
-
-            # this is because the tap uses `time_extracted` to bookmark with `since` at execution
-            new_state_value = min(max_value, state_value)
-            state_as_datetime = dateutil.parser.parse(new_state_value)
+            state_as_datetime = dateutil.parser.parse(state_value)
 
             days, hours, minutes = timedelta_by_stream[stream]
             calculated_state_as_datetime = state_as_datetime - datetime.timedelta(days=days, hours=hours, minutes=minutes)
 
-            state_format = '%Y-%m-%dT%H:%M:%S-00:00'
+            state_format = '%Y-%m-%dT%H:%M:%SZ'
             calculated_state_formatted = datetime.datetime.strftime(calculated_state_as_datetime, state_format)
 
-            stream_to_calculated_state[stream] = {state_key: calculated_state_formatted}
+            stream_to_calculated_state[repo][stream] = {state_key: calculated_state_formatted}
 
         return stream_to_calculated_state
 
 
     def test_run(self):
-        # Exclude collaborators stream due to access issues in circle
-        expected_streams = self.expected_streams() - {'collaborators'}
+        """
+        • Verify that for each stream you can do a sync which records bookmarks.
+        • Verify that the bookmark is the maximum value sent to the target for the replication key.
+        • Verify that a second sync respects the bookmark
+            All data of the second sync is >= the bookmark from the first sync
+            The number of records in the 2nd sync is less then the first
+        • Verify that for full table stream, all data replicated in sync 1 is replicated again in sync 2.
+        
+        PREREQUISITE
+        For EACH stream that is incrementally replicated there are multiple rows of data with
+            different values for the replication key
+        """
 
+        expected_streams = self.expected_streams()
         expected_replication_keys = self.expected_bookmark_keys()
         expected_replication_methods = self.expected_replication_method()
 
@@ -109,8 +86,8 @@ class TestGithubBookmarks(TestGithubBase):
         new_states = {'bookmarks': dict()}
         simulated_states = self.calculated_states_by_stream(first_sync_bookmarks,
             first_sync_records, expected_replication_keys)
-        for stream, new_state in simulated_states.items():
-            new_states['bookmarks'][stream] = new_state
+        for repo, new_state in simulated_states.items():
+            new_states['bookmarks'][repo] = new_state
         menagerie.set_state(conn_id, new_states)
 
         ##########################################################################
@@ -128,10 +105,10 @@ class TestGithubBookmarks(TestGithubBase):
         for stream in expected_streams:
             with self.subTest(stream=stream):
 
-                # expected values
+                # Expected values
                 expected_replication_method = expected_replication_methods[stream]
 
-                # collect information for assertions from syncs 1 & 2 base on expected values
+                # Collect information for assertions from syncs 1 & 2 base on expected values
                 first_sync_count = first_sync_record_count.get(stream, 0)
                 second_sync_count = second_sync_record_count.get(stream, 0)
                 first_sync_messages = [record.get('data') for record in
@@ -145,12 +122,15 @@ class TestGithubBookmarks(TestGithubBase):
 
 
                 if expected_replication_method == self.INCREMENTAL:
-                    # collect information specific to incremental streams from syncs 1 & 2
+                    # Collect information specific to incremental streams from syncs 1 & 2
                     replication_key = next(iter(expected_replication_keys[stream]))
                     first_bookmark_value = first_bookmark_key_value.get('since')
                     second_bookmark_value = second_bookmark_key_value.get('since')
-                    first_bookmark_value_utc = self.convert_state_to_utc(first_bookmark_value)
-                    second_bookmark_value_utc = self.convert_state_to_utc(second_bookmark_value)
+                    
+                    first_bookmark_value_ts = self.dt_to_ts(first_bookmark_value, self.BOOKMARK_FORMAT)
+                    second_bookmark_value_ts = self.dt_to_ts(second_bookmark_value, self.BOOKMARK_FORMAT)
+
+                    simulated_bookmark_value = self.dt_to_ts(new_states['bookmarks'][repo][stream]['since'], self.BOOKMARK_FORMAT)
 
                     # Verify the first sync sets a bookmark of the expected form
                     self.assertIsNotNone(first_bookmark_key_value)
@@ -161,29 +141,32 @@ class TestGithubBookmarks(TestGithubBase):
                     self.assertIsNotNone(second_bookmark_key_value.get('since'))
 
                     # Verify the second sync bookmark is Equal or Greater than the first sync bookmark
-                    # the tap uses `time_extracted` and sets a bookmark using `since` for all real/pseudo incremental streams
-                    self.assertGreaterEqual(second_bookmark_value, first_bookmark_value)
+                    self.assertGreaterEqual(second_bookmark_value_ts, first_bookmark_value_ts)
+
+                    replication_key_format = self.RECORD_REPLICATION_KEY_FORMAT
+                    # For events stream replication key value is coming in different format
+                    if stream == 'events':
+                        replication_key_format = self.EVENTS_RECORD_REPLICATION_KEY_FORMAT
+                    
+                    for record in first_sync_messages:
+                        # Verify the first sync bookmark value is the max replication key value for a given stream
+                        replication_key_value = self.dt_to_ts(record.get(replication_key), replication_key_format)
+                        
+                        self.assertLessEqual(
+                            replication_key_value, first_bookmark_value_ts,
+                            msg="First sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
+                        )
 
                     for record in second_sync_messages:
                         # Verify the second sync bookmark value is the max replication key value for a given stream
-                        if stream in ('commits', 'pr_commits'):
-                            replication_key_value = record.get('commit', {}).get('committer', {}).get('date')
-                        else:
-                            replication_key_value = record.get(replication_key)
+                        replication_key_value = self.dt_to_ts(record.get(replication_key), replication_key_format)
+                        
+                        self.assertGreaterEqual(replication_key_value, simulated_bookmark_value,
+                                                msg="Second sync records do not respect the previous bookmark.")
+                        
                         self.assertLessEqual(
-                            replication_key_value, second_bookmark_value_utc,
+                            replication_key_value, second_bookmark_value_ts,
                             msg="Second sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
-                        )
-
-                    for record in first_sync_messages:
-                        # Verify the first sync bookmark value is the max replication key value for a given stream
-                        if stream in ('commits', 'pr_commits'):
-                            replication_key_value = record.get('commit', {}).get('committer', {}).get('date')
-                        else:
-                            replication_key_value = record.get(replication_key)
-                        self.assertLessEqual(
-                            replication_key_value, first_bookmark_value_utc,
-                            msg="First sync bookmark was set incorrectly, a record with a greater replication-key value was synced."
                         )
 
                     # Verify the number of records in the 2nd sync is less then the first

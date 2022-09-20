@@ -1,6 +1,5 @@
 {
   "type": ["null", "object"],
-  "additionalProperties": false,
   "properties": {
     "name": {
       "type": ["null", "string"]
@@ -56,17 +55,14 @@
     "received_events_url": {
       "type": ["null", "string"]
     },
+    "type": {
+      "type": ["null", "string"]
+    },
     "site_admin": {
       "type": ["null", "boolean"]
     },
     "starred_at": {
       "type": ["null", "string"]
-    },
-    "type": {
-      "type": ["null", "string"]
-    },
-    "_sdc_repository": {
-      "type": ["string"]
     }
   }
 }

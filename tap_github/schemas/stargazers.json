@@ -6,13 +6,7 @@
       "type": ["string"]
     },
     "user": {
-      "type": ["null", "object"],
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "type": ["null", "integer"]
-        }
-      }
+      "$ref": "shared/user.json#/"
     },
     "starred_at": {
       "type": ["null", "string"],

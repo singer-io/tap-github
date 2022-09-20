@@ -1,9 +1,13 @@
 import unittest
 from unittest import mock
-import tap_github.__init__ as tap_github
+import tap_github
+from tap_github.client import GithubClient, REQUEST_TIMEOUT
 import requests
+from parameterized import parameterized
 
 class Mockresponse:
+    """ Mock response object class."""
+
     def __init__(self, status_code, json, raise_error, headers={'X-RateLimit-Remaining': 1}, text=None, content=None):
         self.status_code = status_code
         self.raise_error = raise_error
@@ -18,19 +22,24 @@ class Mockresponse:
         raise requests.HTTPError("Sample message")
 
     def json(self):
+        """ Response JSON method."""
         return self.text
 
 class MockParseArgs:
+    """Mock args object class"""
     config = {}
     def __init__(self, config):
         self.config = config
 
 def get_args(config):
+    """ Returns required args response. """
     return MockParseArgs(config)
 
 def get_response(status_code, json={}, raise_error=False, content=None):
+    """ Returns required mock response. """
     return Mockresponse(status_code, json, raise_error, content=content)
 
+@mock.patch("tap_github.client.GithubClient.verify_access_for_repo", return_value = None)
 @mock.patch("time.sleep")
 @mock.patch("requests.Session.request")
 @mock.patch("singer.utils.parse_args")
@@ -38,121 +47,41 @@ class TestTimeoutValue(unittest.TestCase):
     """
         Test case to verify the timeout value is set as expected
     """
+    json = {"key": "value"}
 
-    def test_timeout_value_in_config(self, mocked_parse_args, mocked_request, mocked_sleep):
-        json = {"key": "value"}
+    @parameterized.expand([
+        ["test_int_value", {"request_timeout": 100, "access_token": "access_token"}, 100.0],
+        ["test_str_value", {"request_timeout": "100", "access_token": "access_token"}, 100.0],
+        ["test_empty_value", {"request_timeout": "", "access_token": "access_token"}, 300.0],
+        ["test_int_zero_value", {"request_timeout": 0, "access_token": "access_token"}, 300.0],
+        ["test_str_zero_value", {"request_timeout": "0", "access_token": "access_token"}, 300.0],
+        ["test_no_value", {"request_timeout": "0", "access_token": "access_token"}, REQUEST_TIMEOUT]
+
+    ])
+    def test_timeout_value_in_config(self, mocked_parse_args, mocked_request, mocked_sleep, mock_verify_access, name, config, expected_value):
+        """
+        Test if timeout value given in config
+        """
         # mock response
-        mocked_request.return_value = get_response(200, json)
+        mocked_request.return_value = get_response(200, self.json)
 
-        mock_config = {"request_timeout": 100}
+        mock_config = config
         # mock parse args
         mocked_parse_args.return_value = get_args(mock_config)
+        test_client = GithubClient(mock_config)
 
         # get the timeout value for assertion
-        timeout = tap_github.get_request_timeout()
+        timeout = test_client.get_request_timeout()
         # function call
-        tap_github.authed_get("test_source", "")
+        test_client.authed_get("test_source", "")
 
         # verify that we got expected timeout value
-        self.assertEquals(100.0, timeout)
+        self.assertEqual(expected_value, timeout)
         # verify that the request was called with expected timeout value
-        mocked_request.assert_called_with(method='get', url='', timeout=100.0)
+        mocked_request.assert_called_with(method='get', url='', timeout=expected_value)
 
-    def test_timeout_value_not_in_config(self, mocked_parse_args, mocked_request, mocked_sleep):
-        json = {"key": "value"}
-        # mock response
-        mocked_request.return_value = get_response(200, json)
 
-        mock_config = {}
-        # mock parse args
-        mocked_parse_args.return_value = get_args(mock_config)
-
-        # get the timeout value for assertion
-        timeout = tap_github.get_request_timeout()
-        # function call
-        tap_github.authed_get("test_source", "")
-
-        # verify that we got expected timeout value
-        self.assertEquals(300.0, timeout)
-        # verify that the request was called with expected timeout value
-        mocked_request.assert_called_with(method='get', url='', timeout=300.0)
-
-    def test_timeout_string_value_in_config(self, mocked_parse_args, mocked_request, mocked_sleep):
-        json = {"key": "value"}
-        # mock response
-        mocked_request.return_value = get_response(200, json)
-
-        mock_config = {"request_timeout": "100"}
-        # mock parse args
-        mocked_parse_args.return_value = get_args(mock_config)
-
-        # get the timeout value for assertion
-        timeout = tap_github.get_request_timeout()
-        # function call
-        tap_github.authed_get("test_source", "")
-
-        # verify that we got expected timeout value
-        self.assertEquals(100.0, timeout)
-        # verify that the request was called with expected timeout value
-        mocked_request.assert_called_with(method='get', url='', timeout=100.0)
-
-    def test_timeout_empty_value_in_config(self, mocked_parse_args, mocked_request, mocked_sleep):
-        json = {"key": "value"}
-        # mock response
-        mocked_request.return_value = get_response(200, json)
-
-        mock_config = {"request_timeout": ""}
-        # mock parse args
-        mocked_parse_args.return_value = get_args(mock_config)
-
-        # get the timeout value for assertion
-        timeout = tap_github.get_request_timeout()
-        # function call
-        tap_github.authed_get("test_source", "")
-
-        # verify that we got expected timeout value
-        self.assertEquals(300.0, timeout)
-        # verify that the request was called with expected timeout value
-        mocked_request.assert_called_with(method='get', url='', timeout=300.0)
-
-    def test_timeout_0_value_in_config(self, mocked_parse_args, mocked_request, mocked_sleep):
-        json = {"key": "value"}
-        # mock response
-        mocked_request.return_value = get_response(200, json)
-
-        mock_config = {"request_timeout": 0.0}
-        # mock parse args
-        mocked_parse_args.return_value = get_args(mock_config)
-
-        # get the timeout value for assertion
-        timeout = tap_github.get_request_timeout()
-        # function call
-        tap_github.authed_get("test_source", "")
-
-        # verify that we got expected timeout value
-        self.assertEquals(300.0, timeout)
-        # verify that the request was called with expected timeout value
-        mocked_request.assert_called_with(method='get', url='', timeout=300.0)
-
-    def test_timeout_string_0_value_in_config(self, mocked_parse_args, mocked_request, mocked_sleep):
-        json = {"key": "value"}
-        # mock response
-        mocked_request.return_value = get_response(200, json)
-
-        mock_config = {"request_timeout": "0.0"}
-        # mock parse args
-        mocked_parse_args.return_value = get_args(mock_config)
-
-        # get the timeout value for assertion
-        timeout = tap_github.get_request_timeout()
-        # function call
-        tap_github.authed_get("test_source", "")
-
-        # verify that we got expected timeout value
-        self.assertEquals(300.0, timeout)
-        # verify that the request was called with expected timeout value
-        mocked_request.assert_called_with(method='get', url='', timeout=300.0)
-
+@mock.patch("tap_github.client.GithubClient.verify_access_for_repo", return_value = None)
 @mock.patch("time.sleep")
 @mock.patch("requests.Session.request")
 @mock.patch("singer.utils.parse_args")
@@ -161,36 +90,26 @@ class TestTimeoutAndConnnectionErrorBackoff(unittest.TestCase):
         Test case to verify that we backoff for 5 times for Connection and Timeout error
     """
 
-    def test_timeout_backoff(self, mocked_parse_args, mocked_request, mocked_sleep):
-        # mock request and raise 'Timeout' error
-        mocked_request.side_effect = requests.Timeout
+    @parameterized.expand([
+        ["test_timeout_backoff", requests.Timeout],
+        ["test_connection_error_backoff", requests.ConnectionError]
+    ])
+    def test_backoff(self, mocked_parse_args, mocked_request, mocked_sleep, mock_verify_access, name, error_class):
+        """
+        Test that tap retry timeout or connection error 5 times.
+        """
+        # mock request and raise error
+        mocked_request.side_effect = error_class
 
-        mock_config = {}
+        mock_config = {"access_token": "access_token"}
         # mock parse args
         mocked_parse_args.return_value = get_args(mock_config)
+        test_client = GithubClient(mock_config)
 
-        try:
-            # function call
-            tap_github.authed_get("test_source", "")
-        except requests.Timeout:
-            pass
+        with self.assertRaises(error_class):
+            test_client.authed_get("test_source", "")
 
         # verify that we backoff 5 times
-        self.assertEquals(5, mocked_request.call_count)
+        self.assertEqual(5, mocked_request.call_count)
 
-    def test_connection_error_backoff(self, mocked_parse_args, mocked_request, mocked_sleep):
-        # mock request and raise 'Connection' error
-        mocked_request.side_effect = requests.ConnectionError
 
-        mock_config = {}
-        # mock parse args
-        mocked_parse_args.return_value = get_args(mock_config)
-
-        try:
-            # function call
-            tap_github.authed_get("test_source", "")
-        except requests.ConnectionError:
-            pass
-
-        # verify that we backoff 5 times
-        self.assertEquals(5, mocked_request.call_count)
