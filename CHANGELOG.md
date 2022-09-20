@@ -1,5 +1,33 @@
 # Changelog
 
+# 2.0.0
+  * [#166](https://github.com/singer-io/tap-github/pull/166) Added backoff for 5xx error and added custom error message when only organization is passed in config
+  * [#167](https://github.com/singer-io/tap-github/pull/167) Updated several test cases according to the code changes
+    * Skipped missing fields from the all_fields test case
+    * Included replication key's in automatic_fields test case
+    * Added an assertion that replication value is greater than the bookmark in bookmarks test case
+    * Added an assertion for no duplicate metadata entry in the discover test case
+    * Added an assertion for actual replication that matches our expected replication method in the discover test case
+    * Added interrupted sync test file
+    * Added parent-child independent test file
+  * [#168](https://github.com/singer-io/tap-github/pull/168) Update dict based implementation to class based
+    * Changed dict-based implementation to class-based implementation.
+    * Created functionality-wise separate files - schema, discover, sync, streams.
+    * Moved logic of REST API call and error handling to client.py.
+    * Created class for incremental(ordered and unordered), full_table sync.
+    * Created parent class and class for each stream.
+    * Added details code comments for each function.
+    * Added replication key updated_at at 1st level in the schema of the commits stream.
+    * Added separate schema for pr_commits stream.
+    * Added detailed unit test case.
+    * Removed unnecessary unit test case.
+  * [#169](https://github.com/singer-io/tap-github/pull/169) Added properties to the issues assignee schema
+  * [#170](https://github.com/singer-io/tap-github/pull/170) Added missing fields to the schema
+  * [#171](https://github.com/singer-io/tap-github/pull/171) Implemented currently syncing for repos and streams
+  * [#172](https://github.com/singer-io/tap-github/pull/172) Support of custom domain
+  * [#173](https://github.com/singer-io/tap-github/pull/173) Sync teams at organization level
+  * [#174](https://github.com/singer-io/tap-github/pull/174) Updated currently syncing for teams streams.
+
 # 1.10.4
   * Fix team_members stream primary Key [#157] (https://github.com/singer-io/tap-github/pull/157)
 
