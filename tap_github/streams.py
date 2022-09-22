@@ -683,7 +683,7 @@ class IssueEvents(IncrementalOrderedStream):
     replication_method = "INCREMENTAL"
     replication_keys = "created_at"
     key_properties = ["id"]
-    path = "issues/events?sort=created_at&direction=desc"
+    path = "issues/events?sort=created_at&direction=desc&per_page=100"
 
 class Events(IncrementalStream):
     '''
