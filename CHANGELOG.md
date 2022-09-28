@@ -1,10 +1,13 @@
 # Changelog
 
 # 2.0.0
+  * Update missing fields to the schema and update the data types of several fields [#169](https://github.com/singer-io/tap-github/pull/169) [#170](https://github.com/singer-io/tap-github/pull/170)
+    * Issue -> Performed_via_github_app of issue_events stream in Tap it was given as string but in API doc it is an object so updated in the tap to [null, object, string]. Ref: [doc-link](https://docs.github.com/en/rest/issues/events#list-issue-events-for-a-repository)
+    * payload -> comment of events stream in Tap it was given as string but in API doc it is an object so updated in the tap to [null, object, string]. Ref: [doc-link](https://docs.github.com/en/rest/activity/events#list-repository-events)
+    * payload -> issue of events stream in Tap it was given as string but in API doc it is an object so updated in the tap to [null, object, string]. Ref: [doc-link](https://docs.github.com/en/rest/activity/events#list-repository-events)
   * Update dict based implementation to class based [#168](https://github.com/singer-io/tap-github/pull/168)
   * Implement currently syncing for repos and streams [#171](https://github.com/singer-io/tap-github/pull/171) [#174](https://github.com/singer-io/tap-github/pull/174)
   * Implement custom exception handling and backoff for 5xx error [#166](https://github.com/singer-io/tap-github/pull/166)
-  * Update missing fields to the schema [#169](https://github.com/singer-io/tap-github/pull/169) [#170](https://github.com/singer-io/tap-github/pull/170)
   * Support of custom domain [#172](https://github.com/singer-io/tap-github/pull/172)
   * Sync teams at organization level [#173](https://github.com/singer-io/tap-github/pull/173) 
   * Update integration test suite [#167](https://github.com/singer-io/tap-github/pull/167)
