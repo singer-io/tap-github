@@ -1,10 +1,9 @@
 # Changelog
 
 # 2.0.0
-  * Update missing fields to the schema and update the data types of several fields [#169](https://github.com/singer-io/tap-github/pull/169) [#170](https://github.com/singer-io/tap-github/pull/170)
-    * Issue -> Performed_via_github_app of issue_events stream in Tap it was given as string but in API doc it is an object so updated in the tap to [null, object, string]. Ref: [doc-link](https://docs.github.com/en/rest/issues/events#list-issue-events-for-a-repository)
-    * payload -> comment of events stream in Tap it was given as string but in API doc it is an object so updated in the tap to [null, object, string]. Ref: [doc-link](https://docs.github.com/en/rest/activity/events#list-repository-events)
-    * payload -> issue of events stream in Tap it was given as string but in API doc it is an object so updated in the tap to [null, object, string]. Ref: [doc-link](https://docs.github.com/en/rest/activity/events#list-repository-events)
+  * Schema updates [#170](https://github.com/singer-io/tap-github/pull/170) [#169](https://github.com/singer-io/tap-github/pull/169)
+    * Update data types of fields in `events` and `issue_events` stream
+    * Add missing fields to the schemas
   * Update dict based implementation to class based [#168](https://github.com/singer-io/tap-github/pull/168)
   * Implement currently syncing for repos and streams [#171](https://github.com/singer-io/tap-github/pull/171) [#174](https://github.com/singer-io/tap-github/pull/174)
   * Implement custom exception handling and backoff for 5xx error [#166](https://github.com/singer-io/tap-github/pull/166)
