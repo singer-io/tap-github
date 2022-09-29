@@ -1,5 +1,16 @@
 # Changelog
 
+# 2.0.0
+  * Schema updates [#170](https://github.com/singer-io/tap-github/pull/170) [#169](https://github.com/singer-io/tap-github/pull/169)
+    * Update data types of fields in `events` and `issue_events` stream
+    * Add missing fields to the schemas
+  * Update dict based implementation to class based [#168](https://github.com/singer-io/tap-github/pull/168)
+  * Implement currently syncing for repos and streams [#171](https://github.com/singer-io/tap-github/pull/171) [#174](https://github.com/singer-io/tap-github/pull/174)
+  * Implement custom exception handling and backoff for 5xx error [#166](https://github.com/singer-io/tap-github/pull/166)
+  * Support of custom domain [#172](https://github.com/singer-io/tap-github/pull/172)
+  * Sync teams at organization level [#173](https://github.com/singer-io/tap-github/pull/173) 
+  * Update integration test suite [#167](https://github.com/singer-io/tap-github/pull/167)
+
 # 1.10.4
   * Fix team_members stream primary Key [#157] (https://github.com/singer-io/tap-github/pull/157)
 
