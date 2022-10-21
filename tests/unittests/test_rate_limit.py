@@ -72,7 +72,7 @@ class TestRateLimit(unittest.TestCase):
 
     def test_rate_limit_wait_with_min_rate_limit_defined(self, mocked_sleep):
         """
-        Test `rate_throttling` if sleep time does exceed limit with a different value for the `min_rate_limit`
+        Test `rate_throttling` if remain rate limit > 0 and equal to `min_rate_limit`
         """
 
         mocked_sleep.side_effect = None
