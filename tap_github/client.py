@@ -128,9 +128,10 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
 def calculate_seconds(epoch):
     """
     Calculate the seconds to sleep before making a new request.
+    Note: a 10 second break to ensure the retry is not done before the reset
     """
     current = time.time()
-    return int(round((epoch - current), 0))
+    return int(round((epoch - current), 0)) + 10
 
 def rate_throttling(response, max_sleep_seconds):
     """
