@@ -4,9 +4,11 @@ import backoff
 from simplejson import JSONDecodeError
 import singer
 from singer import metrics
+from math import ceil
 
 LOGGER = singer.get_logger()
 DEFAULT_SLEEP_SECONDS = 600
+DEFAULT_MIN_RATE_LIMIT = 0
 DEFAULT_DOMAIN = "https://api.github.com"
 
 # Set default timeout of 300 seconds
@@ -130,14 +132,14 @@ def calculate_seconds(epoch):
     Calculate the seconds to sleep before making a new request.
     """
     current = time.time()
-    return int(round((epoch - current), 0))
+    return int(ceil(epoch - current))
 
-def rate_throttling(response, max_sleep_seconds):
+def rate_throttling(response, max_sleep_seconds, min_rate_limit):
     """
     For rate limit errors, get the remaining time before retrying and calculate the time to sleep before making a new request.
     """
     if 'X-RateLimit-Remaining' in response.headers:
-        if int(response.headers['X-RateLimit-Remaining']) == 0:
+        if int(response.headers['X-RateLimit-Remaining']) <= min_rate_limit:
             seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
             if seconds_to_sleep > max_sleep_seconds:
@@ -160,6 +162,7 @@ class GithubClient:
         self.session = requests.Session()
         self.base_url = config['base_url'] if config.get('base_url') else DEFAULT_DOMAIN
         self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
+        self.min_rate_limit = self.config.get('min_rate_limit', DEFAULT_MIN_RATE_LIMIT)
         self.set_auth_in_session()
         self.not_accessible_repos = set()
 
@@ -198,7 +201,7 @@ class GithubClient:
             if resp.status_code != 200:
                 raise_for_error(resp, source, stream, self, should_skip_404)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
-            rate_throttling(resp, self.max_sleep_seconds)
+            rate_throttling(resp, self.max_sleep_seconds, self.min_rate_limit)
             if resp.status_code == 404:
                 # Return an empty response body since we're not raising a NotFoundException
                 resp._content = b'{}' # pylint: disable=protected-access
