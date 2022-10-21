@@ -7,7 +7,7 @@ import time
 import requests
 
 DEFAULT_SLEEP_SECONDS = 600
-DEFAULT_MIN_RATE_LIMIT = 0
+DEFAULT_MIN_REMAIN_RATE_LIMIT = 0
 def api_call():
     return requests.get("https://api.github.com/rate_limit")
 
@@ -30,7 +30,7 @@ class TestRateLimit(unittest.TestCase):
         resp.headers["X-RateLimit-Reset"] = int(ceil(time.time())) + 120
         resp.headers["X-RateLimit-Remaining"] = 0
 
-        rate_throttling(resp, DEFAULT_SLEEP_SECONDS, DEFAULT_MIN_RATE_LIMIT)
+        rate_throttling(resp, DEFAULT_SLEEP_SECONDS, DEFAULT_MIN_REMAIN_RATE_LIMIT)
 
         # Verify `time.sleep` is called with expected seconds in response
         mocked_sleep.assert_called_with(121)
@@ -50,7 +50,7 @@ class TestRateLimit(unittest.TestCase):
 
         # Verify exception is raised with proper message
         with self.assertRaises(tap_github.client.RateLimitExceeded) as e:
-            rate_throttling(resp, DEFAULT_SLEEP_SECONDS, DEFAULT_MIN_RATE_LIMIT)
+            rate_throttling(resp, DEFAULT_SLEEP_SECONDS, DEFAULT_MIN_REMAIN_RATE_LIMIT)
         self.assertEqual(str(e.exception), "API rate limit exceeded, please try after 602 seconds.")
 
 
@@ -65,14 +65,14 @@ class TestRateLimit(unittest.TestCase):
         resp.headers["X-RateLimit-Reset"] = int(ceil(time.time())) + 10
         resp.headers["X-RateLimit-Remaining"] = 5
 
-        rate_throttling(resp, DEFAULT_SLEEP_SECONDS, DEFAULT_MIN_RATE_LIMIT)
+        rate_throttling(resp, DEFAULT_SLEEP_SECONDS, DEFAULT_MIN_REMAIN_RATE_LIMIT)
 
         # Verify that `time.sleep` is not called
         self.assertFalse(mocked_sleep.called)
 
-    def test_rate_limit_wait_with_min_rate_limit_defined(self, mocked_sleep):
+    def test_rate_limit_wait_with_min_remain_rate_limit_defined(self, mocked_sleep):
         """
-        Test `rate_throttling` if remain rate limit > 0 and equal to `min_rate_limit`
+        Test `rate_throttling` if remain rate limit > 0 and equal to `min_remain_rate_limit`
         """
 
         mocked_sleep.side_effect = None
@@ -81,7 +81,7 @@ class TestRateLimit(unittest.TestCase):
         resp.headers["X-RateLimit-Reset"] = int(ceil(time.time())) + 10
         resp.headers["X-RateLimit-Remaining"] = 5
 
-        rate_throttling(resp, DEFAULT_SLEEP_SECONDS, min_rate_limit=5)
+        rate_throttling(resp, DEFAULT_SLEEP_SECONDS, min_remain_rate_limit=5)
 
         # Verify `time.sleep` is called
         self.assertTrue(mocked_sleep.called)
@@ -94,7 +94,7 @@ class TestRateLimit(unittest.TestCase):
         resp.headers={}
         
         with self.assertRaises(GithubException) as e:
-            rate_throttling(resp, DEFAULT_SLEEP_SECONDS, DEFAULT_MIN_RATE_LIMIT)
+            rate_throttling(resp, DEFAULT_SLEEP_SECONDS, DEFAULT_MIN_REMAIN_RATE_LIMIT)
         
         # Verifying the message formed for the invalid base URL
         self.assertEqual(str(e.exception), "The API call using the specified base url was unsuccessful. Please double-check the provided base URL.")
