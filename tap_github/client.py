@@ -99,7 +99,7 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     }
 }
 
-def raise_for_error(resp, source, stream, client, should_skip_404, should_skip_422):
+def raise_for_error(resp, source, stream, client, should_skip_404):
     """
     Retrieve the error code and the error message from the response and return custom exceptions accordingly.
     """
@@ -118,13 +118,6 @@ def raise_for_error(resp, source, stream, client, should_skip_404, should_skip_4
         message = "HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details.".format(details, response_json.get("documentation_url"))
         LOGGER.warning(message)
         # Don't raise a NotFoundException
-        return None
-
-    if error_code == 422 and should_skip_422:
-        message = ("HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details. "
-                   "The next pages will be skipped due to Github API limit of 40k records.").format(
-            response_json.get('message'), response_json.get("documentation_url"))
-        LOGGER.warning(message)
         return None
 
     message = "HTTP-error-code: {}, Error: {}".format(
@@ -221,10 +214,7 @@ class GithubClient:
         """
         Fetch all pages of records and return them.
         """
-        prepared_request = PreparedRequest()
-        prepared_request.prepare_url(url, {'per_page': self.max_per_page})
-        url = prepared_request.url
-        LOGGER.info(url)
+        url = self.prepare_url(url)
         while True:
             r = self.authed_get(source, url, headers, stream, should_skip_404)
             yield r
@@ -235,6 +225,15 @@ class GithubClient:
             else:
             # Break the loop if all pages are fetched.
                 break
+
+    def prepare_url(self, url):
+        """
+        Prepare the URL with some additional parameters
+        """
+        prepared_request = PreparedRequest()
+        # Including max per page param
+        prepared_request.prepare_url(url, {'per_page': self.max_per_page})
+        return prepared_request.url
 
     def verify_repo_access(self, url_for_repo, repo):
         """

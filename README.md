@@ -63,9 +63,13 @@ This tap:
       "repository": "singer-io/tap-github singer-io/getting-started",
       "start_date": "2021-01-01T00:00:00Z",
       "request_timeout": 300,
-      "base_url": "https://api.github.com"
+      "base_url": "https://api.github.com",
     }
     ```
+
+> Note: The max results per page is configurable with the parameter `max_per_page`,
+> as default it will return 100 (that is the max of most of the endpoints)
+
 4. Run the tap in discovery mode to get properties.json file
 
     ```bash

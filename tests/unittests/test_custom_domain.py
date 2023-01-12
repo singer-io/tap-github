@@ -27,3 +27,18 @@ class TestCustomDomain(unittest.TestCase):
 
         # Verify domain in client is from config
         self.assertEqual(test_client.base_url, mock_config["base_url"])
+
+    def test_prepare_url(self, mock_verify_access):
+        """
+        Test if the correct params are added to url
+        """
+        mock_config = {'repository': 'singer-io/test-repo', "base_url": "http://CUSTOM-git.com", "access_token": "", "max_per_page": 35}
+        test_client = GithubClient(mock_config)
+
+        # Verify domain in client is from config
+        self.assertEqual(test_client.prepare_url(test_client.base_url), f"{mock_config['base_url'].lower()}/?per_page=35")
+        self.assertEqual(test_client.prepare_url('http://CUSTOM-git.com/?q=query'), 'http://custom-git.com/?q=query&per_page=35')
+
+        del mock_config["max_per_page"]
+        test_client2 = GithubClient(mock_config)
+        self.assertEqual(test_client2.prepare_url(test_client2.base_url), f"{mock_config['base_url'].lower()}/?per_page=100")
