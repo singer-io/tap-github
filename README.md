@@ -63,7 +63,7 @@ This tap:
       "repository": "singer-io/tap-github singer-io/getting-started",
       "start_date": "2021-01-01T00:00:00Z",
       "request_timeout": 300,
-      "base_url": "https://api.github.com",
+      "base_url": "https://api.github.com"
     }
     ```
 
