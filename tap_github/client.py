@@ -1,5 +1,6 @@
 import time
 import requests
+from requests.models import PreparedRequest
 import backoff
 from simplejson import JSONDecodeError
 import singer
@@ -9,6 +10,7 @@ from math import ceil
 LOGGER = singer.get_logger()
 DEFAULT_SLEEP_SECONDS = 600
 DEFAULT_MIN_REMAIN_RATE_LIMIT = 0
+DEFAULT_MAX_PER_PAGE = 100
 DEFAULT_DOMAIN = "https://api.github.com"
 
 # Set default timeout of 300 seconds
@@ -97,7 +99,7 @@ ERROR_CODE_EXCEPTION_MAPPING = {
     }
 }
 
-def raise_for_error(resp, source, stream, client, should_skip_404):
+def raise_for_error(resp, source, stream, client, should_skip_404, should_skip_422):
     """
     Retrieve the error code and the error message from the response and return custom exceptions accordingly.
     """
@@ -116,6 +118,13 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
         message = "HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details.".format(details, response_json.get("documentation_url"))
         LOGGER.warning(message)
         # Don't raise a NotFoundException
+        return None
+
+    if error_code == 422 and should_skip_422:
+        message = ("HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details. "
+                   "The next pages will be skipped due to Github API limit of 40k records.").format(
+            response_json.get('message'), response_json.get("documentation_url"))
+        LOGGER.warning(message)
         return None
 
     message = "HTTP-error-code: {}, Error: {}".format(
@@ -165,6 +174,7 @@ class GithubClient:
         self.min_remain_rate_limit = self.config.get('min_remain_rate_limit', DEFAULT_MIN_REMAIN_RATE_LIMIT)
         self.set_auth_in_session()
         self.not_accessible_repos = set()
+        self.max_per_page = self.config.get('max_per_page', DEFAULT_MAX_PER_PAGE)
 
     def get_request_timeout(self):
         """
@@ -211,12 +221,16 @@ class GithubClient:
         """
         Fetch all pages of records and return them.
         """
+        prepared_request = PreparedRequest()
+        prepared_request.prepare_url(url, {'per_page': self.max_per_page})
+        url = prepared_request.url
+        LOGGER.info(url)
         while True:
             r = self.authed_get(source, url, headers, stream, should_skip_404)
             yield r
 
             # Fetch the next page if next found in the response.
-            if 'next' in r.links:
+            if 'next' in r.links and r.links['last'] != url:
                 url = r.links['next']['url']
             else:
             # Break the loop if all pages are fetched.
