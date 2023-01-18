@@ -130,7 +130,7 @@ def calculate_seconds(epoch):
     Calculate the seconds to sleep before making a new request.
     """
     current = time.time()
-    return int(round((epoch - current), 0))
+    return int(round((epoch - current), 0))+60 # Add additional 60 seconds to this request to prevent 403
 
 def rate_throttling(response, max_sleep_seconds):
     """
