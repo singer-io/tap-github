@@ -143,6 +143,8 @@ def rate_throttling(response, max_sleep_seconds, min_remain_rate_limit):
     if 'X-RateLimit-Remaining' in response.headers:
         if int(response.headers['X-RateLimit-Remaining']) <= min_remain_rate_limit:
             seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
+            if seconds_to_sleep <= 0:
+                return
 
             if seconds_to_sleep > max_sleep_seconds:
                 message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
