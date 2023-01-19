@@ -224,18 +224,12 @@ class GithubClient:
         """
         Fetch all pages of records and return them.
         """
-        url = self.prepare_url(url)
-        next_page = True
-        while next_page:
+        next_url = self.prepare_url(url)
+        while next_url:
             response = self.authed_get(source, url, headers, stream, should_skip_404)
             yield response
 
-            # Fetch the next page if next found in the response.
-            if 'next' in response.links:
-                url = response.links['next']['url']
-            else:
-                # Break the loop if all pages are fetched.
-                next_page = False
+            next_url = response.links.get('next', None)
 
     def prepare_url(self, url):
         """
