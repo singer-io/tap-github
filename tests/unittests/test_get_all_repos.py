@@ -95,7 +95,7 @@ class TestAuthedGetAllPages(unittest.TestCase):
     """
     Test `authed_get_all_pages` method from client.
     """
-    config = {"access_token": "", "repository": "test-org/repo1"}
+    config = {"access_token": "", "repository": "test-org/repo1", "max_per_page": 100}
     
     def test_for_one_page(self, mock_auth_get, mock_verify_access):
 
@@ -104,7 +104,7 @@ class TestAuthedGetAllPages(unittest.TestCase):
         test_client = GithubClient(self.config)
         mock_auth_get.return_value = MockResponse({})
         
-        list(test_client.authed_get_all_pages("", "mock_url", {}))
+        list(test_client.authed_get_all_pages("", "http://mock_url", {}))
         
         # Verify `auth_get` call count
         self.assertEqual(mock_auth_get.call_count, 1)
@@ -114,14 +114,15 @@ class TestAuthedGetAllPages(unittest.TestCase):
         """Verify `authed_get` is called equal number times as pages available."""
 
         test_client = GithubClient(self.config)
-        mock_auth_get.side_effect = [MockResponse({"next": {"url": "mock_url_2"}}),MockResponse({"next": {"url": "mock_url_3"}}),MockResponse({})]
+        mock_auth_get.side_effect = [MockResponse({"next": {"url": "http://mock_url_2/?per_page=100"}}),
+                                     MockResponse({"next": {"url": "http://mock_url_3/?per_page=100"}}),MockResponse({})]
         
-        list(test_client.authed_get_all_pages("", "mock_url_1", {}))
+        list(test_client.authed_get_all_pages("", "http://mock_url_1", {}))
         
         # Verify `auth_get` call count
         self.assertEqual(mock_auth_get.call_count, 3)
         
         # Verify `auth_get` calls with expected url
-        self.assertEqual(mock_auth_get.mock_calls[0], mock.call("", "mock_url_1", {}, '', True))
-        self.assertEqual(mock_auth_get.mock_calls[1], mock.call("", "mock_url_2", {}, '', True))
-        self.assertEqual(mock_auth_get.mock_calls[2], mock.call("", "mock_url_3", {}, '', True))
+        self.assertEqual(mock_auth_get.mock_calls[0], mock.call("", "http://mock_url_1/?per_page=100", {}, '', True))
+        self.assertEqual(mock_auth_get.mock_calls[1], mock.call("", "http://mock_url_2/?per_page=100", {}, '', True))
+        self.assertEqual(mock_auth_get.mock_calls[2], mock.call("", "http://mock_url_3/?per_page=100", {}, '', True))
