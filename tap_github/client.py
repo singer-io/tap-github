@@ -16,6 +16,8 @@ DEFAULT_DOMAIN = "https://api.github.com"
 # Set default timeout of 300 seconds
 REQUEST_TIMEOUT = 300
 
+PAGINATION_EXCEED_MSG = 'In order to keep the API fast for everyone, pagination is limited for this resource.'
+
 class GithubException(Exception):
     pass
 
@@ -120,6 +122,14 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
         # Don't raise a NotFoundException
         return None
 
+    if error_code == 422 and PAGINATION_EXCEED_MSG in response_json.get('message', ''):
+        message = f"HTTP-error-code: 422, Error: {response_json.get('message', '')}. " \
+                  f"Please refer '{response_json.get('documentation_url')}' for more details." \
+                  "This is a known issue when the results exceed 40k and the last page is not full" \
+                  " (it will trim the results to get only the available by the API)."
+        LOGGER.warning(message)
+        return None
+
     message = "HTTP-error-code: {}, Error: {}".format(
         error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
 
@@ -134,7 +144,7 @@ def calculate_seconds(epoch):
     Calculate the seconds to sleep before making a new request.
     """
     current = time.time()
-    return int(ceil(epoch - current))
+    return max(0, int(ceil(epoch - current)))
 
 def rate_throttling(response, max_sleep_seconds, min_remain_rate_limit):
     """
@@ -143,8 +153,6 @@ def rate_throttling(response, max_sleep_seconds, min_remain_rate_limit):
     if 'X-RateLimit-Remaining' in response.headers:
         if int(response.headers['X-RateLimit-Remaining']) <= min_remain_rate_limit:
             seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
-            if seconds_to_sleep <= 0:
-                return
 
             if seconds_to_sleep > max_sleep_seconds:
                 message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
@@ -207,9 +215,9 @@ class GithubClient:
                 raise_for_error(resp, source, stream, self, should_skip_404)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
             rate_throttling(resp, self.max_sleep_seconds, self.min_remain_rate_limit)
-            if resp.status_code == 404:
+            if resp.status_code == 404 or resp.status_code == 422:
                 # Return an empty response body since we're not raising a NotFoundException
-                resp._content = b'{}' # pylint: disable=protected-access
+                resp._content = b'{}'  # pylint: disable=protected-access
             return resp
 
     def authed_get_all_pages(self, source, url, headers={}, stream="", should_skip_404 = True):
@@ -217,16 +225,17 @@ class GithubClient:
         Fetch all pages of records and return them.
         """
         url = self.prepare_url(url)
-        while True:
-            r = self.authed_get(source, url, headers, stream, should_skip_404)
-            yield r
+        next_page = True
+        while next_page:
+            response = self.authed_get(source, url, headers, stream, should_skip_404)
+            yield response
 
             # Fetch the next page if next found in the response.
-            if 'next' in r.links and r.links['last'] != url:
-                url = r.links['next']['url']
+            if 'next' in response.links:
+                url = response.links['next']['url']
             else:
-            # Break the loop if all pages are fetched.
-                break
+                # Break the loop if all pages are fetched.
+                next_page = False
 
     def prepare_url(self, url):
         """
