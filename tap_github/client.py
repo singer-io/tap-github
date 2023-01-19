@@ -226,7 +226,7 @@ class GithubClient:
         """
         next_url = self.prepare_url(url)
         while next_url:
-            response = self.authed_get(source, url, headers, stream, should_skip_404)
+            response = self.authed_get(source, next_url, headers, stream, should_skip_404)
             yield response
 
             next_url = response.links.get('next', {}).get('url', None)
