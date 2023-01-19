@@ -229,7 +229,7 @@ class GithubClient:
             response = self.authed_get(source, url, headers, stream, should_skip_404)
             yield response
 
-            next_url = response.links.get('next', None)
+            next_url = response.links.get('next', {}).get('url', None)
 
     def prepare_url(self, url):
         """
