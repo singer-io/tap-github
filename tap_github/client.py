@@ -208,7 +208,7 @@ class GithubClient:
         """
         Call rest API and return the response in case of status code 200.
         """
-        with metrics.http_request_timer(source) as timer:
+        with metrics.http_request_timer(url) as timer:
             self.session.headers.update(headers)
             resp = self.session.request(method='get', url=url, timeout=self.get_request_timeout())
             if resp.status_code != 200:
