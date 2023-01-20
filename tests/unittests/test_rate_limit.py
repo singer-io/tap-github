@@ -36,7 +36,6 @@ class TestRateLimit(unittest.TestCase):
         mocked_sleep.assert_called_with(121)
         self.assertTrue(mocked_sleep.called)
 
-
     def test_rate_limit_exception(self, mocked_sleep):
         """
         Test `rate_throttling` for 'sleep_time' greater than `MAX_SLEEP_SECONDS`
@@ -52,7 +51,6 @@ class TestRateLimit(unittest.TestCase):
         with self.assertRaises(tap_github.client.RateLimitExceeded) as e:
             rate_throttling(resp, DEFAULT_SLEEP_SECONDS, DEFAULT_MIN_REMAIN_RATE_LIMIT)
         self.assertEqual(str(e.exception), "API rate limit exceeded, please try after 602 seconds.")
-
 
     def test_rate_limit_not_exceeded(self, mocked_sleep):
         """
