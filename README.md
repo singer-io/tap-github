@@ -66,6 +66,10 @@ This tap:
       "base_url": "https://api.github.com"
     }
     ```
+
+> Note: The max results per page is configurable with the parameter `max_per_page`,
+> as default it will return 100 (that is the max of most of the endpoints)
+
 4. Run the tap in discovery mode to get properties.json file
 
     ```bash

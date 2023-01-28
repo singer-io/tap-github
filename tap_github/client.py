@@ -1,16 +1,22 @@
 import time
 import requests
+from requests.models import PreparedRequest
 import backoff
 from simplejson import JSONDecodeError
 import singer
 from singer import metrics
+from math import ceil
 
 LOGGER = singer.get_logger()
 DEFAULT_SLEEP_SECONDS = 600
+DEFAULT_MIN_REMAIN_RATE_LIMIT = 0
+DEFAULT_MAX_PER_PAGE = 100
 DEFAULT_DOMAIN = "https://api.github.com"
 
 # Set default timeout of 300 seconds
 REQUEST_TIMEOUT = 300
+
+PAGINATION_EXCEED_MSG = 'In order to keep the API fast for everyone, pagination is limited for this resource.'
 
 class GithubException(Exception):
     pass
@@ -116,6 +122,14 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
         # Don't raise a NotFoundException
         return None
 
+    if error_code == 422 and PAGINATION_EXCEED_MSG in response_json.get('message', ''):
+        message = f"HTTP-error-code: 422, Error: {response_json.get('message', '')}. " \
+                  f"Please refer '{response_json.get('documentation_url')}' for more details." \
+                  "This is a known issue when the results exceed 40k and the last page is not full" \
+                  " (it will trim the results to get only the available by the API)."
+        LOGGER.warning(message)
+        return None
+
     message = "HTTP-error-code: {}, Error: {}".format(
         error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
 
@@ -130,14 +144,14 @@ def calculate_seconds(epoch):
     Calculate the seconds to sleep before making a new request.
     """
     current = time.time()
-    return int(round((epoch - current), 0))
+    return max(0, int(ceil(epoch - current)))
 
-def rate_throttling(response, max_sleep_seconds):
+def rate_throttling(response, max_sleep_seconds, min_remain_rate_limit):
     """
     For rate limit errors, get the remaining time before retrying and calculate the time to sleep before making a new request.
     """
     if 'X-RateLimit-Remaining' in response.headers:
-        if int(response.headers['X-RateLimit-Remaining']) == 0:
+        if int(response.headers['X-RateLimit-Remaining']) <= min_remain_rate_limit:
             seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
 
             if seconds_to_sleep > max_sleep_seconds:
@@ -160,8 +174,10 @@ class GithubClient:
         self.session = requests.Session()
         self.base_url = config['base_url'] if config.get('base_url') else DEFAULT_DOMAIN
         self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
+        self.min_remain_rate_limit = self.config.get('min_remain_rate_limit', DEFAULT_MIN_REMAIN_RATE_LIMIT)
         self.set_auth_in_session()
         self.not_accessible_repos = set()
+        self.max_per_page = self.config.get('max_per_page', DEFAULT_MAX_PER_PAGE)
 
     def get_request_timeout(self):
         """
@@ -192,32 +208,37 @@ class GithubClient:
         """
         Call rest API and return the response in case of status code 200.
         """
-        with metrics.http_request_timer(source) as timer:
+        with metrics.http_request_timer(url) as timer:
             self.session.headers.update(headers)
             resp = self.session.request(method='get', url=url, timeout=self.get_request_timeout())
             if resp.status_code != 200:
                 raise_for_error(resp, source, stream, self, should_skip_404)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
-            rate_throttling(resp, self.max_sleep_seconds)
-            if resp.status_code == 404:
+            rate_throttling(resp, self.max_sleep_seconds, self.min_remain_rate_limit)
+            if resp.status_code == 404 or resp.status_code == 422:
                 # Return an empty response body since we're not raising a NotFoundException
-                resp._content = b'{}' # pylint: disable=protected-access
+                resp._content = b'{}'  # pylint: disable=protected-access
             return resp
 
     def authed_get_all_pages(self, source, url, headers={}, stream="", should_skip_404 = True):
         """
         Fetch all pages of records and return them.
         """
-        while True:
-            r = self.authed_get(source, url, headers, stream, should_skip_404)
-            yield r
+        next_url = self.prepare_url(url)
+        while next_url:
+            response = self.authed_get(source, next_url, headers, stream, should_skip_404)
+            yield response
 
-            # Fetch the next page if next found in the response.
-            if 'next' in r.links:
-                url = r.links['next']['url']
-            else:
-            # Break the loop if all pages are fetched.
-                break
+            next_url = response.links.get('next', {}).get('url', None)
+
+    def prepare_url(self, url):
+        """
+        Prepare the URL with some additional parameters
+        """
+        prepared_request = PreparedRequest()
+        # Including max per page param
+        prepared_request.prepare_url(url, {'per_page': self.max_per_page})
+        return prepared_request.url
 
     def verify_repo_access(self, url_for_repo, repo):
         """
