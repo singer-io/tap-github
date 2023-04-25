@@ -237,13 +237,6 @@ class GithubClient:
             # Throwing user-friendly error message as it checks token access
             message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
             raise NotFoundException(message) from None
-        except ConflictError as err:
-            LOGGER.warning("Got error %s", err)
-            self.authed_get(
-                "verifying repository access",
-                '{}/repos/{}'.format(self.base_url, repo),
-            )
-            LOGGER.info("Ignoring error because of successful request")
 
     def verify_access_for_repo(self):
         """
@@ -341,19 +334,10 @@ class GithubClient:
                         repo_full_name = repo.get('full_name')
                         LOGGER.info("Verifying access of repository: %s", repo_full_name)
 
-
-                        try:
-                            self.verify_repo_access(
-                                '{}/repos/{}/commits'.format(self.base_url,repo_full_name),
-                                repo
-                            )
-                        except ConflictError as err:
-                            LOGGER.warning("Got error %s", err)
-                            self.verify_repo_access(
-                                '{}/repos/{}'.format(self.base_url,repo_full_name),
-                                repo
-                            )
-                            LOGGER.info("Ignoring error because of successful request")
+                        self.verify_repo_access(
+                            '{}/repos/{}/commits'.format(self.base_url,repo_full_name),
+                            repo
+                        )
 
                         repos.append(repo_full_name)
             except NotFoundException:
