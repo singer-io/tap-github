@@ -105,6 +105,10 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
     except JSONDecodeError:
         response_json = {}
 
+    if stream == "commits" and response_json.get("message") == "Git Repository is empty.":
+        LOGGER.warning("Encountered an empty git repository")
+        return
+
     if error_code == 404 and should_skip_404:
         # Add not accessible stream into list.
         client.not_accessible_repos.add(stream)
@@ -199,8 +203,12 @@ class GithubClient:
                 raise_for_error(resp, source, stream, self, should_skip_404)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
             rate_throttling(resp, self.max_sleep_seconds)
-            if resp.status_code == 404:
+            if resp.status_code in {404, 409}:
                 # Return an empty response body since we're not raising a NotFoundException
+
+                # In the 409 case, this is only for `commits` returning an
+                # error for an empty repository, so we'll treat this as an
+                # empty list of records to process
                 resp._content = b'{}' # pylint: disable=protected-access
             return resp
 
