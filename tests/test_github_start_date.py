@@ -67,7 +67,7 @@ class GithubStartDateTest(TestGithubBase):
         self.run_test(date_1, date_2, {'events'})
 
     def run_test(self, date_1, date_2, streams):
-        """   
+        """
         • Verify that a sync with a later start date has at least one record synced
           and less records than the 1st sync with a previous start date
         • Verify that each stream has less records than the earlier start date sync
@@ -96,7 +96,7 @@ class GithubStartDateTest(TestGithubBase):
 
         # run check mode
         found_catalogs_1 = self.run_and_verify_check_mode(conn_id_1)
-        
+
         # table and field selection
         test_catalogs_1_all_fields = [catalog for catalog in found_catalogs_1
                                       if catalog.get('stream_name') in expected_streams]
@@ -161,7 +161,7 @@ class GithubStartDateTest(TestGithubBase):
                 self.assertGreater(record_count_sync_2, 0)
 
                 if expected_metadata.get(self.OBEYS_START_DATE):
-                    
+
                     # Expected bookmark key is one element in set so directly access it
                     bookmark_keys_list_1 = [message.get('data').get(next(iter(expected_bookmark_keys))) for message in synced_records_1.get(stream).get('messages')
                                             if message.get('action') == 'upsert']
@@ -202,7 +202,7 @@ class GithubStartDateTest(TestGithubBase):
                     self.assertTrue(primary_keys_sync_2.issubset(primary_keys_sync_1))
 
                 else:
-                    
+
                     # Verify that the 2nd sync with a later start date replicates the same number of
                     # records as the 1st sync.
                     self.assertEqual(record_count_sync_2, record_count_sync_1)
