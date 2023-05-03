@@ -130,7 +130,7 @@ class GithubStartDateTest(TestGithubBase):
         self.assertGreater(sum(record_count_by_stream_1.values()), sum(record_count_by_stream_2.values()))
 
         for stream in expected_streams:
-            with self.subTest(stream=stream):
+            with self.subTest(stream=stream, start_date_1=date_1, start_date_2=date_2):
 
                 # expected values
                 expected_primary_keys = self.expected_primary_keys()[stream]
