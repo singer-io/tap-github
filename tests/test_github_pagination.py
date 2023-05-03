@@ -28,12 +28,27 @@ class GitHubPaginationTest(TestGithubBase):
 
         # Pagination is not supported for "team_memberships" by Github API.
         # Skipping "teams" stream as it's RECORD count is <= 30.
-        untestable_streams = {'team_memberships', 'teams', 'team_members', 'collaborators', 'assignees'}
+        untestable_streams = {
+            'team_memberships',
+            'teams',
+            'team_members',
+            'collaborators',
+            'assignees',
+        }
 
         # For some streams RECORD count were not > 30 in same test-repo.
         # So, separated streams on the basis of RECORD count.
         self.repository_name = 'singer-io/tap-github'
-        expected_stream_1 = {'comments', 'stargazers', 'commits', 'pull_requests', 'reviews', 'review_comments', 'pr_commits', 'issues'}
+        expected_stream_1 = {
+            'comments',
+            'stargazers',
+            'commits',
+            'pull_requests',
+            'reviews',
+            'review_comments',
+            'pr_commits',
+            'issues',
+        }
         self.run_test(expected_stream_1)
 
         self.repository_name = 'singer-io/test-repo'

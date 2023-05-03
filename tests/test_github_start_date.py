@@ -46,10 +46,17 @@ class GithubStartDateTest(TestGithubBase):
         self.run_test(date_1, date_2, expected_stream_3)
 
         date_2 = '2022-01-27T00:00:00Z'
+        expected_stream_4 = self.expected_streams().difference(
+            expected_stream_1,
+            expected_stream_2,
+            expected_stream_3,
+            {'events', 'issues', 'pull_requests'}
+        )
+
         # run the test for all the streams excluding 'events' stream
         # as for 'events' stream we have to use dynamic dates.
         # `issues` doesn't have enough data in this range, so we skip it too
-        self.run_test(date_1, date_2, self.expected_streams() - expected_stream_1 - expected_stream_2 - expected_stream_3 - {'events', 'issues', 'pull_requests'})
+        self.run_test(date_1, date_2, expected_stream_4)
 
         date_3 = '2023-01-27T00:00:00Z'
         self.run_test(date_1, date_3, {"issues"})
