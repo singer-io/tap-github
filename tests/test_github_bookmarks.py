@@ -20,7 +20,8 @@ class TestGithubBookmarks(TestGithubBase):
         value based off timedelta expectations. This ensures the subsequent sync will replicate
         at least 1 record but, fewer records than the previous sync.
         """
-        timedelta_by_stream = {stream: [90,0,0]  # {stream_name: [days, hours, minutes], ...}
+        # {stream_name: [days, hours, minutes], ...}
+        timedelta_by_stream = {stream: [90,0,0]
                                for stream in self.expected_streams()}
 
         timedelta_by_stream["commits"] = [7, 0, 0]
