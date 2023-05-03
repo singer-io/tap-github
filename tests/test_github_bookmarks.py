@@ -14,11 +14,11 @@ class TestGithubBookmarks(TestGithubBase):
     def name():
         return "tap_tester_github_bookmarks"
 
-    def calculated_states_by_stream(self, current_state, synced_records, replication_keys, start_date=None):
+    def calculated_states_by_stream(self, current_state, synced_records, replication_keys, start_date):
         """
-        Look at the bookmarks from a previous sync and set a new bookmark
-        value based off timedelta expectations. This ensures the subsequent sync will replicate
-        at least 1 record but, fewer records than the previous sync.
+        Look at the bookmarks from a previous sync and shift it to a
+        date to ensure the subsequent sync will replicate at least 1
+        record but, fewer records than the previous sync.
         """
         timedelta_by_stream = {stream: [90,0,0]  # {stream_name: [days, hours, minutes], ...}
                                for stream in self.expected_streams()}
@@ -34,11 +34,8 @@ class TestGithubBookmarks(TestGithubBase):
 
             days, hours, minutes = timedelta_by_stream[stream]
 
-            if start_date:
-                start_date_as_datetime = dateutil.parser.parse(start_date)
-                calculated_state_as_datetime = start_date_as_datetime + datetime.timedelta(days=days, hours=hours, minutes=minutes)
-            else:
-                calculated_state_as_datetime = state_as_datetime - datetime.timedelta(days=days, hours=hours, minutes=minutes)
+            start_date_as_datetime = dateutil.parser.parse(start_date)
+            calculated_state_as_datetime = start_date_as_datetime + datetime.timedelta(days=days, hours=hours, minutes=minutes)
 
             state_format = '%Y-%m-%dT%H:%M:%SZ'
             calculated_state_formatted = datetime.datetime.strftime(calculated_state_as_datetime, state_format)
