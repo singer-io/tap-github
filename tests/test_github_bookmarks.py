@@ -93,7 +93,9 @@ class TestGithubBookmarks(TestGithubBase):
         first_sync_start_date = self.get_properties()['start_date']
         new_states = {'bookmarks': dict()}
         simulated_states = self.calculated_states_by_stream(first_sync_bookmarks,
-            first_sync_records, expected_replication_keys, first_sync_start_date)
+                                                            first_sync_records,
+                                                            expected_replication_keys,
+                                                            first_sync_start_date)
         for repo, new_state in simulated_states.items():
             new_states['bookmarks'][repo] = new_state
         menagerie.set_state(conn_id, new_states)
