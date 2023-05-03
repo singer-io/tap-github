@@ -14,7 +14,7 @@ class TestGithubBookmarks(TestGithubBase):
     def name():
         return "tap_tester_github_bookmarks"
 
-    def calculated_states_by_stream(self, current_state, synced_records, replication_keys):
+    def calculated_states_by_stream(self, current_state, synced_records, replication_keys, start_date=None):
         """
         Look at the bookmarks from a previous sync and set a new bookmark
         value based off timedelta expectations. This ensures the subsequent sync will replicate
@@ -22,6 +22,8 @@ class TestGithubBookmarks(TestGithubBase):
         """
         timedelta_by_stream = {stream: [90,0,0]  # {stream_name: [days, hours, minutes], ...}
                                for stream in self.expected_streams()}
+
+        timedelta_by_stream["commits"] = [7, 0, 0]
 
         repo = self.get_properties().get('repository')
 
@@ -31,7 +33,12 @@ class TestGithubBookmarks(TestGithubBase):
             state_as_datetime = dateutil.parser.parse(state_value)
 
             days, hours, minutes = timedelta_by_stream[stream]
-            calculated_state_as_datetime = state_as_datetime - datetime.timedelta(days=days, hours=hours, minutes=minutes)
+
+            if start_date:
+                start_date_as_datetime = dateutil.parser.parse(start_date)
+                calculated_state_as_datetime = start_date_as_datetime + datetime.timedelta(days=days, hours=hours, minutes=minutes)
+            else:
+                calculated_state_as_datetime = state_as_datetime - datetime.timedelta(days=days, hours=hours, minutes=minutes)
 
             state_format = '%Y-%m-%dT%H:%M:%SZ'
             calculated_state_formatted = datetime.datetime.strftime(calculated_state_as_datetime, state_format)
@@ -83,9 +90,10 @@ class TestGithubBookmarks(TestGithubBase):
         ### Update State Between Syncs
         ##########################################################################
 
+        first_sync_start_date = self.get_properties()['start_date']
         new_states = {'bookmarks': dict()}
         simulated_states = self.calculated_states_by_stream(first_sync_bookmarks,
-            first_sync_records, expected_replication_keys)
+            first_sync_records, expected_replication_keys, first_sync_start_date)
         for repo, new_state in simulated_states.items():
             new_states['bookmarks'][repo] = new_state
         menagerie.set_state(conn_id, new_states)
