@@ -106,7 +106,7 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
         response_json = {}
 
     if stream == "commits" and response_json.get("message") == "Git Repository is empty.":
-        LOGGER.warning("Encountered an empty git repository")
+        LOGGER.info("Encountered an empty git repository")
         return None
 
     if error_code == 404 and should_skip_404:
