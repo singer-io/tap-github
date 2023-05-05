@@ -1,0 +1,16 @@
+version: 0.2
+
+env:
+  shell: bash
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.10
+  pre_build:
+    commands:
+      - echo pre_build
+  build:
+    commands:
+      - echo $Environment
+      - echo "<insert build commands>"
