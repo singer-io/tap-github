@@ -141,6 +141,7 @@ def rate_throttling(response):
             LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
             # add the buffer 2 seconds
             time.sleep(seconds_to_sleep + 2)
+            return True
     else:
         # Raise an exception if `X-RateLimit-Remaining` is not found in the header.
         # API does include this key header if provided base URL is not a valid github custom domain.
@@ -189,10 +190,11 @@ class GithubClient:
         with metrics.http_request_timer(source) as timer:
             self.session.headers.update(headers)
             resp = self.session.request(method='get', url=url, timeout=self.get_request_timeout())
+            if rate_throttling(resp):
+                self.authed_get(source, url, headers, stream, should_skip_404)
             if resp.status_code != 200:
                 raise_for_error(resp, source, stream, self, should_skip_404)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
-            rate_throttling(resp)
             if resp.status_code == 404:
                 # Return an empty response body since we're not raising a NotFoundException
                 resp._content = b'{}' # pylint: disable=protected-access
