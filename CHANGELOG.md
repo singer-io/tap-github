@@ -1,5 +1,8 @@
 # Changelog
 
+# 2.0.1
+  * Allow `commits` stream sync to continue when we hit an empty repo [#187](https://github.com/singer-io/tap-github/pull/187)
+
 # 2.0.0
   * Schema updates [#170](https://github.com/singer-io/tap-github/pull/170) [#169](https://github.com/singer-io/tap-github/pull/169)
     * Update data types of fields in `events` and `issue_events` stream

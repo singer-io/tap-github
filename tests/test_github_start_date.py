@@ -42,13 +42,27 @@ class GithubStartDateTest(TestGithubBase):
         self.run_test(date_1, date_2, expected_stream_2)
 
         date_2 = '2022-05-06T00:00:00Z'
-        expected_stream_3  = {'pull_requests', 'pr_commits', 'review_comments', 'reviews'}
+        expected_stream_3  = {'pr_commits', 'review_comments', 'reviews'}
         self.run_test(date_1, date_2, expected_stream_3)
 
         date_2 = '2022-01-27T00:00:00Z'
+        expected_stream_4 = self.expected_streams().difference(
+            expected_stream_1,
+            expected_stream_2,
+            expected_stream_3,
+            {'events', 'issues', 'pull_requests'}
+        )
+
         # run the test for all the streams excluding 'events' stream
-        # as for 'events' stream we have to use dynamic dates
-        self.run_test(date_1, date_2, self.expected_streams() - expected_stream_1 - expected_stream_2 - expected_stream_3 - {'events'})
+        # as for 'events' stream we have to use dynamic dates.
+        # `issues` doesn't have enough data in this range, so we skip it too
+        self.run_test(date_1, date_2, expected_stream_4)
+
+        date_3 = '2023-01-27T00:00:00Z'
+        self.run_test(date_1, date_3, {"issues"})
+
+        date_4 = '2023-01-01T00:00:00Z'
+        self.run_test(date_1, date_4, {'pull_requests'})
 
         # As per the Documentation: https://docs.github.com/en/rest/reference/activity#events
         # the 'events' of past 90 days will only be returned
@@ -60,7 +74,7 @@ class GithubStartDateTest(TestGithubBase):
         self.run_test(date_1, date_2, {'events'})
 
     def run_test(self, date_1, date_2, streams):
-        """   
+        """
         • Verify that a sync with a later start date has at least one record synced
           and less records than the 1st sync with a previous start date
         • Verify that each stream has less records than the earlier start date sync
@@ -89,7 +103,7 @@ class GithubStartDateTest(TestGithubBase):
 
         # run check mode
         found_catalogs_1 = self.run_and_verify_check_mode(conn_id_1)
-        
+
         # table and field selection
         test_catalogs_1_all_fields = [catalog for catalog in found_catalogs_1
                                       if catalog.get('stream_name') in expected_streams]
@@ -130,7 +144,7 @@ class GithubStartDateTest(TestGithubBase):
         self.assertGreater(sum(record_count_by_stream_1.values()), sum(record_count_by_stream_2.values()))
 
         for stream in expected_streams:
-            with self.subTest(stream=stream):
+            with self.subTest(stream=stream, start_date_1=date_1, start_date_2=date_2):
 
                 # expected values
                 expected_primary_keys = self.expected_primary_keys()[stream]
@@ -154,7 +168,7 @@ class GithubStartDateTest(TestGithubBase):
                 self.assertGreater(record_count_sync_2, 0)
 
                 if expected_metadata.get(self.OBEYS_START_DATE):
-                    
+
                     # Expected bookmark key is one element in set so directly access it
                     bookmark_keys_list_1 = [message.get('data').get(next(iter(expected_bookmark_keys))) for message in synced_records_1.get(stream).get('messages')
                                             if message.get('action') == 'upsert']
@@ -195,7 +209,7 @@ class GithubStartDateTest(TestGithubBase):
                     self.assertTrue(primary_keys_sync_2.issubset(primary_keys_sync_1))
 
                 else:
-                    
+
                     # Verify that the 2nd sync with a later start date replicates the same number of
                     # records as the 1st sync.
                     self.assertEqual(record_count_sync_2, record_count_sync_1)
