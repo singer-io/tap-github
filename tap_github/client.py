@@ -145,7 +145,7 @@ def rate_throttling(response):
             LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
             # add the buffer 2 seconds
             time.sleep(seconds_to_sleep + 2)
-            #if tap sleeps
+            #returns True if tap sleeps
             return True
         return False
 
@@ -197,6 +197,7 @@ class GithubClient:
             self.session.headers.update(headers)
             resp = self.session.request(method='get', url=url, timeout=self.get_request_timeout())
             if rate_throttling(resp):
+                # If the API rate limit is reached, the function will be recursively
                 self.authed_get(source, url, headers, stream, should_skip_404)
             if resp.status_code != 200:
                 raise_for_error(resp, source, stream, self, should_skip_404)
