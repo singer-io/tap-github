@@ -6,7 +6,6 @@ import singer
 from singer import metrics
 
 LOGGER = singer.get_logger()
-DEFAULT_SLEEP_SECONDS = 600
 DEFAULT_DOMAIN = "https://api.github.com"
 
 # Set default timeout of 300 seconds
@@ -136,24 +135,23 @@ def calculate_seconds(epoch):
     current = time.time()
     return int(round((epoch - current), 0))
 
-def rate_throttling(response, max_sleep_seconds):
+def rate_throttling(response):
     """
     For rate limit errors, get the remaining time before retrying and calculate the time to sleep before making a new request.
     """
     if 'X-RateLimit-Remaining' in response.headers:
         if int(response.headers['X-RateLimit-Remaining']) == 0:
             seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
-
-            if seconds_to_sleep > max_sleep_seconds:
-                message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
-                raise RateLimitExceeded(message) from None
-
             LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
-            time.sleep(seconds_to_sleep)
-    else:
-        # Raise an exception if `X-RateLimit-Remaining` is not found in the header.
-        # API does include this key header if provided base URL is not a valid github custom domain.
-        raise GithubException("The API call using the specified base url was unsuccessful. Please double-check the provided base URL.")
+            # add the buffer 2 seconds
+            time.sleep(seconds_to_sleep + 2)
+            #returns True if tap sleeps
+            return True
+        return False
+
+    # Raise an exception if `X-RateLimit-Remaining` is not found in the header.
+    # API does include this key header if provided base URL is not a valid github custom domain.
+    raise GithubException("The API call using the specified base url was unsuccessful. Please double-check the provided base URL.")
 
 class GithubClient:
     """
@@ -163,7 +161,6 @@ class GithubClient:
         self.config = config
         self.session = requests.Session()
         self.base_url = config['base_url'] if config.get('base_url') else DEFAULT_DOMAIN
-        self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
         self.set_auth_in_session()
         self.not_accessible_repos = set()
 
@@ -199,10 +196,12 @@ class GithubClient:
         with metrics.http_request_timer(source) as timer:
             self.session.headers.update(headers)
             resp = self.session.request(method='get', url=url, timeout=self.get_request_timeout())
+            if rate_throttling(resp):
+                # If the API rate limit is reached, the function will be recursively
+                self.authed_get(source, url, headers, stream, should_skip_404)
             if resp.status_code != 200:
                 raise_for_error(resp, source, stream, self, should_skip_404)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
-            rate_throttling(resp, self.max_sleep_seconds)
             if resp.status_code in {404, 409}:
                 # Return an empty response body since we're not raising a NotFoundException
 
