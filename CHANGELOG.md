@@ -1,7 +1,10 @@
 # Changelog
 
+# 2.0.3
+  * Handles the secondary rate limit - `Retry-After` [#191](https://github.com/singer-io/tap-github/pull/191)
+
 # 2.0.2
-  * Make the tap sleep for `X-RateLimit-Reset` + `2` seconds, whenever the API rate limit is hit [#187](https://github.com/singer-io/tap-github/pull/187)
+  * Make the tap sleep for `X-RateLimit-Reset` + `2` seconds, whenever the API rate limit is hit [#190](https://github.com/singer-io/tap-github/pull/190)
 
 # 2.0.1
   * Allow `commits` stream sync to continue when we hit an empty repo [#187](https://github.com/singer-io/tap-github/pull/187)
