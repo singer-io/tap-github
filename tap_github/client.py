@@ -142,10 +142,11 @@ def rate_throttling(response):
     if "Retry-After" in response.headers:
         # handles the secondary rate limit
         seconds_to_sleep = int(response.headers['Retry-After'])
-        LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
-        time.sleep(seconds_to_sleep)
-        #returns True if tap sleeps
-        return True
+        if seconds_to_sleep > 0:
+            LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
+            time.sleep(seconds_to_sleep)
+            #returns True if tap sleeps
+            return True
     if 'X-RateLimit-Remaining' in response.headers:
         if int(response.headers['X-RateLimit-Remaining']) == 0:
             seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))

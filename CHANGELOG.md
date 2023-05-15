@@ -1,5 +1,8 @@
 # Changelog
 
+# 2.0.4
+  * Recursively call the function if `Retry-After` has the value greater than 0 [#192](https://github.com/singer-io/tap-github/pull/192)
+
 # 2.0.3
   * Handles the secondary rate limit - `Retry-After` [#191](https://github.com/singer-io/tap-github/pull/191)
 
