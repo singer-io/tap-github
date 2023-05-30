@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.5
+  * Dependabot update [#193](https://github.com/singer-io/tap-github/pull/193)
+
 # 2.0.4
   * Recursively call the function if `Retry-After` has the value greater than 0 [#192](https://github.com/singer-io/tap-github/pull/192)
 
