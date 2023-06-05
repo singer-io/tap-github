@@ -1,5 +1,20 @@
 # Changelog
 
+# 2.0.5
+  * Merging upstream forked repo changes. 
+
+# 2.0.4
+  * Recursively call the function if `Retry-After` has the value greater than 0 [#192](https://github.com/singer-io/tap-github/pull/192)
+
+# 2.0.3
+  * Handles the secondary rate limit - `Retry-After` [#191](https://github.com/singer-io/tap-github/pull/191)
+
+# 2.0.2
+  * Make the tap sleep for `X-RateLimit-Reset` + `2` seconds, whenever the API rate limit is hit [#190](https://github.com/singer-io/tap-github/pull/190)
+
+# 2.0.1
+  * Allow `commits` stream sync to continue when we hit an empty repo [#187](https://github.com/singer-io/tap-github/pull/187)
+
 # 2.0.0
   * Schema updates [#170](https://github.com/singer-io/tap-github/pull/170) [#169](https://github.com/singer-io/tap-github/pull/169)
     * Update data types of fields in `events` and `issue_events` stream
