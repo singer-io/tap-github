@@ -2,9 +2,6 @@
   "type": ["null", "object"],
   "additionalProperties": false,
   "properties": {
-    "_sdc_repository": {
-      "type": ["string"]
-    },
     "id": {
       "type": ["null", "string"]
     },
