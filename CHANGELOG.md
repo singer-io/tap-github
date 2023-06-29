@@ -1,5 +1,8 @@
 # Changelog
 
+# 2.0.5
+  * Remove date-time format from the field discussion_url in releases schema [#196](https://github.com/singer-io/tap-github/pull/196)
+
 # 2.0.4
   * Recursively call the function if `Retry-After` has the value greater than 0 [#192](https://github.com/singer-io/tap-github/pull/192)
 
