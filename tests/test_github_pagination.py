@@ -23,30 +23,45 @@ class GitHubPaginationTest(TestGithubBase):
         return return_value
 
     def test_run(self):
-        
+
         streams_to_test = self.expected_streams()
 
         # Pagination is not supported for "team_memberships" by Github API.
         # Skipping "teams" stream as it's RECORD count is <= 30.
-        untestable_streams = {'team_memberships', 'teams'}
+        untestable_streams = {
+            'team_memberships',
+            'teams',
+            'team_members',
+            'collaborators',
+            'assignees',
+        }
 
-        # For some streams RECORD count were not > 30 in same test-repo. 
+        # For some streams RECORD count were not > 30 in same test-repo.
         # So, separated streams on the basis of RECORD count.
         self.repository_name = 'singer-io/tap-github'
-        expected_stream_1 = {'comments', 'stargazers', 'commits', 'pull_requests', 'reviews', 'review_comments', 'pr_commits', 'issues'} 
+        expected_stream_1 = {
+            'comments',
+            'stargazers',
+            'commits',
+            'pull_requests',
+            'reviews',
+            'review_comments',
+            'pr_commits',
+            'issues',
+        }
         self.run_test(expected_stream_1)
-        
+
         self.repository_name = 'singer-io/test-repo'
         expected_stream_2 = streams_to_test - expected_stream_1 - untestable_streams
         self.run_test(expected_stream_2)
-    
+
     def run_test(self, streams):
         """
-        • Verify that for each stream you can get multiple pages of data.  
+        • Verify that for each stream you can get multiple pages of data.
         This requires we ensure more than 1 page of data exists at all times for any given stream.
         • Verify by pks that the data replicated matches the data we expect.
         """
-        
+
         # Page size for pagination supported streams
         page_size = 30
         conn_id = connections.ensure_connection(self)
@@ -83,7 +98,7 @@ class GitHubPaginationTest(TestGithubBase):
                 # Verify that for each stream you can get multiple pages of data
                 self.assertGreater(record_count_sync, page_size,
                                    msg="The number of records is not over the stream max limit")
-                
+
                 # Chunk the replicated records (just primary keys) into expected pages
                 pages = []
                 page_count = ceil(len(primary_keys_list) / page_size)

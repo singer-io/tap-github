@@ -6,7 +6,6 @@ import singer
 from singer import metrics
 
 LOGGER = singer.get_logger()
-DEFAULT_SLEEP_SECONDS = 600
 DEFAULT_DOMAIN = "https://api.github.com"
 
 # Set default timeout of 300 seconds
@@ -105,6 +104,10 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
     except JSONDecodeError:
         response_json = {}
 
+    if stream == "commits" and response_json.get("message") == "Git Repository is empty.":
+        LOGGER.info("Encountered an empty git repository")
+        return None
+
     if error_code == 404 and should_skip_404:
         # Add not accessible stream into list.
         client.not_accessible_repos.add(stream)
@@ -132,24 +135,31 @@ def calculate_seconds(epoch):
     current = time.time()
     return int(round((epoch - current), 0))+60 # Add additional 60 seconds to this request to prevent 403
 
-def rate_throttling(response, max_sleep_seconds):
+def rate_throttling(response):
     """
     For rate limit errors, get the remaining time before retrying and calculate the time to sleep before making a new request.
     """
+    if "Retry-After" in response.headers:
+        # handles the secondary rate limit
+        seconds_to_sleep = int(response.headers['Retry-After'])
+        if seconds_to_sleep > 0:
+            LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
+            time.sleep(seconds_to_sleep)
+            #returns True if tap sleeps
+            return True
     if 'X-RateLimit-Remaining' in response.headers:
         if int(response.headers['X-RateLimit-Remaining']) == 0:
             seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
-
-            if seconds_to_sleep > max_sleep_seconds:
-                message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
-                raise RateLimitExceeded(message) from None
-
             LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
-            time.sleep(seconds_to_sleep)
-    else:
-        # Raise an exception if `X-RateLimit-Remaining` is not found in the header.
-        # API does include this key header if provided base URL is not a valid github custom domain.
-        raise GithubException("The API call using the specified base url was unsuccessful. Please double-check the provided base URL.")
+            # add the buffer 2 seconds
+            time.sleep(seconds_to_sleep + 2)
+            #returns True if tap sleeps
+            return True
+        return False
+
+    # Raise an exception if `X-RateLimit-Remaining` is not found in the header.
+    # API does include this key header if provided base URL is not a valid github custom domain.
+    raise GithubException("The API call using the specified base url was unsuccessful. Please double-check the provided base URL.")
 
 class GithubClient:
     """
@@ -159,7 +169,6 @@ class GithubClient:
         self.config = config
         self.session = requests.Session()
         self.base_url = config['base_url'] if config.get('base_url') else DEFAULT_DOMAIN
-        self.max_sleep_seconds = self.config.get('max_sleep_seconds', DEFAULT_SLEEP_SECONDS)
         self.set_auth_in_session()
         self.not_accessible_repos = set()
 
@@ -195,12 +204,18 @@ class GithubClient:
         with metrics.http_request_timer(source) as timer:
             self.session.headers.update(headers)
             resp = self.session.request(method='get', url=url, timeout=self.get_request_timeout())
+            if rate_throttling(resp):
+                # If the API rate limit is reached, the function will be recursively
+                self.authed_get(source, url, headers, stream, should_skip_404)
             if resp.status_code != 200:
                 raise_for_error(resp, source, stream, self, should_skip_404)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
-            rate_throttling(resp, self.max_sleep_seconds)
-            if resp.status_code == 404:
+            if resp.status_code in {404, 409}:
                 # Return an empty response body since we're not raising a NotFoundException
+
+                # In the 409 case, this is only for `commits` returning an
+                # error for an empty repository, so we'll treat this as an
+                # empty list of records to process
                 resp._content = b'{}' # pylint: disable=protected-access
             return resp
 
@@ -224,7 +239,7 @@ class GithubClient:
         Call rest API to verify that the user has sufficient permissions to access this repository.
         """
         try:
-            self.authed_get("verifying repository access", url_for_repo)
+            self.authed_get("verifying repository access", url_for_repo, stream="commits")
         except NotFoundException:
             # Throwing user-friendly error message as it checks token access
             message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
