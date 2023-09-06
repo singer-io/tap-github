@@ -53,13 +53,13 @@
             "type": ["null", "string"]
           },
           "additions": {
-            "type": ["null", "number"]
+            "type": ["null", "integer"]
           },
           "deletions": {
-            "type": ["null", "number"]
+            "type": ["null", "integer"]
           },
           "changes": {
-            "type": ["null", "number"]
+            "type": ["null", "integer"]
           },
           "status": {
             "type": ["null", "string"]

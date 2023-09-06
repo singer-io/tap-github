@@ -17,7 +17,7 @@
           "type": ["null", "string"]
         },
         "id": {
-          "type": ["null", "number"]
+          "type": ["null", "integer"]
         },
         "login": {
           "type": ["null", "string"]
@@ -31,7 +31,7 @@
       "type": ["null", "string"]
     },
     "id": {
-      "type": ["null", "number"]
+      "type": ["null", "integer"]
     },
     "org": {
       "type": ["null", "object"],
@@ -43,7 +43,7 @@
           "type": ["null", "string"]
         },
         "id": {
-          "type": ["null", "number"]
+          "type": ["null", "integer"]
         },
         "login": {
           "type": ["null", "string"]
@@ -1017,19 +1017,19 @@
       }
     },
     "distinct_size": {
-      "type": ["null", "number"]
+      "type": ["null", "integer"]
     },
     "head": {
       "type": ["null", "string"]
     },
     "push_id": {
-      "type": ["null", "number"]
+      "type": ["null", "integer"]
     },
     "ref": {
       "type": ["null", "string"]
     },
     "size": {
-      "type": ["null", "number"]
+      "type": ["null", "integer"]
     },
     "public": {
       "type": ["null", "boolean"]
@@ -1038,7 +1038,7 @@
       "type": ["null", "object"],
       "properties": {
         "id": {
-          "type": ["null", "number"]
+          "type": ["null", "integer"]
         },
         "name": {
           "type": ["null", "string"]
