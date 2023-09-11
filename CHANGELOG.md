@@ -1,5 +1,10 @@
 # Changelog
 
+# 2.0.6
+  * Remove `files` and `stats` fields from `commits` endpoint as they are not returned without fetching individual commmits [#198](https://github.com/singer-io/tap-github/pull/198)
+  * Remove `files` and `stats` fields from `pr-commits` endpoint as they are not documented and not returned
+  * Update tests accordingly
+
 # 2.0.5
   * Remove date-time format from the field discussion_url in releases schema [#196](https://github.com/singer-io/tap-github/pull/196)
 
