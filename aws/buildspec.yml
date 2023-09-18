@@ -2,8 +2,6 @@ version: 0.2
 phases:
   install:
     commands:
-      - virtualenv -p python3.8 venv
-      - source venv/bin/activate
       - pip install psycopg2-binary==2.9.5
       - pip install psycopg2==2.9.5
       - pip install tap-github
