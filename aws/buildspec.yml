@@ -2,10 +2,8 @@ version: 0.2
 phases:
   install:
     commands:
-      - pip install pyOpenSSL
-      - pip install psycopg2-binary==2.9.5
       - pip install tap-github
-      - pip install target-postgres
+      - pip install singer-target-postgres
   build:
     commands:
       - python -m tap-github --config config.json --properties properties.json | target-postgres --config target_postgres_config.json
