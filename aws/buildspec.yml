@@ -6,9 +6,10 @@ phases:
       - pip install target-postgres
   build:
     commands:
-      - python -m tap-github --config config.json --properties properties.json | datamill-co-target-postgres --config config.yaml
+      - python -m tap-github --config config.json --properties properties.json | target-postgres --config target_postgres_config.json
 artifacts:
   files:
+    - target_postgres_config.json
     - properties.json
     - config.json
     - tap-github.log
