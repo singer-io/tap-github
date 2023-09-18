@@ -3,7 +3,7 @@ phases:
   install:
     commands:
       - pip install psycopg2-binary
-      - pip install libpq-dev
+      - apt-get install libpq-dev
       - pip install tap-github
       - pip install target-postgres
   build:
