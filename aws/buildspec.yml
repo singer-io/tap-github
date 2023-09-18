@@ -1,0 +1,15 @@
+version: 0.2
+phases:
+  install:
+    commands:
+      - pip install tap-github
+      - pip install target-postgres
+  build:
+    commands:
+      - python -m tap-github --config config.json --properties properties.json | datamill-co-target-postgres --config config.yaml
+artifacts:
+  files:
+    - properties.json
+    - config.json
+    - tap-github.log
+    - target-postgres.log
