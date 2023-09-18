@@ -3,7 +3,7 @@ phases:
   install:
     commands:
       - pip install psycopg2-binary
-      - pip install psycopg2
+      - pip install psycopg2==2.9.5
       - pip install tap-github
       - pip install target-postgres
   build:
