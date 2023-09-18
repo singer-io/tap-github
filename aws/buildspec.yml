@@ -2,9 +2,10 @@ version: 0.2
 phases:
   install:
     commands:
-      - pip install psycopg2-binary
+      - pip install psycopg2-binary==2.9.5
       - pip install psycopg2==2.9.5
       - pip install tap-github
+      - export PATH=/usr/lib/postgresql/X.Y/bin/:$PATH
       - pip install target-postgres
   build:
     commands:
