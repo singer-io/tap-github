@@ -2,6 +2,7 @@ version: 0.2
 phases:
   install:
     commands:
+      - yum install openssl-devel
       - pip install psycopg2-binary==2.9.5
       - pip install tap-github
       - pip install target-postgres
