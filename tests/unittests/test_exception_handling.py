@@ -63,7 +63,7 @@ class TestExceptionHandling(unittest.TestCase):
 
     @parameterized.expand([
         [400, "The request is missing or has a bad parameter.", BadRequestException, '', {}, 1],
-        [401, "Invalid authorization credentials.", BadCredentialsException, '', {}, 5],
+        [401, "Invalid authorization credentials.", BadCredentialsException, '', {}, 3],
         [403, "User doesn't have permission to access the resource.", AuthException, '', {}, 1],
         [500, "An error has occurred at Github's end.", InternalServerError, '', {}, 5],
         [301, "The resource you are looking for is moved to another URL.", tap_github.client.MovedPermanentlyError, '', {}, 1],

@@ -203,8 +203,9 @@ class GithubClient:
     # pylint: disable=dangerous-default-value
     # During 'Timeout' error there is also possibility of 'ConnectionError',
     # hence added backoff for 'ConnectionError' too.
-    @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError, TooManyRequests,
-                                         BadCredentialsException), max_tries=5, factor=2)
+    @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError, TooManyRequests),
+                          max_tries=5, factor=2)
+    @backoff.on_exception(backoff.expo, (BadCredentialsException, ), max_tries=3, factor=2)
     def authed_get(self, source, url, headers={}, stream="", should_skip_404 = True):
         """
         Call rest API and return the response in case of status code 200.
