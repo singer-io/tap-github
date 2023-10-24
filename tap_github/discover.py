@@ -24,7 +24,9 @@ def discover(client):
             LOGGER.error('type schema_dict: %s', type(schema_dict))
             raise err
 
-        key_properties = mdata[0]['metadata'].get('table-key-properties')
+        root_mdata = [x for x in mdata if x['breadcrumb'] == ()]
+        key_properties = root_mdata[0]['metadata'].get('table-key-properties')
+
         catalog.streams.append(CatalogEntry(
             stream=stream_name,
             tap_stream_id=stream_name,
