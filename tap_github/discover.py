@@ -1,4 +1,5 @@
 import singer
+from singer import metadata
 from singer.catalog import Catalog, CatalogEntry, Schema
 from tap_github.schema import get_schemas
 
@@ -24,11 +25,12 @@ def discover(client):
             LOGGER.error('type schema_dict: %s', type(schema_dict))
             raise err
 
-        key_properties = mdata[0]['metadata'].get('table-key-properties')
+        key_properties = metadata.to_map(mdata).get((), {}).get('table-key-properties')
+
         catalog.streams.append(CatalogEntry(
             stream=stream_name,
             tap_stream_id=stream_name,
-            key_properties= key_properties,
+            key_properties=key_properties,
             schema=schema,
             metadata=mdata
         ))
