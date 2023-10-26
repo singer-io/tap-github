@@ -2,6 +2,7 @@
 
 # 3.0.0
   * Allow all python versions to grab the correct key_properties/PK value [#199](https://github.com/singer-io/tap-github/pull/199)
+  * Dependabot update [#193](https://github.com/singer-io/tap-github/pull/193)
 
 # 2.0.6
   * Remove `files` and `stats` fields from `commits` endpoint as they are not returned without fetching individual commmits [#198](https://github.com/singer-io/tap-github/pull/198)
