@@ -1,4 +1,9 @@
 version: 0.2
+env:
+  parameter-store:
+    GITHUB_TOKEN: "/engineering-productivity/dev/github-token"
+    POSTGRES_PASSWORD: "/database/ep-dev-pg/ep_github_metrics_app/password"
+
 phases:
   install:
     commands:
@@ -6,7 +11,7 @@ phases:
       - pip install singer-target-postgres
   build:
     commands:
-      - python -m tap-github --config config.json --properties properties.json | target-postgres --config target_postgres_config.json
+     
 artifacts:
   files:
     - target_postgres_config.json
