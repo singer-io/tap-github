@@ -60,3 +60,15 @@ class TestCredentials(unittest.TestCase):
 
         # Verify error with proper message
         self.assertEqual(str(e.exception), "HTTP-error-code: 401, Error: {}".format(json))
+
+    def test_repo_no_permission(self, mocked_parse_args, mocked_request, mock_verify_access):
+        """Verify if 404 error arises"""
+        test_client = GithubClient(self.config)
+        json = {"message": "Please check the repository name 'repo' or you do not have sufficient permissions to access this repository.", "documentation_url": "https://docs.github.com/"}
+        mocked_request.return_value = get_response(404, json, True)
+
+        with self.assertRaises(tap_github.client.NotFoundException) as e:
+            test_client.verify_repo_access("", "repo")
+
+        # Verify error with proper message
+        self.assertEqual(str(e.exception), "HTTP-error-code: 404, Error: {}".format(json['message']))
