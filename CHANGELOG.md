@@ -1,5 +1,8 @@
 # Changelog
 
+# 3.1.0
+  * Updates to run on python 3.11.7 [#201](https://github.com/singer-io/tap-github/pull/201)
+
 # 3.0.0
   * Allow all python versions to grab the correct key_properties/PK value [#199](https://github.com/singer-io/tap-github/pull/199)
   * Dependabot update [#193](https://github.com/singer-io/tap-github/pull/193)

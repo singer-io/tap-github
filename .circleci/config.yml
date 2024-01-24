@@ -5,7 +5,7 @@ orbs:
 jobs:
   build:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester-3-11-dev
     steps:
       - checkout
       - run:
@@ -13,7 +13,7 @@ jobs:
           command: |
             python3 -mvenv /usr/local/share/virtualenvs/tap-github
             source /usr/local/share/virtualenvs/tap-github/bin/activate
-            pip install -U 'pip<19.2' 'setuptools<51.0.0'
+            pip install -U pip 'setuptools<51.0.0'
             pip install .[dev]
       - run:
           name: 'JSON Validator'
@@ -29,9 +29,8 @@ jobs:
           name: 'Unit Tests'
           command: |
             source /usr/local/share/virtualenvs/tap-github/bin/activate
-            pip install nose coverage parameterized
-            nosetests --with-coverage --cover-erase --cover-package=tap_github --cover-html-dir=htmlcov tests/unittests
-            coverage html
+            pip install nose2 parameterized nose2[coverage_plugin]>=0.6.5
+            nose2 --with-coverage -v -s tests/unittests
           when: always
       - store_test_results:
           path: test_output/report.xml
