@@ -21,7 +21,7 @@ def load_schema_references():
 
     refs = {}
     for shared_schema_file in shared_file_names:
-        with open(os.path.join(shared_schema_path, shared_schema_file)) as data_file:
+        with open(os.path.join(shared_schema_path, shared_schema_file), encoding='UTF-8') as data_file:
             refs['shared/' + shared_schema_file] = json.load(data_file)
 
     return refs
@@ -37,7 +37,7 @@ def get_schemas():
     for stream_name, stream_metadata in STREAMS.items():
         schema_path = get_abs_path('schemas/{}.json'.format(stream_name))
 
-        with open(schema_path) as file:
+        with open(schema_path, encoding='UTF-8') as file:
             schema = json.load(file)
 
         schemas[stream_name] = schema
