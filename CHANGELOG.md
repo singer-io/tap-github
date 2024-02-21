@@ -1,5 +1,8 @@
 # Changelog
 
+# 3.0.1
+  * Remove URI format of `/payload/issue/labels/url` field from `events` stream [#204](https://github.com/singer-io/tap-github/pull/204)
+
 # 3.0.0
   * Allow all python versions to grab the correct key_properties/PK value [#199](https://github.com/singer-io/tap-github/pull/199)
   * Dependabot update [#193](https://github.com/singer-io/tap-github/pull/193)
