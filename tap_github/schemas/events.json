@@ -173,8 +173,7 @@
                     "type": ["null", "string"]
                   },
                   "url": {
-                    "type": ["null", "string"],
-                    "format": "uri"
+                    "type": ["null", "string"]
                   },
                   "name": {
                     "type": ["null", "string"]
