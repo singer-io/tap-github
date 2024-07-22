@@ -1,5 +1,8 @@
 # Changelog
 
+# 3.0.2
+  * Bump `requests` package to fix vulnerability [#207](https://github.com/singer-io/tap-github/pull/207)
+
 # 3.0.1
   * Remove URI format of `/payload/issue/labels/url` field from `events` stream [#205](https://github.com/singer-io/tap-github/pull/205)
 
@@ -35,7 +38,7 @@
   * Implement currently syncing for repos and streams [#171](https://github.com/singer-io/tap-github/pull/171) [#174](https://github.com/singer-io/tap-github/pull/174)
   * Implement custom exception handling and backoff for 5xx error [#166](https://github.com/singer-io/tap-github/pull/166)
   * Support of custom domain [#172](https://github.com/singer-io/tap-github/pull/172)
-  * Sync teams at organization level [#173](https://github.com/singer-io/tap-github/pull/173) 
+  * Sync teams at organization level [#173](https://github.com/singer-io/tap-github/pull/173)
   * Update integration test suite [#167](https://github.com/singer-io/tap-github/pull/167)
 
 # 1.10.4
