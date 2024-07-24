@@ -166,8 +166,7 @@
                 "type": ["null", "object"],
                 "properties": {
                   "id": {
-                    "type": ["null", "integer"],
-                    "format": "int64"
+                    "type": ["null", "integer"]
                   },
                   "node_id": {
                     "type": ["null", "string"]
