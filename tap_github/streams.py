@@ -648,6 +648,18 @@ class Issues(IncrementalOrderedStream):
     filter_param = True
     path = "issues?state=all&sort=updated&direction=desc"
 
+
+class OpenIssues(FullTableStream):
+    '''
+    https://docs.github.com/en/rest/issues/issues#list-repository-issues
+    '''
+    tap_stream_id = "open_issues"
+    replication_method = "FULL_TABLE"
+    key_properties = ["id"]
+    filter_param = False
+    path = "issues?state=open"
+
+
 class Assignees(FullTableStream):
     '''
     https://docs.github.com/en/rest/issues/assignees#list-assignees
@@ -753,6 +765,7 @@ STREAMS = {
     "events": Events,
     "commit_comments": CommitComments,
     "issue_milestones": IssueMilestones,
+    "open_issues": OpenIssues,
     "projects": Projects,
     "project_columns": ProjectColumns,
     "project_cards": ProjectCards,
