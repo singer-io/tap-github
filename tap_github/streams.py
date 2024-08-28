@@ -505,6 +505,29 @@ class PRCommits(IncrementalStream):
         record['pr_id'] = parent_record.get('id')
         record['id'] = '{}-{}'.format(parent_record.get('id'), record.get('sha'))
 
+class PRFiles(IncrementalStream):
+    '''
+    https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
+    '''
+    tap_stream_id = "pr_files"
+    replication_method = "INCREMENTAL"
+    replication_keys = "updated_at"
+    key_properties = ["id"]
+    path = "pulls/{}/files"
+    use_repository = True
+    id_keys = ['number']
+    parent = 'pull_requests'
+
+    def add_fields_at_1st_level(self, record, parent_record = None):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
+        record['updated_at'] = record['commit']['committer']['date']
+
+        record['pr_number'] = parent_record.get('number')
+        record['pr_id'] = parent_record.get('id')
+        record['id'] = '{}-{}'.format(parent_record.get('id'), record.get('sha'))
+
 class PullRequests(IncrementalOrderedStream):
     '''
     https://developer.github.com/v3/pulls/#list-pull-requests
@@ -514,7 +537,7 @@ class PullRequests(IncrementalOrderedStream):
     replication_keys = "updated_at"
     key_properties = ["id"]
     path = "pulls?state=all&sort=updated&direction=desc"
-    children = ['reviews', 'review_comments', 'pr_commits']
+    children = ['reviews', 'review_comments', 'pr_commits', 'pr_files']
     pk_child_fields = ["number"]
 
 class ProjectCards(IncrementalStream):
@@ -773,6 +796,7 @@ STREAMS = {
     "reviews": Reviews,
     "review_comments": ReviewComments,
     "pr_commits": PRCommits,
+    "pr_files": PRFiles,
     "teams": Teams,
     "team_members": TeamMembers,
     "team_memberships": TeamMemberships,
