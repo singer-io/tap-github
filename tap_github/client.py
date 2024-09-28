@@ -165,6 +165,9 @@ def rate_throttling(response):
         LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
         # Arbitrary 10 second wait
         time.sleep(10)
+        return True
+    if response.status_code == 404:
+        return False
 
     # Raise an exception if `X-RateLimit-Remaining` is not found in the header.
     # API does include this key header if provided base URL is not a valid github custom domain.
