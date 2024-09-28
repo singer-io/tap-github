@@ -156,6 +156,15 @@ def rate_throttling(response):
             #returns True if tap sleeps
             return True
         return False
+    
+    # There is not necessarily a need to provide a custom github domain - but it looks like X-RateLimit-Remaining may
+    # not be included in this case, even if the API calls work fine
+    if response.status_code == 200:
+        return False
+    if response.status_code == 429:
+        LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
+        # Arbitrary 10 second wait
+        time.sleep(10)
 
     # Raise an exception if `X-RateLimit-Remaining` is not found in the header.
     # API does include this key header if provided base URL is not a valid github custom domain.
