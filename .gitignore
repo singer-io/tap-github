@@ -102,3 +102,10 @@ properties.json
 *.DS_Store
 .AppleDouble
 .LSOverride
+
+output.json
+meltano.yml
+
+
+.meltano/** 
+plugins/** 

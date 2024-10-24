@@ -5,7 +5,7 @@ import backoff
 from simplejson import JSONDecodeError
 import singer
 from singer import metrics
-from auth import is_oauth_credentials
+from tap_github.auth import is_oauth_credentials
 import os
 
 LOGGER = singer.get_logger()

@@ -3,11 +3,7 @@ import singer
 from singer import metrics, bookmarks, metadata
 from tap_github.auth import is_oauth_credentials
 from typing import Generator, Union
-from singer_sdk.authenticators import (
-    BearerTokenAuthenticator,
-    OAuthAuthenticato,
-    BaseAPIAuthenticator,
-)
+
 
 
 LOGGER = singer.get_logger()

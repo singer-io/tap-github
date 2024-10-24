@@ -1,9 +1,9 @@
 import json
 import sys
 import singer
-from discover import discover as _discover
-from client import GithubClient
-from sync import sync as _sync
+from tap_github.discover import discover as _discover
+from tap_github.client import GithubClient
+from tap_github.sync import sync as _sync
 
 LOGGER = singer.get_logger()
 
