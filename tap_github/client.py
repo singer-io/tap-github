@@ -1,9 +1,12 @@
 import time
 import requests
+import jwt
 import backoff
 from simplejson import JSONDecodeError
 import singer
 from singer import metrics
+from auth import is_oauth_credentials
+import os
 
 LOGGER = singer.get_logger()
 DEFAULT_DOMAIN = "https://api.github.com"
@@ -11,41 +14,54 @@ DEFAULT_DOMAIN = "https://api.github.com"
 # Set default timeout of 300 seconds
 REQUEST_TIMEOUT = 300
 
+
 class GithubException(Exception):
     pass
+
 
 class Server5xxError(GithubException):
     pass
 
+
 class BadCredentialsException(GithubException):
     pass
+
 
 class AuthException(GithubException):
     pass
 
+
 class NotFoundException(GithubException):
     pass
+
 
 class BadRequestException(GithubException):
     pass
 
+
 class InternalServerError(Server5xxError):
     pass
+
 
 class UnprocessableError(GithubException):
     pass
 
+
 class NotModifiedError(GithubException):
     pass
+
 
 class MovedPermanentlyError(GithubException):
     pass
 
+
 class ConflictError(GithubException):
     pass
 
+
 class RateLimitExceeded(GithubException):
     pass
+
 
 class TooManyRequests(GithubException):
     pass
@@ -54,45 +70,43 @@ class TooManyRequests(GithubException):
 ERROR_CODE_EXCEPTION_MAPPING = {
     301: {
         "raise_exception": MovedPermanentlyError,
-        "message": "The resource you are looking for is moved to another URL."
+        "message": "The resource you are looking for is moved to another URL.",
     },
     304: {
         "raise_exception": NotModifiedError,
-        "message": "The requested resource has not been modified since the last time you accessed it."
+        "message": "The requested resource has not been modified since the last time you accessed it.",
     },
-    400:{
+    400: {
         "raise_exception": BadRequestException,
-        "message": "The request is missing or has a bad parameter."
+        "message": "The request is missing or has a bad parameter.",
     },
     401: {
         "raise_exception": BadCredentialsException,
-        "message": "Invalid authorization credentials."
+        "message": "Invalid authorization credentials.",
     },
     403: {
         "raise_exception": AuthException,
-        "message": "User doesn't have permission to access the resource."
+        "message": "User doesn't have permission to access the resource.",
     },
     404: {
         "raise_exception": NotFoundException,
-        "message": "The resource you have specified cannot be found. Alternatively the access_token is not valid for the resource"
+        "message": "The resource you have specified cannot be found. Alternatively the access_token is not valid for the resource",
     },
     409: {
         "raise_exception": ConflictError,
-        "message": "The request could not be completed due to a conflict with the current state of the server."
+        "message": "The request could not be completed due to a conflict with the current state of the server.",
     },
     422: {
         "raise_exception": UnprocessableError,
-        "message": "The request was not able to process right now."
+        "message": "The request was not able to process right now.",
     },
-    429: {
-        "raise_exception": TooManyRequests,
-        "message": "Too many requests occurred."
-    },
+    429: {"raise_exception": TooManyRequests, "message": "Too many requests occurred."},
     500: {
         "raise_exception": InternalServerError,
-        "message": "An error has occurred at Github's end."
-    }
+        "message": "An error has occurred at Github's end.",
+    },
 }
+
 
 def raise_for_error(resp, source, stream, client, should_skip_404):
     """
@@ -104,7 +118,10 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
     except JSONDecodeError:
         response_json = {}
 
-    if stream == "commits" and response_json.get("message") == "Git Repository is empty.":
+    if (
+        stream == "commits"
+        and response_json.get("message") == "Git Repository is empty."
+    ):
         LOGGER.info("Encountered an empty git repository")
         return None
 
@@ -113,20 +130,33 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
         client.not_accessible_repos.add(stream)
         details = ERROR_CODE_EXCEPTION_MAPPING.get(error_code).get("message")
         if source == "teams":
-            details += ' or it is a personal account repository'
-        message = "HTTP-error-code: 404, Error: {}. Please refer \'{}\' for more details.".format(details, response_json.get("documentation_url"))
+            details += " or it is a personal account repository"
+        message = "HTTP-error-code: 404, Error: {}. Please refer '{}' for more details.".format(
+            details, response_json.get("documentation_url")
+        )
         LOGGER.warning(message)
         # Don't raise a NotFoundException
         return None
 
     message = "HTTP-error-code: {}, Error: {}".format(
-        error_code, ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("message", "Unknown Error") if response_json == {} else response_json)
+        error_code,
+        (
+            ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get(
+                "message", "Unknown Error"
+            )
+            if response_json == {}
+            else response_json
+        ),
+    )
 
     if error_code > 500:
         raise Server5xxError(message) from None
 
-    exc = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get("raise_exception", GithubException)
+    exc = ERROR_CODE_EXCEPTION_MAPPING.get(error_code, {}).get(
+        "raise_exception", GithubException
+    )
     raise exc(message) from None
+
 
 def calculate_seconds(epoch):
     """
@@ -135,34 +165,46 @@ def calculate_seconds(epoch):
     current = time.time()
     return int(round((epoch - current), 0))
 
+
 def rate_throttling(response):
     """
     For rate limit errors, get the remaining time before retrying and calculate the time to sleep before making a new request.
     """
     if "Retry-After" in response.headers:
         # handles the secondary rate limit
-        seconds_to_sleep = int(response.headers['Retry-After'])
+        seconds_to_sleep = int(response.headers["Retry-After"])
         if seconds_to_sleep > 0:
-            LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
+            LOGGER.info(
+                "API rate limit exceeded. Tap will retry the data collection after %s seconds.",
+                seconds_to_sleep,
+            )
             time.sleep(seconds_to_sleep)
-            #returns True if tap sleeps
+            # returns True if tap sleeps
             return True
-    if 'X-RateLimit-Remaining' in response.headers:
-        if int(response.headers['X-RateLimit-Remaining']) == 0:
-            seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
-            LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
+    if "X-RateLimit-Remaining" in response.headers:
+        if int(response.headers["X-RateLimit-Remaining"]) == 0:
+            seconds_to_sleep = calculate_seconds(
+                int(response.headers["X-RateLimit-Reset"])
+            )
+            LOGGER.info(
+                "API rate limit exceeded. Tap will retry the data collection after %s seconds.",
+                seconds_to_sleep,
+            )
             # add the buffer 2 seconds
             time.sleep(seconds_to_sleep + 2)
-            #returns True if tap sleeps
+            # returns True if tap sleeps
             return True
         return False
-    
+
     # There is not necessarily a need to provide a custom github domain - but it looks like X-RateLimit-Remaining may
     # not be included in this case, even if the API calls work fine
     if response.status_code == 200:
         return False
     if response.status_code == 429:
-        LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
+        LOGGER.info(
+            "API rate limit exceeded. Tap will retry the data collection after %s seconds.",
+            seconds_to_sleep,
+        )
         # Arbitrary 10 second wait
         time.sleep(10)
         return True
@@ -171,25 +213,100 @@ def rate_throttling(response):
 
     # Raise an exception if `X-RateLimit-Remaining` is not found in the header.
     # API does include this key header if provided base URL is not a valid github custom domain.
-    raise GithubException("The API call using the specified base url was unsuccessful. Please double-check the provided base URL.")
+    raise GithubException(
+        "The API call using the specified base url was unsuccessful. Please double-check the provided base URL."
+    )
+
 
 class GithubClient:
+
+    _cached_jwt: str = None
+    _jwt_timestamp: float = 0.0
+
+    _cached_access_tokens = {}
+
+    installation_id: str = None
+    token: str = None
+    token_expires_at: float = 0.0
+
     """
     The client class used for making REST calls to the Github API.
     """
+
     def __init__(self, config):
         self.config = config
         self.session = requests.Session()
-        self.base_url = config['base_url'] if config.get('base_url') else DEFAULT_DOMAIN
-        self.set_auth_in_session()
+        self.base_url = config["base_url"] if config.get("base_url") else DEFAULT_DOMAIN
         self.not_accessible_repos = set()
+
+    @property
+    def cached_jwt(self) -> str:
+        if not self._cached_jwt or (time.time() - self._jwt_timestamp) > 600:
+            self._cached_jwt = self.generate_jwt()
+            self._jwt_timestamp = time.time()
+        return self._cached_jwt
+
+    def generate_jwt(self) -> str:
+        env_github_jwt_signing_key = os.getenv("TAP_GITHUB_SIGNING_KEY")
+        env_client_id = os.getenv("TAP_GITHUB_CLIENT_ID")
+
+        signing_key = self.config["signing_key"] or env_github_jwt_signing_key
+        client_id = self.config["client_id"] or env_client_id
+
+        payload = {
+            # Issued at time
+            "iat": int(time.time()),
+            # JWT expiration time (10 minutes maximum)
+            "exp": int(time.time()) + 600,
+            # GitHub App's client ID
+            "iss": client_id,
+            "alg": "RS256",
+        }
+
+        LOGGER.info("Generating JWT for GitHub App", payload)
+
+        # Create JWT
+        encoded_jwt = jwt.encode(payload, signing_key, algorithm="RS256")
+        return encoded_jwt
+
+    def get_access_token(self) -> None:
+        if not self.installation_id:
+            orgs = self.extract_orgs_from_config()
+            current_org = orgs.pop()
+            self.installation_id = self.get_org_installation_id(current_org)
+
+        if self.token or self.token_expires_at > time.time():
+            return self.token
+
+        response = requests.post(
+            url=f"https://api.github.com/app/installations/{self.installation_id}/access_tokens",
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {self.cached_jwt}",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        )
+        self.token = response.json()["token"]
+        self.token_expires_at = response.json()["expires_at"]
+        return response.json()["token"]
+
+    def get_org_installation_id(self, org: str) -> str:
+        response = requests.get(
+            url=f"https://api.github.com/orgs/{org}/installation",
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {self.cached_jwt}",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        )
+        return response.json()["id"]
 
     def get_request_timeout(self):
         """
         Get the request timeout from the config, if not present use the default 300 seconds.
         """
         # Get the value of request timeout from config
-        config_request_timeout = self.config.get('request_timeout')
+        config_request_timeout = self.config.get("request_timeout")
 
         # Only return the timeout value if it is passed in the config and the value is not 0, "0" or ""
         if config_request_timeout and float(config_request_timeout):
@@ -198,24 +315,39 @@ class GithubClient:
         # Return default timeout
         return REQUEST_TIMEOUT
 
-    def set_auth_in_session(self):
+    def set_token(self):
         """
         Set access token in the header for authorization.
         """
-        access_token = self.config['access_token']
-        self.session.headers.update({'authorization': 'token ' + access_token})
+
+        if is_oauth_credentials(self.config):
+            token = self.get_access_token()
+
+            ### Use installation token authentication
+            self.session.headers.update({"authorization": "Bearer " + token})
+        else:
+            access_token = self.config["access_token"]
+            self.session.headers.update({"authorization": "token " + access_token})
 
     # pylint: disable=dangerous-default-value
     # During 'Timeout' error there is also possibility of 'ConnectionError',
     # hence added backoff for 'ConnectionError' too.
-    @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError, TooManyRequests), max_tries=5, factor=2)
-    def authed_get(self, source, url, headers={}, stream="", should_skip_404 = True):
+    @backoff.on_exception(
+        backoff.expo,
+        (requests.Timeout, requests.ConnectionError, Server5xxError, TooManyRequests),
+        max_tries=5,
+        factor=2,
+    )
+    def authed_get(self, source, url, headers={}, stream="", should_skip_404=True):
         """
         Call rest API and return the response in case of status code 200.
         """
         with metrics.http_request_timer(source) as timer:
+            self.set_token()
             self.session.headers.update(headers)
-            resp = self.session.request(method='get', url=url, timeout=self.get_request_timeout())
+            resp = self.session.request(
+                method="get", url=url, timeout=self.get_request_timeout()
+            )
             if rate_throttling(resp):
                 # If the API rate limit is reached, the function will be recursively
                 self.authed_get(source, url, headers, stream, should_skip_404)
@@ -228,10 +360,12 @@ class GithubClient:
                 # In the 409 case, this is only for `commits` returning an
                 # error for an empty repository, so we'll treat this as an
                 # empty list of records to process
-                resp._content = b'{}' # pylint: disable=protected-access
+                resp._content = b"{}"  # pylint: disable=protected-access
             return resp
 
-    def authed_get_all_pages(self, source, url, headers={}, stream="", should_skip_404 = True):
+    def authed_get_all_pages(
+        self, source, url, headers={}, stream="", should_skip_404=True
+    ):
         """
         Fetch all pages of records and return them.
         """
@@ -240,10 +374,10 @@ class GithubClient:
             yield r
 
             # Fetch the next page if next found in the response.
-            if 'next' in r.links:
-                url = r.links['next']['url']
+            if "next" in r.links:
+                url = r.links["next"]["url"]
             else:
-            # Break the loop if all pages are fetched.
+                # Break the loop if all pages are fetched.
                 break
 
     def verify_repo_access(self, url_for_repo, repo):
@@ -251,17 +385,23 @@ class GithubClient:
         Call rest API to verify that the user has sufficient permissions to access this repository.
         """
         try:
-            self.authed_get("verifying repository access", url_for_repo, stream="commits")
+            self.authed_get(
+                "verifying repository access", url_for_repo, stream="commits"
+            )
         except NotFoundException:
             # Throwing user-friendly error message as it checks token access
-            message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
+            message = "HTTP-error-code: 404, Error: Please check the repository name '{}' or you do not have sufficient permissions to access this repository.".format(
+                repo
+            )
             raise NotFoundException(message) from None
 
     def verify_access_for_repo(self):
         """
         For all the repositories mentioned in the config, check the access for each repos.
         """
-        repositories, org = self.extract_repos_from_config() # pylint: disable=unused-variable
+        repositories, org = (
+            self.extract_repos_from_config()
+        )  # pylint: disable=unused-variable
 
         for repo in repositories:
 
@@ -275,8 +415,8 @@ class GithubClient:
         """
         Extracts all organizations from the config
         """
-        repo_paths = list(filter(None, self.config['repository'].split(' ')))
-        orgs_paths = [repo.split('/')[0] for repo in repo_paths]
+        repo_paths = list(filter(None, self.config["repository"].split(" ")))
+        orgs_paths = [repo.split("/")[0] for repo in repo_paths]
 
         return set(orgs_paths)
 
@@ -285,13 +425,18 @@ class GithubClient:
         Extracts all repositories from the config and calls get_all_repos()
         for organizations using the wildcard 'org/*' format.
         """
-        repo_paths = list(filter(None, self.config['repository'].split(' ')))
+        repo_paths = list(filter(None, self.config["repository"].split(" ")))
 
         unique_repos = set()
         # Insert the duplicate repos found in the config repo_paths into duplicates
-        duplicate_repos = [x for x in repo_paths if x in unique_repos or (unique_repos.add(x) or False)]
+        duplicate_repos = [
+            x for x in repo_paths if x in unique_repos or (unique_repos.add(x) or False)
+        ]
         if duplicate_repos:
-            LOGGER.warning("Duplicate repositories found: %s and will be synced only once.", duplicate_repos)
+            LOGGER.warning(
+                "Duplicate repositories found: %s and will be synced only once.",
+                duplicate_repos,
+            )
 
         repo_paths = list(set(repo_paths))
 
@@ -300,14 +445,18 @@ class GithubClient:
         repos_with_errors = []
         for repo in repo_paths:
             # Split the repo_path by `/` as we are passing org/repo_name in the config.
-            split_repo_path = repo.split('/')
+            split_repo_path = repo.split("/")
             # Prepare list of organizations
             orgs.append(split_repo_path[0])
             # Check for the second element in the split list only if the length is greater than 1 and the first/second
             # element is not empty (for scenarios such as: `org/` or `/repo` which is invalid)
-            if len(split_repo_path) > 1 and split_repo_path[1] != '' and split_repo_path[0] != '':
+            if (
+                len(split_repo_path) > 1
+                and split_repo_path[1] != ""
+                and split_repo_path[0] != ""
+            ):
                 # If the second element is *, we need to check access for all the repos.
-                if split_repo_path[1] == '*':
+                if split_repo_path[1] == "*":
                     orgs_with_all_repos.append(repo)
             else:
                 # If `/`/repo name/organization not found, append the repo_path in the repos_with_errors
@@ -315,7 +464,11 @@ class GithubClient:
 
         # If any repos found in repos_with_errors, raise an exception
         if repos_with_errors:
-            raise GithubException("Please provide valid organization/repository for: {}".format(sorted(repos_with_errors)))
+            raise GithubException(
+                "Please provide valid organization/repository for: {}".format(
+                    sorted(repos_with_errors)
+                )
+            )
 
         if orgs_with_all_repos:
             # Remove any wildcard "org/*" occurrences from `repo_paths`
@@ -339,29 +492,35 @@ class GithubClient:
         repos = []
 
         for org_path in organizations:
-            org = org_path.split('/')[0]
+            org = org_path.split("/")[0]
             try:
                 for response in self.authed_get_all_pages(
-                    'get_all_repos',
-                    '{}/orgs/{}/repos?sort=created&direction=desc'.format(self.base_url, org),
-                    should_skip_404 = False
+                    "get_all_repos",
+                    "{}/orgs/{}/repos?sort=created&direction=desc".format(
+                        self.base_url, org
+                    ),
+                    should_skip_404=False,
                 ):
                     org_repos = response.json()
                     LOGGER.info("Collected repos for organization: %s", org)
 
                     for repo in org_repos:
-                        repo_full_name = repo.get('full_name')
-                        LOGGER.info("Verifying access of repository: %s", repo_full_name)
+                        repo_full_name = repo.get("full_name")
+                        LOGGER.info(
+                            "Verifying access of repository: %s", repo_full_name
+                        )
 
                         self.verify_repo_access(
-                            '{}/repos/{}/commits'.format(self.base_url,repo_full_name),
-                            repo
+                            "{}/repos/{}/commits".format(self.base_url, repo_full_name),
+                            repo,
                         )
 
                         repos.append(repo_full_name)
             except NotFoundException:
                 # Throwing user-friendly error message as it checks token access
-                message = "HTTP-error-code: 404, Error: Please check the organization name \'{}\' or you do not have sufficient permissions to access this organization.".format(org)
+                message = "HTTP-error-code: 404, Error: Please check the organization name '{}' or you do not have sufficient permissions to access this organization.".format(
+                    org
+                )
                 raise NotFoundException(message) from None
 
         return repos
