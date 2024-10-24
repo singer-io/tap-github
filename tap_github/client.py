@@ -235,6 +235,7 @@ class GithubClient:
 
     def __init__(self, config):
         self.config = config
+        self.installation_id = config.get("installation_id", None)
         self.session = requests.Session()
         self.base_url = config["base_url"] if config.get("base_url") else DEFAULT_DOMAIN
         self.not_accessible_repos = set()
