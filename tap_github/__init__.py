@@ -9,8 +9,18 @@ LOGGER = singer.get_logger()
 
 REQUIRED_CONFIG_KEYS = [
     "start_date",
-    "repository",
 ]  # access_token or installation_id required
+
+
+GITHUB_ACCESS_TOKEN_KEYS = ["access_token", "start_date", "repository"]
+
+GITHUB_APP_CONFIG_KEYS = [
+    "client_id",
+    "client_secret",
+    "signing_key",
+    "installation_id",
+    "start_date'",
+]
 
 
 def do_discover(client):
@@ -27,10 +37,10 @@ def main():
     """
     Run discover mode or sync mode.
     """
+
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
 
     config = args.config
-    print(config)
 
     client = GithubClient(config)
 

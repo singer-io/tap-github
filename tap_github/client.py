@@ -421,12 +421,31 @@ class GithubClient:
 
         return set(orgs_paths)
 
+    def get_selected_repos(self):
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {self.token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        url = "https://api.github.com/installation/repositories"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            repos = response.json()["repositories"]
+            full_names = [repo["full_name"] for repo in repos]
+            return full_names
+        else:
+            response.raise_for_status()
+
     def extract_repos_from_config(self):
         """
         Extracts all repositories from the config and calls get_all_repos()
         for organizations using the wildcard 'org/*' format.
         """
-        repo_paths = list(filter(None, self.config["repository"].split(" ")))
+        repo_paths: list[str] = []
+        if is_oauth_credentials(self.config):
+            repo_paths = self.get_selected_repos()
+        else:
+            repo_paths = list(filter(None, self.config["repository"].split(" ")))
 
         unique_repos = set()
         # Insert the duplicate repos found in the config repo_paths into duplicates
