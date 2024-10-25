@@ -424,7 +424,7 @@ class GithubClient:
     def get_selected_repos(self):
         headers = {
             "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {self.token}",
+            "Authorization": f"Bearer {self.get_access_token()}",
             "X-GitHub-Api-Version": "2022-11-28",
         }
         url = "https://api.github.com/installation/repositories"
