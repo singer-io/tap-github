@@ -138,6 +138,11 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
         # Don't raise a NotFoundException
         return None
 
+    if error_code == 410:
+        # Feature is disabled, we can continue safely
+        LOGGER.warning("Feature is disabled, continuing: %s", response_json)
+        return None
+
     message = "HTTP-error-code: {}, Error: {}".format(
         error_code,
         (
@@ -355,7 +360,7 @@ class GithubClient:
             if resp.status_code != 200:
                 raise_for_error(resp, source, stream, self, should_skip_404)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
-            if resp.status_code in {404, 409}:
+            if resp.status_code in {404, 409, 410}:
                 # Return an empty response body since we're not raising a NotFoundException
 
                 # In the 409 case, this is only for `commits` returning an

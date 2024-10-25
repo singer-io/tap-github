@@ -193,12 +193,14 @@ def sync(client, config, state, catalog):
 
     # Get selected streams, make sure stream dependencies are met
     selected_stream_ids = get_selected_streams(catalog)
+    LOGGER.info("Selected Stream IDs %s", selected_stream_ids)
 
     streams_to_sync = get_stream_to_sync(catalog)
     LOGGER.info("Sync stream %s", streams_to_sync)
 
     repositories, organizations = client.extract_repos_from_config()
 
+    LOGGER.info(repositories)
     state = translate_state(state, catalog, repositories)
     singer.write_state(state)
 
