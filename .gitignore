@@ -104,8 +104,10 @@ properties.json
 .LSOverride
 
 output.json
-meltano.yml
+meltano**.yml
+
 
 
 .meltano/** 
 plugins/** 
+output/**
