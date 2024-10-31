@@ -256,8 +256,8 @@ class GithubClient:
         env_github_jwt_signing_key = os.getenv("TAP_GITHUB_SIGNING_KEY")
         env_client_id = os.getenv("TAP_GITHUB_CLIENT_ID")
 
-        signing_key = self.config["signing_key"] or env_github_jwt_signing_key
-        client_id = self.config["client_id"] or env_client_id
+        signing_key = self.config.get("signing_key", None) or env_github_jwt_signing_key
+        client_id = self.config.get("client_id", None) or env_client_id
 
         payload = {
             # Issued at time
