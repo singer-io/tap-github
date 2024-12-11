@@ -33,11 +33,10 @@ class TestTranslateState(unittest.TestCase):
     def test_newer_format_state_with_repo_name(self):
         """Verify that `translate_state` return the state itself if a newer format bookmark is found."""
         state = {
-            "bookmarks": {
-                "org/test-repo" : {
-                        "comments": {"since": "2019-01-01T00:00:00Z"}
+            "bookmarks" : {
+                "comments" : {
+                    "org/test-repo": {"since": "2019-01-01T00:00:00Z"},
                     },
-                "org/test-repo2" : {}
             }
         }
 
@@ -48,17 +47,18 @@ class TestTranslateState(unittest.TestCase):
         """Verify that `translate_state` migrate each stream's bookmark into the repo name"""
         older_format_state = {
             "bookmarks": {
-                "comments": {"since": "2019-01-01T00:00:00Z"}
-            }
-        }
-        expected_state =  {
-            "bookmarks": {
                 "org/test-repo" : {
                         "comments": {"since": "2019-01-01T00:00:00Z"}
                     },
                 "org/test-repo2" : {
                         "comments": {"since": "2019-01-01T00:00:00Z"}
                     }
+            }
+        }
+        expected_state =  {
+            "bookmarks": {
+                "comments": {"org/test-repo" : {"since": "2019-01-01T00:00:00Z"},
+                            "org/test-repo2" : {"since": "2019-01-01T00:00:00Z"}},
             }
         }
         final_state = translate_state(older_format_state, self.catalog, ["org/test-repo", "org/test-repo2"])
@@ -75,10 +75,9 @@ class TestTranslateState(unittest.TestCase):
         """Verify that `translate_state` return the existing state if all existing repo unselected in the current sync."""
         newer_format_state = {
             "bookmarks": {
-                "org/test-repo" : {
-                        "comments": {"since": "2019-01-01T00:00:00Z"}
+                "comments" : {
+                        "org/test-repo": {"since": "2019-01-01T00:00:00Z"}
                     },
-                "org/test-repo2" : {}
             }
         }
         final_state = translate_state(newer_format_state, self.catalog, ["org/test-repo3", "org/test-repo4"])
@@ -88,17 +87,16 @@ class TestTranslateState(unittest.TestCase):
         """Verify that `translate_state` migrate each stream's bookmark into the repo name"""
         older_format_state = {
             "bookmarks": {
-                "comments": {"since": "2019-01-01T00:00:00Z"}
+                "org/test-repo3": {
+                    "comments": {"since": "2019-01-01T00:00:00Z"}
+                 }
             }
         }
         expected_state = {
             "bookmarks": {
-                "org/test-repo3" : {
-                        "comments": {"since": "2019-01-01T00:00:00Z"}
-                    },
-                "org/test-repo4" : {
-                        "comments": {"since": "2019-01-01T00:00:00Z"}
-                    }
+                "comments" : {
+                    "org/test-repo3": {"since": "2019-01-01T00:00:00Z"},
+                },
             }
         }
         final_state = translate_state(older_format_state, self.catalog, ["org/test-repo3", "org/test-repo4"])
