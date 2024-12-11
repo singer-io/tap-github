@@ -9,7 +9,7 @@ def get_bookmark(state, repo, stream_name, bookmark_key, start_date):
     """
     Return bookmark value if available in the state otherwise return start date
     """
-    repo_stream_dict = bookmarks.get_bookmark(state, repo, stream_name)
+    repo_stream_dict = bookmarks.get_bookmark(state, stream_name, repo)
     if repo_stream_dict:
         return repo_stream_dict.get(bookmark_key)
 
@@ -119,7 +119,7 @@ class Stream:
 
         # If the stream is selected, write the bookmark.
         if stream in selected_streams:
-            singer.write_bookmark(state, repo_path, stream_obj.tap_stream_id, {"since": bookmark_value})
+            singer.write_bookmark(state, stream_obj.tap_stream_id, repo_path, {"since": bookmark_value})
 
         # For the each child, write the bookmark if it is selected.
         for child in stream_obj.children:
@@ -205,14 +205,14 @@ class Stream:
 
 class FullTableStream(Stream):
     def sync_endpoint(self,
-                        client,
-                        state,
-                        catalog,
-                        repo_path,
-                        start_date,
-                        selected_stream_ids,
-                        stream_to_sync
-                        ):
+                      client,
+                      state,
+                      catalog,
+                      repo_path,
+                      start_date,
+                      selected_stream_ids,
+                      stream_to_sync
+                      ):
         """
         A common function sync full table streams.
         """
