@@ -122,10 +122,10 @@ def translate_state(state, catalog, repositories):
     for stream in catalog['streams']:
         stream_name = stream['tap_stream_id']
         for repo in repositories:
-            if bookmarks.get_bookmark(state, repo, stream_name):
+            if bookmarks.get_bookmark(state, stream_name, repo):
                 return state
-            if bookmarks.get_bookmark(state, stream_name, 'since'):
-                new_state['bookmarks'][repo][stream_name]['since'] = bookmarks.get_bookmark(state, stream_name, 'since')
+            if bookmarks.get_bookmark(state, repo, stream_name):
+                new_state['bookmarks'][stream_name][repo] = bookmarks.get_bookmark(state, repo, stream_name)
 
     return new_state
 
