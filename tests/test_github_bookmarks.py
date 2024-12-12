@@ -1,6 +1,7 @@
 import datetime
 import dateutil.parser
 import pytz
+import copy
 
 from tap_tester import runner, menagerie, connections
 
@@ -28,7 +29,7 @@ class TestGithubBookmarks(TestGithubBase):
 
         repo = self.get_properties().get('repository')
         #stream_to_calculated_state = {repo: {stream: "" for stream in current_state['bookmarks'][repo].keys()}}
-        stream_to_calculated_state = current_state.copy()['bookmarks']
+        stream_to_calculated_state = copy.deepcopy(current_state)['bookmarks']
 
         for stream in current_state['bookmarks'].keys():
             for repo, state in current_state['bookmarks'][stream].items():
