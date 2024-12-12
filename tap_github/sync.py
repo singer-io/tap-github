@@ -115,9 +115,10 @@ def translate_state(state, catalog, repositories):
 
         # If the state contains a bookmark for `repo_a` and `repo_b` and the user deselects these both repos and adds another repo
         # then in that case this function was returning an empty state. Now this change will return the existing state instead of the empty state.
-        if key not in stream_names and key not in repositories:
-            # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.
-            return state
+        for repo in state['bookmarks'][key].keys():
+            if repo not in stream_names and repo not in repositories:
+                # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.
+                return state
 
     for stream in catalog['streams']:
         stream_name = stream['tap_stream_id']

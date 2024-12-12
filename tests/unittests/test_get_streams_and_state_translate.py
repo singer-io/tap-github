@@ -76,7 +76,8 @@ class TestTranslateState(unittest.TestCase):
         newer_format_state = {
             "bookmarks": {
                 "comments" : {
-                        "org/test-repo": {"since": "2019-01-01T00:00:00Z"}
+                    "org/test-repo": {"since": "2019-01-01T00:00:00Z"},
+                    "org/test-repo2": {"since": "2019-01-01T00:00:00Z"}
                     },
             }
         }
