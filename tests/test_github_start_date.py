@@ -32,20 +32,20 @@ class GithubStartDateTest(TestGithubBase):
         # generate data for 'events' stream
         self.generate_data()
 
-        date_1 = '2020-04-01T00:00:00Z'
-        date_2 = '2021-10-08T00:00:00Z'
+        date_1 = '2023-04-01T00:00:00Z'
+        date_2 = '2024-10-08T00:00:00Z'
         expected_stream_1  = {'commits'}
         self.run_test(date_1, date_2, expected_stream_1)
 
-        date_2 = '2022-07-13T00:00:00Z'
+        date_2 = '2024-07-13T00:00:00Z'
         expected_stream_2  = {'issue_milestones'}
         self.run_test(date_1, date_2, expected_stream_2)
 
-        date_2 = '2022-05-06T00:00:00Z'
+        date_2 = '2024-05-06T00:00:00Z'
         expected_stream_3  = {'pr_commits', 'review_comments', 'reviews'}
         self.run_test(date_1, date_2, expected_stream_3)
 
-        date_2 = '2022-01-27T00:00:00Z'
+        date_2 = '2024-01-27T00:00:00Z'
         expected_stream_4 = self.expected_streams().difference(
             expected_stream_1,
             expected_stream_2,
@@ -58,10 +58,10 @@ class GithubStartDateTest(TestGithubBase):
         # `issues` doesn't have enough data in this range, so we skip it too
         self.run_test(date_1, date_2, expected_stream_4)
 
-        date_3 = '2023-01-27T00:00:00Z'
+        date_3 = '2024-01-27T00:00:00Z'
         self.run_test(date_1, date_3, {"issues"})
 
-        date_4 = '2023-01-01T00:00:00Z'
+        date_4 = '2024-01-01T00:00:00Z'
         self.run_test(date_1, date_4, {'pull_requests'})
 
         # As per the Documentation: https://docs.github.com/en/rest/reference/activity#events
@@ -209,7 +209,6 @@ class GithubStartDateTest(TestGithubBase):
                     self.assertTrue(primary_keys_sync_2.issubset(primary_keys_sync_1))
 
                 else:
-
                     # Verify that the 2nd sync with a later start date replicates the same number of
                     # records as the 1st sync.
                     self.assertEqual(record_count_sync_2, record_count_sync_1)
