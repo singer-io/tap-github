@@ -54,8 +54,17 @@ def get_ordered_stream_list(currently_syncing, streams_to_sync):
     return stream_list
 
 def get_ordered_repos(state, repositories):
-    """
-    Get an ordered list of remaining repos to sync followed by synced repos.
+    """Get an ordered list of remaining repos to sync followed by synced repos.
+
+    The tap supports multiple repos, this is the previous format
+    of bookmarks in state, which has the stream keys under the repo:
+
+
+    In qcdi the stream keys need to be after bookmarks, for standardized
+    table level resets to occur. so, this function should be called at the
+    beginning of each run to ensure the state is translated to the new
+    format:
+
     """
     syncing_repo = state.get("currently_syncing_repo")
     if syncing_repo in repositories:
@@ -65,18 +74,8 @@ def get_ordered_repos(state, repositories):
 
 def translate_state(state, catalog, repositories):
     '''
-    This tap used to only support a single repository, in which case the
-    the state took the shape of:
-    {
-      "bookmarks": {
-        "commits": {
-          "since": "2018-11-14T13:21:20.700360Z"
-        }
-      }
-    }
-    The tap now supports multiple repos, so this function should be called
-    at the beginning of each run to ensure the state is translated to the
-    new format:
+    The tap supports multiple repos. This was the previous format
+    of bookmarks in state, which has the stream keys under the repo:
     {
       "bookmarks": {
         "singer-io/tap-adwords": {
@@ -91,11 +90,36 @@ def translate_state(state, catalog, repositories):
         }
       }
     }
+    In qcdi the stream keys need to be after bookmarks for standardized
+    table level resets to occur. This function should be called at the
+    beginning of each run to ensure the state is translated to the new
+    format:
+    {
+      "bookmarks": {
+        "commits" : {
+          "singer-io/tap-adwords": {
+            "since": "2018-11-14T13:21:20.700360Z"
+          },
+          "singer-io/tap-salesforce": {
+            "since": "2018-11-14T13:21:20.700360Z"
+          }
+        },
+        "issues" : {
+          "singer-io/tap-adwords": {
+            "since": "2018-11-14T13:21:20.700360Z"
+          },
+          "singer-io/tap-salesforce": {
+            "since": "2018-11-14T13:21:20.700360Z"
+          }
+        }
+      }
+    }
+
     '''
     nested_dict = lambda: collections.defaultdict(nested_dict)
     new_state = nested_dict()
 
-    # Collect keys(repo_name for update state or stream_name for older state) from state available in the `bookmarks``
+    # Collect keys(stream_name for update state or repo_name for older state) from state available in the `bookmarks``
     previous_state_keys = state.get('bookmarks', {}).keys()
     # Collect stream names from the catalog
     stream_names = [stream['tap_stream_id'] for stream in catalog['streams']]
@@ -115,8 +139,30 @@ def translate_state(state, catalog, repositories):
 
         # If the state contains a bookmark for `repo_a` and `repo_b` and the user deselects these both repos and adds another repo
         # then in that case this function was returning an empty state. Now this change will return the existing state instead of the empty state.
-        for repo in state['bookmarks'][key].keys():
-            if repo not in stream_names and repo not in repositories:
+
+        # old state
+        # {
+        #     "bookmarks": {
+        #         "org/test-repo3": {
+        #             "comments": {"since": "2019-01-01T00:00:00Z"}
+        #          }
+        #     }
+        # }
+        # for each repo, check each stream under the repo. If the stream is not in stream names or repositories return state.
+        # stream should always be in stream_names
+
+        # new state
+        # {
+        #     "bookmarks": {
+        #         "comments" : {
+        #             "org/test-repo3": {"since": "2019-01-01T00:00:00Z"},
+        #         },
+        #     }
+        # }
+        # for each stream, loop over repos in stream. If the repo is not a stream name (it wont be) or is not is the list of repos, reutrn state. This could happen, and is the case we are checking for. If the repositories are not selected, new ones will get added the new bookmark way.
+
+        for inner_key in state['bookmarks'][key].keys():
+            if inner_key not in stream_names and inner_key not in repositories:
                 # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.
                 return state
 

@@ -34,6 +34,7 @@ class GitHubPaginationTest(TestGithubBase):
             'team_members',
             'collaborators',
             'assignees',
+            'events',
         }
 
         # For some streams RECORD count were not > 30 in same test-repo.

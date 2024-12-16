@@ -62,21 +62,21 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
             "currently_syncing": "pull_requests",
             "currently_syncing_repo": "singer-io/test-repo",
             "bookmarks": {
-                "singer-io/singer-python": {
-                    "issues": {
+                "issues": {
+                    "singer-io/singer-python": {
                         "since": "2022-06-22T13:32:42Z"
                     },
-                    "pull_requests": {
-                        "since": "2022-06-22T13:32:42Z"
-                    }
-                },
-                "singer-io/test-repo": {
-                    "issues": {
+                    "singer-io/test-repo": {
                         "since": "2022-07-14T07:47:21Z"
                     },
-                    "pull_requests": {
-                        "since": "2022-07-13T07:47:21Z"
-                    }
+                },
+                "pull_requests": {
+                    "singer-io/singer-python": {
+                        "since": "2022-06-22T13:32:42Z"
+                    },
+                    "singer-io/test-repo": {
+                        "since": "2022-07-14T07:47:21Z"
+                    },
                 }
             }
         }
@@ -100,16 +100,10 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
             # Verify bookmarks are saved
             self.assertIsNotNone(final_state.get('bookmarks'))
 
-        for repository in self.get_properties().get("repository").split():
-            with self.subTest(repository=repository):
-            
-                full_sync_bookmark = full_sync_state["bookmarks"][repository]
-                final_bookmark = final_state["bookmarks"][repository]
-                interrupted_repo_bookmark = interrupted_state["bookmarks"][repository]
-
-                for stream in streams_to_test:
-                    with self.subTest(stream=stream):
-                        
+        for stream in streams_to_test:
+            with self.subTest(stream=stream):
+                for repository in self.get_properties().get("repository").split():
+                    with self.subTest(repository=repository):
                         # Expected values
                         expected_replication_method = expected_replication_methods[stream]
 
@@ -126,14 +120,18 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
                         interrupted_record_count = len(interrupted_records)
 
                         if expected_replication_method == self.INCREMENTAL:
+                            final_bookmark = final_state["bookmarks"][stream]
+
                             expected_replication_key = next(iter(expected_replication_keys[stream]))
 
-                            if stream in full_sync_bookmark.keys():
-                                full_sync_stream_bookmark = self.dt_to_ts(full_sync_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
-                                final_sync_stream_bookmark = self.dt_to_ts(final_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
+                            if stream in full_sync_state["bookmarks"].keys():
+                                full_sync_bookmark = full_sync_state["bookmarks"][stream]
+                                full_sync_stream_bookmark = self.dt_to_ts(full_sync_bookmark.get(repository, {}).get("since"), self.BOOKMARK_FORMAT)
+                                final_sync_stream_bookmark = self.dt_to_ts(final_bookmark.get(repository, {}).get("since"), self.BOOKMARK_FORMAT)
                                 
-                            if stream in interrupted_repo_bookmark.keys():
-                                interrupted_bookmark = self.dt_to_ts(interrupted_repo_bookmark[stream]["since"], self.BOOKMARK_FORMAT)
+                            if stream in interrupted_state["bookmarks"].keys():
+                                interrupted_repo_bookmark = interrupted_state["bookmarks"][stream]
+                                interrupted_bookmark = self.dt_to_ts(interrupted_repo_bookmark[repository]["since"], self.BOOKMARK_FORMAT)
 
                                 for record in interrupted_records:
                                     rec_time = self.dt_to_ts(record[expected_replication_key], self.RECORD_REPLICATION_KEY_FORMAT)
@@ -144,7 +142,7 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
                                 self.assertGreater(interrupted_record_count, 0)
 
                             if stream != added_stream:
-                                
+
                                 # Verify state ends with the same value for common streams after both full and interrupted syncs
                                 self.assertEqual(full_sync_stream_bookmark, final_sync_stream_bookmark)
                                 
@@ -168,8 +166,8 @@ class TestGithubInterruptedSyncAddStream(TestGithubBase):
 
                         else:
                             # Verify full table streams do not save bookmarked values after a successful sync
-                            self.assertNotIn(stream, full_sync_bookmark.keys())
-                            self.assertNotIn(stream, final_bookmark.keys())
+                            self.assertNotIn(stream, full_sync_state["bookmarks"].keys())
+                            self.assertNotIn(stream, final_state["bookmarks"].keys())
 
                             # Verify first and second sync have the same records
                             self.assertEqual(full_record_count, interrupted_record_count)
