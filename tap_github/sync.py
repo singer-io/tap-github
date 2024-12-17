@@ -126,41 +126,6 @@ def translate_state(state, catalog, repositories):
 
     for key in previous_state_keys:
         # Loop through each key of `bookmarks` available in the previous state.
-
-        # Case 1:
-        # Older connections `bookmarks` contain stream names so check if it is the stream name or not.
-        # If the previous state's key is found in the stream name list then continue to check other keys. Because we want
-        # to migrate each stream's bookmark into the repo name as mentioned below:
-        # Example: {`bookmarks`: {`stream_a`: `bookmark_a`}} to {`bookmarks`: {`repo_a`: {`stream_a`: `bookmark_a`}}}
-
-        # Case 2:
-        # Check if the key is available in the list of currently selected repo's list or not. Newer format `bookmarks` contain repo names.
-        # Return the state if the previous state's key is not found in the repo name list or stream name list.
-
-        # If the state contains a bookmark for `repo_a` and `repo_b` and the user deselects these both repos and adds another repo
-        # then in that case this function was returning an empty state. Now this change will return the existing state instead of the empty state.
-
-        # old state
-        # {
-        #     "bookmarks": {
-        #         "org/test-repo3": {
-        #             "comments": {"since": "2019-01-01T00:00:00Z"}
-        #          }
-        #     }
-        # }
-        # for each repo, check each stream under the repo. If the stream is not in stream names or repositories return state.
-        # stream should always be in stream_names
-
-        # new state
-        # {
-        #     "bookmarks": {
-        #         "comments" : {
-        #             "org/test-repo3": {"since": "2019-01-01T00:00:00Z"},
-        #         },
-        #     }
-        # }
-        # for each stream, loop over repos in stream. If the repo is not a stream name (it wont be) or is not is the list of repos, reutrn state. This could happen, and is the case we are checking for. If the repositories are not selected, new ones will get added the new bookmark way.
-
         for inner_key in state['bookmarks'][key].keys():
             if inner_key not in stream_names and inner_key not in repositories:
                 # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.

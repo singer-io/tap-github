@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 from tap_tester import connections, runner, LOGGER
 
 from base import TestGithubBase
@@ -19,33 +20,41 @@ class GithubStartDateTest(TestGithubBase):
     def generate_data(self):
         # get the token
         token = os.getenv("TAP_GITHUB_TOKEN")
-        url = "https://api.github.com/user/starred/singer-io/test-repo"
-        headers = {"Authorization": "Bearer {}".format(token)}
+        url = "https://api.github.com/repos/singer-io/test-repo/issues"
+        headers = {"Authorization": "Bearer {}".format(token),
+                   'Accept': 'application/vnd.github+json'}
+        data = {
+            "title": "Test Issue",
+            "body": "This is a test issue for tap-github pagination test"}
+        # create and close an issue to generate new event data
+        response = requests.post(url=url, headers=headers, data=json.dumps(data))
+        if response.status_code == 201:
+            issue_number = response.json()['number']
+        else:
+            print(f"Failed to create issue: {response.status_code}, {response.text}")
 
-        # generate a data for 'events' stream: 'watchEvent' ie. star the repo
-        requests.put(url=url, headers=headers)
-        # as per the Documentation: https://docs.github.com/en/developers/webhooks-and-events/events/github-event-types#watchevent
-        # the event is generated when we 'star' a repo, hence 'unstar' it as we can 'star' it next time
-        requests.delete(url=url, headers=headers)
+        delete_url = f'https://api.github.com/repos/singer-io/test-repo/issues/{issue_number}'
+        delete_data = {'state': 'closed'}
+        requests.patch(url=delete_url, headers=headers, data=json.dumps(delete_data))
 
     def test_run(self):
         # generate data for 'events' stream
         self.generate_data()
 
-        date_1 = '2023-04-01T00:00:00Z'
-        date_2 = '2024-10-08T00:00:00Z'
+        date_1 = '2020-04-01T00:00:00Z'
+        date_2 = '2021-10-08T00:00:00Z'
         expected_stream_1  = {'commits'}
         self.run_test(date_1, date_2, expected_stream_1)
 
-        date_2 = '2024-07-13T00:00:00Z'
+        date_2 = '2022-07-13T00:00:00Z'
         expected_stream_2  = {'issue_milestones'}
         self.run_test(date_1, date_2, expected_stream_2)
 
-        date_2 = '2024-05-06T00:00:00Z'
+        date_2 = '2022-05-06T00:00:00Z'
         expected_stream_3  = {'pr_commits', 'review_comments', 'reviews'}
         self.run_test(date_1, date_2, expected_stream_3)
 
-        date_2 = '2024-01-27T00:00:00Z'
+        date_2 = '2022-01-27T00:00:00Z'
         expected_stream_4 = self.expected_streams().difference(
             expected_stream_1,
             expected_stream_2,
@@ -58,10 +67,10 @@ class GithubStartDateTest(TestGithubBase):
         # `issues` doesn't have enough data in this range, so we skip it too
         self.run_test(date_1, date_2, expected_stream_4)
 
-        date_3 = '2024-01-27T00:00:00Z'
+        date_3 = '2023-01-27T00:00:00Z'
         self.run_test(date_1, date_3, {"issues"})
 
-        date_4 = '2024-01-01T00:00:00Z'
+        date_4 = '2023-01-01T00:00:00Z'
         self.run_test(date_1, date_4, {'pull_requests'})
 
         # As per the Documentation: https://docs.github.com/en/rest/reference/activity#events
