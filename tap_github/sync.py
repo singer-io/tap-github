@@ -54,17 +54,8 @@ def get_ordered_stream_list(currently_syncing, streams_to_sync):
     return stream_list
 
 def get_ordered_repos(state, repositories):
-    """Get an ordered list of remaining repos to sync followed by synced repos.
-
-    The tap supports multiple repos, this is the previous format
-    of bookmarks in state, which has the stream keys under the repo:
-
-
-    In qcdi the stream keys need to be after bookmarks, for standardized
-    table level resets to occur. so, this function should be called at the
-    beginning of each run to ensure the state is translated to the new
-    format:
-
+    """
+    Get an ordered list of remaining repos to sync followed by synced repos.
     """
     syncing_repo = state.get("currently_syncing_repo")
     if syncing_repo in repositories:
