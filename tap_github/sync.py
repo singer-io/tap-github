@@ -65,8 +65,9 @@ def get_ordered_repos(state, repositories):
 
 def translate_state(state, catalog, repositories):
     '''
-    The tap supports multiple repos. This was the previous format
-    of bookmarks in state, which has the stream keys under the repo:
+    The tap supports multiple repositories. Previously, the state format
+    for bookmarks included stream keys nested under each repository, as
+    shown below:
     {
       "bookmarks": {
         "singer-io/tap-adwords": {
@@ -81,10 +82,10 @@ def translate_state(state, catalog, repositories):
         }
       }
     }
-    In qcdi the stream keys need to be after bookmarks for standardized
-    table level resets to occur. This function should be called at the
-    beginning of each run to ensure the state is translated to the new
-    format:
+    In QCDI, the stream keys must be the second key after bookmarks in
+    order for standardized table-level resets to function correctly. This
+    function should be called at the start of each run to ensure that the
+    state is properly converted to the new format:
     {
       "bookmarks": {
         "commits" : {
