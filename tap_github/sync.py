@@ -82,10 +82,11 @@ def translate_state(state, catalog, repositories):
         }
       }
     }
-    In QCDI, the stream keys must be the second key after bookmarks in
-    order for standardized table-level resets to function correctly. This
-    function should be called at the start of each run to ensure that the
-    state is properly converted to the new format:
+
+    The stream keys must be the second key after bookmarks in order for
+    standardized table-level resets to function correctly. This function
+    should be called at the start of each run to ensure that the state
+    is properly converted to the new format:
     {
       "bookmarks": {
         "commits" : {
