@@ -189,8 +189,8 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
 
                         else:
                             # Verify full table streams do not save bookmarked values after a successful sync
-                            self.assertNotIn(stream, full_sync_bookmark.keys())
-                            self.assertNotIn(stream, final_bookmark.keys())
+                            self.assertNotIn(stream, full_sync_state["bookmarks"].keys())
+                            self.assertNotIn(stream, final_state["bookmarks"].keys())
 
                             # Verify first and second sync have the same records
                             self.assertEqual(full_record_count, interrupted_record_count)
