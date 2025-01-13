@@ -4,7 +4,7 @@ from singer import bookmarks
 from tap_github.streams import STREAMS
 
 LOGGER = singer.get_logger()
-STREAM_TO_SYNC_FOR_ORGS = ['teams', 'team_members', 'team_memberships']
+STREAM_TO_SYNC_FOR_ORGS = ['teams', 'team_members', 'team_memberships', 'repos', 'repo_forked_parents', 'repo_forked_compares']
 
 def get_selected_streams(catalog):
     '''

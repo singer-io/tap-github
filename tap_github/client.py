@@ -222,7 +222,7 @@ class GithubClient:
                 resp._content = b'{}'  # pylint: disable=protected-access
             return resp
 
-    def authed_get_all_pages(self, source, url, headers={}, stream="", should_skip_404 = True):
+    def authed_get_all_pages(self, source, url, headers={}, stream="", should_skip_404 = True, skip_pagination=True):
         """
         Fetch all pages of records and return them.
         """
@@ -231,6 +231,8 @@ class GithubClient:
             response = self.authed_get(source, next_url, headers, stream, should_skip_404)
             yield response
 
+            if skip_pagination:
+                break
             next_url = response.links.get('next', {}).get('url', None)
 
     def prepare_url(self, url):

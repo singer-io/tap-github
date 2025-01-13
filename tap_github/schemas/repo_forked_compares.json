@@ -1,0 +1,74 @@
+{
+  "type": ["null", "object"],
+  "properties": {
+    "_sdc_repository": {
+      "type": ["null", "string"]
+    },
+    "name": {
+      "type": ["null", "string"]
+    },
+    "full_name": {
+      "type": ["null", "string"]
+    },
+    "owner_login": {
+      "type": ["null", "string"]
+    },
+    "default_branch": {
+      "type": ["null", "string"]
+    },
+    "fork_name": {
+        "type": ["null", "string"]
+    },
+    "fork_owner_login": {
+        "type": ["null", "string"]
+    },
+    "fork_default_branch": {
+        "type": ["null", "string"]
+    },
+    "url": {
+      "type": ["null", "string"]
+    },
+    "html_url": {
+      "type": ["null", "string"]
+    },
+    "permalink_url": {
+      "type": ["null", "string"]
+    },
+    "diff_url": {
+      "type": ["null", "string"]
+    },
+    "patch_url": {
+      "type": ["null", "string"]
+    },
+    "base_commit": {
+      "type": ["null", "object"]
+    },
+    "merge_base_commit": {
+      "type": ["null", "object"]
+    },
+    "status": {
+      "type": ["null", "string"]
+    },
+    "ahead_by": {
+      "type": ["null", "number"]
+    },
+    "behind_by": {
+      "type": ["null", "number"]
+    },
+    "total_commits": {
+      "type": ["null", "number"]
+    },
+    "commits": {
+      "type": ["null", "array"],
+      "items": {
+          "type": ["null", "object"]
+      }
+    },
+    "files": {
+      "type": ["null", "array"],
+      "items": {
+          "type": ["null", "object"]
+      }
+    }
+  }
+}
