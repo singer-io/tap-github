@@ -58,7 +58,6 @@ KNOWN_MISSING_FIELDS = {
     },
     'issues': {
         'body_text',
-        'closed_by',
         'body_html'
     },
     'releases': {

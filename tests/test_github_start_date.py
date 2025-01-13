@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 from tap_tester import connections, runner, LOGGER
 
 from base import TestGithubBase
@@ -19,14 +20,22 @@ class GithubStartDateTest(TestGithubBase):
     def generate_data(self):
         # get the token
         token = os.getenv("TAP_GITHUB_TOKEN")
-        url = "https://api.github.com/user/starred/singer-io/test-repo"
-        headers = {"Authorization": "Bearer {}".format(token)}
+        url = "https://api.github.com/repos/singer-io/test-repo/issues"
+        headers = {"Authorization": "Bearer {}".format(token),
+                   'Accept': 'application/vnd.github+json'}
+        data = {
+            "title": "Test Issue",
+            "body": "This is a test issue for tap-github pagination test"}
+        # create and close an issue to generate new event data
+        response = requests.post(url=url, headers=headers, data=json.dumps(data))
+        if response.status_code == 201:
+            issue_number = response.json()['number']
+        else:
+            print(f"Failed to create issue: {response.status_code}, {response.text}")
 
-        # generate a data for 'events' stream: 'watchEvent' ie. star the repo
-        requests.put(url=url, headers=headers)
-        # as per the Documentation: https://docs.github.com/en/developers/webhooks-and-events/events/github-event-types#watchevent
-        # the event is generated when we 'star' a repo, hence 'unstar' it as we can 'star' it next time
-        requests.delete(url=url, headers=headers)
+        delete_url = f'https://api.github.com/repos/singer-io/test-repo/issues/{issue_number}'
+        delete_data = {'state': 'closed'}
+        requests.patch(url=delete_url, headers=headers, data=json.dumps(delete_data))
 
     def test_run(self):
         # generate data for 'events' stream
@@ -209,7 +218,6 @@ class GithubStartDateTest(TestGithubBase):
                     self.assertTrue(primary_keys_sync_2.issubset(primary_keys_sync_1))
 
                 else:
-
                     # Verify that the 2nd sync with a later start date replicates the same number of
                     # records as the 1st sync.
                     self.assertEqual(record_count_sync_2, record_count_sync_1)

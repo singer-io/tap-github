@@ -28,7 +28,7 @@ class TestGithubInterruptedSync(TestGithubBase):
         expected_replication_methods = self.expected_replication_method()
         expected_replication_keys = self.expected_bookmark_keys()
         repo_key = "_sdc_repository"
-        
+
         start_date = self.dt_to_ts(self.get_properties().get("start_date"), self.BOOKMARK_FORMAT)
 
         # Run a discovery job
@@ -53,24 +53,26 @@ class TestGithubInterruptedSync(TestGithubBase):
             "currently_syncing": "pull_requests",
             "currently_syncing_repo": "singer-io/test-repo",
             "bookmarks": {
-                "singer-io/singer-python": {
-                    "issues": {
+                "issues": {
+                    "singer-io/singer-python": {
                         "since": "2022-06-22T13:32:42Z"
                     },
-                    "pull_requests": {
-                        "since": "2022-06-22T13:32:42Z"
-                    },
-                    "issue_events": {
-                        "since": "2022-06-22T13:32:42Z"
-                    }
-                },
-                "singer-io/test-repo": {
-                    "issues": {
+                    "singer-io/test-repo": {
                         "since": "2022-07-13T09:21:19Z"
                     },
-                    "pull_requests": {
+                },
+                "pull_requests": {
+                    "singer-io/singer-python": {
+                        "since": "2022-06-22T13:32:42Z"
+                    },
+                    "singer-io/test-repo": {
                         "since": "2022-06-30T05:33:24Z"
-                    }
+                    },
+                },
+                "issue_events": {
+                    "singer-io/singer-python": {
+                        "since": "2022-06-22T13:32:42Z"
+                    },
                 }
             }
         }
@@ -98,23 +100,18 @@ class TestGithubInterruptedSync(TestGithubBase):
             # (This is what the value would have been without an interruption and proves resuming succeeds)
             self.assertDictEqual(final_state, full_sync_state)
 
-        for repository in self.get_properties().get("repository").split():
-            with self.subTest(repository=repository):
-            
-                full_sync_bookmark = full_sync_state["bookmarks"][repository]
-                final_bookmark = final_state["bookmarks"][repository]
-                interrupted_repo_bookmark = interrupted_state["bookmarks"][repository]
-                
-                for stream in streams_to_test:
-                    with self.subTest(stream=stream):
-                        
+        for stream in streams_to_test:
+            with self.subTest(stream=stream):
+                for repository in self.get_properties().get("repository").split():
+                    with self.subTest(repository=repository):
+
                         # Expected values
                         expected_replication_method = expected_replication_methods[stream]
                         expected_primary_keys = list(self.expected_primary_keys()[stream])
 
                         # Gather results
                         full_records = [message['data'] for message in
-                                        full_sync_records.get(stream, {}).get('messages', []) 
+                                        full_sync_records.get(stream, {}).get('messages', [])
                                         if message['data'][repo_key] == repository]
                         full_record_count = len(full_records)
 
@@ -124,11 +121,15 @@ class TestGithubInterruptedSync(TestGithubBase):
                         interrupted_record_count = len(interrupted_records)
 
                         if expected_replication_method == self.INCREMENTAL:
+                            full_sync_bookmark = full_sync_state["bookmarks"][stream]
+                            final_bookmark = final_state["bookmarks"][stream]
+                            interrupted_repo_bookmark = interrupted_state["bookmarks"][stream]
+
                             expected_replication_key = next(iter(expected_replication_keys[stream]))
-                                
-                            if stream in interrupted_repo_bookmark.keys():
-                                interrupted_bookmark =  self.dt_to_ts(interrupted_repo_bookmark[stream]["since"], self.BOOKMARK_FORMAT)
-                                
+
+                            if repository in interrupted_repo_bookmark.keys():
+                                interrupted_bookmark =  self.dt_to_ts(interrupted_repo_bookmark[repository]["since"], self.BOOKMARK_FORMAT)
+
                                 if stream == interrupted_state['currently_syncing'] and repository == interrupted_state['currently_syncing_repo']:
 
                                     for record in interrupted_records:
@@ -147,7 +148,7 @@ class TestGithubInterruptedSync(TestGithubBase):
 
                                         if (rec_time >= interrupted_bookmark):
                                             full_records_after_interrupted_bookmark += 1
-                                            
+
                                     self.assertEqual(full_records_after_interrupted_bookmark, len(interrupted_records), \
                                                         msg="Expected {} records in each sync".format(full_records_after_interrupted_bookmark))
                                 else:
@@ -163,8 +164,8 @@ class TestGithubInterruptedSync(TestGithubBase):
                                         self.assertIn(record, interrupted_records, msg='Record missing from resuming sync.' )
                         else:
                             # Verify full table streams do not save bookmarked values at the conclusion of a successful sync
-                            self.assertNotIn(stream, full_sync_bookmark.keys())
-                            self.assertNotIn(stream, final_bookmark.keys())
+                            self.assertNotIn(stream, full_sync_state["bookmarks"].keys())
+                            self.assertNotIn(stream, final_state["bookmarks"].keys())
 
                             # Verify first and second sync have the same records
                             self.assertEqual(full_record_count, interrupted_record_count)

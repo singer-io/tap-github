@@ -29,7 +29,7 @@ class TestSyncEndpoints(unittest.TestCase):
                                                            {"id": 2, "created_at": "2019-01-04T00:00:00Z"}]),
                                               MockResponse([{"id": 3, "created_at": "2019-01-03T00:00:00Z"},
                                                            {"id": 4, "created_at": "2019-01-02T00:00:00Z"}])]
-        expected_state = {'bookmarks': {'tap-github': {'events': {'since': '2019-01-04T00:00:00Z'}}}}
+        expected_state = {'bookmarks': {'events': {'tap-github': {'since': '2019-01-04T00:00:00Z'}}}}
         test_client = GithubClient(self.config)
         final_state = test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "2018-01-02T00:00:00Z", ["events"], ['events'])
         
@@ -52,9 +52,9 @@ class TestSyncEndpoints(unittest.TestCase):
                                                            {"id": 2, "created_at": "2019-01-04T00:00:00Z"}]),
                                               MockResponse([{"id": 3, "created_at": "2019-01-03T00:00:00Z"},
                                                            {"id": 4, "created_at": "2019-01-02T00:00:00Z"}])]
-        mock_state = {'bookmarks': {'tap-github': {'events': {'since': '2019-01-02T00:00:00Z'}}}}
+        mock_state = {'bookmarks': {'events': {'tap-github': {'since': '2019-01-02T00:00:00Z'}}}}
         
-        expected_state = {'bookmarks': {'tap-github': {'events': {'since': '2019-01-04T00:00:00Z'}}}}
+        expected_state = {'bookmarks': {'events': {'tap-github': {'since': '2019-01-04T00:00:00Z'}}}}
         test_client = GithubClient(self.config)
         final_state = test_stream.sync_endpoint(test_client, mock_state, self.catalog, "tap-github", "2018-01-02T00:00:00Z", ["events"], ['events'])
         

@@ -65,18 +65,9 @@ def get_ordered_repos(state, repositories):
 
 def translate_state(state, catalog, repositories):
     '''
-    This tap used to only support a single repository, in which case the
-    the state took the shape of:
-    {
-      "bookmarks": {
-        "commits": {
-          "since": "2018-11-14T13:21:20.700360Z"
-        }
-      }
-    }
-    The tap now supports multiple repos, so this function should be called
-    at the beginning of each run to ensure the state is translated to the
-    new format:
+    The tap supports multiple repositories. Previously, the state format
+    for bookmarks included stream keys nested under each repository, as
+    shown below:
     {
       "bookmarks": {
         "singer-io/tap-adwords": {
@@ -91,41 +82,55 @@ def translate_state(state, catalog, repositories):
         }
       }
     }
+
+    The stream keys must be the second key after bookmarks in order for
+    standardized table-level resets to function correctly. This function
+    should be called at the start of each run to ensure that the state
+    is properly converted to the new format:
+    {
+      "bookmarks": {
+        "commits" : {
+          "singer-io/tap-adwords": {
+            "since": "2018-11-14T13:21:20.700360Z"
+          },
+          "singer-io/tap-salesforce": {
+            "since": "2018-11-14T13:21:20.700360Z"
+          }
+        },
+        "issues" : {
+          "singer-io/tap-adwords": {
+            "since": "2018-11-14T13:21:20.700360Z"
+          },
+          "singer-io/tap-salesforce": {
+            "since": "2018-11-14T13:21:20.700360Z"
+          }
+        }
+      }
+    }
+
     '''
     nested_dict = lambda: collections.defaultdict(nested_dict)
     new_state = nested_dict()
 
-    # Collect keys(repo_name for update state or stream_name for older state) from state available in the `bookmarks``
+    # Collect keys(stream_name for update state or repo_name for older state) from state available in the `bookmarks``
     previous_state_keys = state.get('bookmarks', {}).keys()
     # Collect stream names from the catalog
     stream_names = [stream['tap_stream_id'] for stream in catalog['streams']]
 
     for key in previous_state_keys:
         # Loop through each key of `bookmarks` available in the previous state.
-
-        # Case 1:
-        # Older connections `bookmarks` contain stream names so check if it is the stream name or not.
-        # If the previous state's key is found in the stream name list then continue to check other keys. Because we want
-        # to migrate each stream's bookmark into the repo name as mentioned below:
-        # Example: {`bookmarks`: {`stream_a`: `bookmark_a`}} to {`bookmarks`: {`repo_a`: {`stream_a`: `bookmark_a`}}}
-
-        # Case 2:
-        # Check if the key is available in the list of currently selected repo's list or not. Newer format `bookmarks` contain repo names.
-        # Return the state if the previous state's key is not found in the repo name list or stream name list.
-
-        # If the state contains a bookmark for `repo_a` and `repo_b` and the user deselects these both repos and adds another repo
-        # then in that case this function was returning an empty state. Now this change will return the existing state instead of the empty state.
-        if key not in stream_names and key not in repositories:
-            # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.
-            return state
+        for inner_key in state['bookmarks'][key].keys():
+            if inner_key not in stream_names and inner_key not in repositories:
+                # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.
+                return state
 
     for stream in catalog['streams']:
         stream_name = stream['tap_stream_id']
         for repo in repositories:
-            if bookmarks.get_bookmark(state, repo, stream_name):
+            if bookmarks.get_bookmark(state, stream_name, repo):
                 return state
-            if bookmarks.get_bookmark(state, stream_name, 'since'):
-                new_state['bookmarks'][repo][stream_name]['since'] = bookmarks.get_bookmark(state, stream_name, 'since')
+            if bookmarks.get_bookmark(state, repo, stream_name):
+                new_state['bookmarks'][stream_name][repo] = bookmarks.get_bookmark(state, repo, stream_name)
 
     return new_state
 

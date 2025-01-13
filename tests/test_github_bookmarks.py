@@ -1,6 +1,7 @@
 import datetime
 import dateutil.parser
 import pytz
+import copy
 
 from tap_tester import runner, menagerie, connections
 
@@ -27,21 +28,23 @@ class TestGithubBookmarks(TestGithubBase):
         timedelta_by_stream["commits"] = [7, 0, 0]
 
         repo = self.get_properties().get('repository')
+        #stream_to_calculated_state = {repo: {stream: "" for stream in current_state['bookmarks'][repo].keys()}}
+        stream_to_calculated_state = copy.deepcopy(current_state)['bookmarks']
 
-        stream_to_calculated_state = {repo: {stream: "" for stream in current_state['bookmarks'][repo].keys()}}
-        for stream, state in current_state['bookmarks'][repo].items():
-            state_key, state_value = next(iter(state.keys())), next(iter(state.values()))
-            state_as_datetime = dateutil.parser.parse(state_value)
+        for stream in current_state['bookmarks'].keys():
+            for repo, state in current_state['bookmarks'][stream].items():
+                state_key, state_value = next(iter(state.keys())), next(iter(state.values()))
+                state_as_datetime = dateutil.parser.parse(state_value)
 
-            days, hours, minutes = timedelta_by_stream[stream]
+                days, hours, minutes = timedelta_by_stream[stream]
 
-            start_date_as_datetime = dateutil.parser.parse(start_date)
-            calculated_state_as_datetime = start_date_as_datetime + datetime.timedelta(days=days, hours=hours, minutes=minutes)
+                start_date_as_datetime = dateutil.parser.parse(start_date)
+                calculated_state_as_datetime = start_date_as_datetime + datetime.timedelta(days=days, hours=hours, minutes=minutes)
 
-            state_format = '%Y-%m-%dT%H:%M:%SZ'
-            calculated_state_formatted = datetime.datetime.strftime(calculated_state_as_datetime, state_format)
+                state_format = '%Y-%m-%dT%H:%M:%SZ'
+                calculated_state_formatted = datetime.datetime.strftime(calculated_state_as_datetime, state_format)
 
-            stream_to_calculated_state[repo][stream] = {state_key: calculated_state_formatted}
+                stream_to_calculated_state[stream][repo] = {state_key: calculated_state_formatted}
 
         return stream_to_calculated_state
 
@@ -69,7 +72,6 @@ class TestGithubBookmarks(TestGithubBase):
         ##########################################################################
         ### First Sync
         ##########################################################################
-
         conn_id = connections.ensure_connection(self, original_properties=True)
 
         # Run in check mode
@@ -94,8 +96,8 @@ class TestGithubBookmarks(TestGithubBase):
                                                             first_sync_records,
                                                             expected_replication_keys,
                                                             first_sync_start_date)
-        for repo, new_state in simulated_states.items():
-            new_states['bookmarks'][repo] = new_state
+        for stream, new_state in simulated_states.items():
+            new_states['bookmarks'][stream] = new_state
         menagerie.set_state(conn_id, new_states)
 
         ##########################################################################
@@ -125,20 +127,21 @@ class TestGithubBookmarks(TestGithubBase):
                 second_sync_messages = [record.get('data') for record in
                                         second_sync_records.get(stream, {'messages': []}).get('messages')
                                         if record.get('action') == 'upsert']
-                first_bookmark_key_value = first_sync_bookmarks.get('bookmarks', {}).get(repo, {stream: None}).get(stream)
-                second_bookmark_key_value = second_sync_bookmarks.get('bookmarks', {}).get(repo, {stream: None}).get(stream)
+                first_bookmark_key_value = first_sync_bookmarks.get('bookmarks', {}).get(stream, {repo: None}).get(repo)
+                second_bookmark_key_value = second_sync_bookmarks.get('bookmarks', {}).get(stream, {repo: None}).get(repo)
 
 
                 if expected_replication_method == self.INCREMENTAL:
                     # Collect information specific to incremental streams from syncs 1 & 2
                     replication_key = next(iter(expected_replication_keys[stream]))
+
                     first_bookmark_value = first_bookmark_key_value.get('since')
                     second_bookmark_value = second_bookmark_key_value.get('since')
 
                     first_bookmark_value_ts = self.dt_to_ts(first_bookmark_value, self.BOOKMARK_FORMAT)
                     second_bookmark_value_ts = self.dt_to_ts(second_bookmark_value, self.BOOKMARK_FORMAT)
 
-                    simulated_bookmark_value = self.dt_to_ts(new_states['bookmarks'][repo][stream]['since'], self.BOOKMARK_FORMAT)
+                    simulated_bookmark_value = self.dt_to_ts(new_states['bookmarks'][stream][repo]['since'], self.BOOKMARK_FORMAT)
 
                     # Verify the first sync sets a bookmark of the expected form
                     self.assertIsNotNone(first_bookmark_key_value)
@@ -159,7 +162,6 @@ class TestGithubBookmarks(TestGithubBase):
                     for record in first_sync_messages:
                         # Verify the first sync bookmark value is the max replication key value for a given stream
                         replication_key_value = self.dt_to_ts(record.get(replication_key), replication_key_format)
-
                         self.assertLessEqual(
                             replication_key_value, first_bookmark_value_ts,
                             msg="First sync bookmark was set incorrectly, a record with a greater replication-key value was synced."

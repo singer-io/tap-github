@@ -37,7 +37,7 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
         expected_replication_methods = self.expected_replication_method()
         expected_replication_keys = self.expected_bookmark_keys()
         repo_key = "_sdc_repository"
-        
+
         start_date = self.dt_to_ts(self.get_properties().get("start_date"), self.BOOKMARK_FORMAT)
 
         # Run a discovery job
@@ -54,14 +54,14 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
         # Acquire records from target output
         full_sync_records = runner.get_records_from_target_output()
         full_sync_state = menagerie.get_state(conn_id)
-        
+
         # Create new connection for another sync
         conn_id_2 = connections.ensure_connection(self)
 
         # Add a stream between syncs
         streams_to_test = streams_to_test - {removed_stream}
         found_catalogs = self.run_and_verify_check_mode(conn_id_2)
-        
+
         test_catalogs = [catalog for catalog in found_catalogs
                            if catalog.get('stream_name') in streams_to_test]
 
@@ -75,23 +75,25 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
             "currently_syncing": "pull_requests",
             "currently_syncing_repo": "singer-io/test-repo",
             "bookmarks": {
-                "singer-io/singer-python": {
-                    "issues": {
+                "issues": {
+                    "singer-io/singer-python": {
                         "since": "2022-06-22T13:32:42Z"
                     },
-                    "pull_requests": {
-                        "since": "2022-06-22T13:32:42Z"
-                    },
-                    "issue_events": {
-                        "since": "2022-06-22T13:32:42Z"
+                    "singer-io/test-repo": {
+                        "since": "2022-07-14T07:47:21Z"
                     }
                 },
-                "singer-io/test-repo": {
-                    "issues": {
-                        "since": "2022-07-14T07:47:21Z"
+                "pull_requests": {
+                    "singer-io/singer-python": {
+                        "since": "2022-06-22T13:32:42Z"
                     },
-                    "pull_requests": {
+                    "singer-io/test-repo": {
                         "since": "2022-07-13T07:47:21Z"
+                    }
+                },
+                "issue_events": {
+                    "singer-io/singer-python": {
+                        "since": "2022-06-22T13:32:42Z"
                     }
                 }
             }
@@ -116,23 +118,19 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
             # Verify bookmarks are saved
             self.assertIsNotNone(final_state.get('bookmarks'))
 
-        for repository in self.get_properties().get("repository").split():
-            with self.subTest(repository=repository):
-            
-                full_sync_bookmark = full_sync_state["bookmarks"][repository]
-                final_bookmark = final_state["bookmarks"][repository]
-                interrupted_repo_bookmark = interrupted_state["bookmarks"][repository]
-                
-                for stream in list(streams_to_test) + [removed_stream]:
-                    with self.subTest(stream=stream):
-                        
+        for stream in list(streams_to_test) + [removed_stream]:
+            with self.subTest(stream=stream):
+
+                for repository in self.get_properties().get("repository").split():
+                    with self.subTest(repository=repository):
+
                         # Expected values
                         expected_replication_method = expected_replication_methods[stream]
                         expected_primary_keys = list(self.expected_primary_keys()[stream])
 
                         # Gather results
                         full_records = [message['data'] for message in
-                                        full_sync_records.get(stream, {}).get('messages', []) 
+                                        full_sync_records.get(stream, {}).get('messages', [])
                                         if message['data'][repo_key] == repository]
                         full_record_count = len(full_records)
 
@@ -145,12 +143,16 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
                             self.assertNotIn(stream, interrupted_sync_records.keys())
 
                         if expected_replication_method == self.INCREMENTAL:
+                            full_sync_bookmark = full_sync_state["bookmarks"][stream]
+
                             expected_replication_key = next(iter(expected_replication_keys[stream]))
-                            full_sync_stream_bookmark = self.dt_to_ts(full_sync_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
-                                
-                            if stream in interrupted_repo_bookmark.keys():
-                                interrupted_bookmark = self.dt_to_ts(interrupted_repo_bookmark[stream]["since"], self.BOOKMARK_FORMAT)
-                                final_sync_stream_bookmark = self.dt_to_ts(final_bookmark.get(stream, {}).get("since"), self.BOOKMARK_FORMAT)
+                            full_sync_stream_bookmark = self.dt_to_ts(full_sync_bookmark.get(repository, {}).get("since"), self.BOOKMARK_FORMAT)
+                            interrupted_repo_bookmark = interrupted_state["bookmarks"][stream]
+
+                            if repository in interrupted_repo_bookmark.keys():
+                                final_bookmark = final_state["bookmarks"][stream]
+                                interrupted_bookmark = self.dt_to_ts(interrupted_repo_bookmark[repository]["since"], self.BOOKMARK_FORMAT)
+                                final_sync_stream_bookmark = self.dt_to_ts(final_bookmark.get(repository, {}).get("since"), self.BOOKMARK_FORMAT)
 
                                 if stream != removed_stream:
 
@@ -187,8 +189,8 @@ class TestGithubInterruptedSyncRemoveStream(TestGithubBase):
 
                         else:
                             # Verify full table streams do not save bookmarked values after a successful sync
-                            self.assertNotIn(stream, full_sync_bookmark.keys())
-                            self.assertNotIn(stream, final_bookmark.keys())
+                            self.assertNotIn(stream, full_sync_state["bookmarks"].keys())
+                            self.assertNotIn(stream, final_state["bookmarks"].keys())
 
                             # Verify first and second sync have the same records
                             self.assertEqual(full_record_count, interrupted_record_count)

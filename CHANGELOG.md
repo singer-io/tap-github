@@ -1,5 +1,8 @@
 # Changelog
 
+# 3.1.0
+  * Transform state to allow stream level resets [#212](https://github.com/singer-io/tap-github/pull/212)
+
 # 3.0.1
   * Remove URI format of `/payload/issue/labels/url` field from `events` stream [#205](https://github.com/singer-io/tap-github/pull/205)
 

@@ -18,7 +18,7 @@ class TestGetSchema(unittest.TestCase):
         ]
         expected_schema = {"tap_stream_id": "comments"}
 
-        # Verify returned schema is same as exected schema 
+        # Verify returned schema is same as exected schema
         self.assertEqual(get_schema(catalog, "comments"), expected_schema)
 
 
@@ -29,26 +29,28 @@ class TestGetBookmark(unittest.TestCase):
 
     test_stream = Comments()
 
-    def test_with_out_repo_path(self):
+    def test_without_stream_key(self):
         """
         Test if the state does not contain a repo path
         """
         state = {
             "bookmarks": {
-                "projects": {"since": "2022-01-01T00:00:00Z"}
+                "org/test-repo": {
+                    "projects" : {"since": "2022-01-01T00:00:00Z"}
+                }
             }
         }
         returned_bookmark = get_bookmark(state, "org/test-repo", "projects", "since", "2021-01-01T00:00:00Z")
         self.assertEqual(returned_bookmark, "2021-01-01T00:00:00Z")
 
-    def test_with_repo_path(self):
+    def test_with_streams_key(self):
         """
         Test if the state does contains a repo path
         """
         state = {
             "bookmarks": {
-                "org/test-repo": {
-                    "projects": {"since": "2022-01-01T00:00:00Z"}
+                "projects": {
+                    "org/test-repo": {"since": "2022-01-01T00:00:00Z"}
                 }
             }
         }
@@ -83,15 +85,13 @@ class GetMinBookmark(unittest.TestCase):
     start_date = "2020-04-01T00:00:00Z"
     state = {
         "bookmarks": {
-            "org/test-repo": {
-                "projects": {"since": "2022-03-29T00:00:00Z"},
-                "project_columns": {"since": "2022-03-01T00:00:00Z"},
-                "project_cards": {"since": "2022-03-14T00:00:00Z"},
-                "pull_requests": {"since": "2022-04-01T00:00:00Z"},
-                "review_comments": {"since": "2022-03-01T00:00:00Z"},
-                "pr_commits": {"since": "2022-02-01T00:00:00Z"},
-                "reviews": {"since": "2022-05-01T00:00:00Z"}
-            }
+            "projects": {"org/test-repo" : {"since": "2022-03-29T00:00:00Z"}},
+            "project_columns": {"org/test-repo" : {"since": "2022-03-01T00:00:00Z"}},
+            "project_cards": {"org/test-repo" : {"since": "2022-03-14T00:00:00Z"}},
+            "pull_requests": {"org/test-repo" : {"since": "2022-04-01T00:00:00Z"}},
+            "review_comments": {"org/test-repo" : {"since": "2022-03-01T00:00:00Z"}},
+            "pr_commits": {"org/test-repo" : {"since": "2022-02-01T00:00:00Z"}},
+            "reviews": {"org/test-repo" : {"since": "2022-05-01T00:00:00Z"}}
         }
     }
 
@@ -103,7 +103,7 @@ class GetMinBookmark(unittest.TestCase):
     ])
     def test_multiple_children(self, name, stream_class, stream_name, stream_to_sync, current_date, expected_bookmark):
         """
-        Test that `get_min_bookmark` method returns the minimum bookmark from the parent and its corresponding child bookmarks. 
+        Test that `get_min_bookmark` method returns the minimum bookmark from the parent and its corresponding child bookmarks.
         """
         test_stream = stream_class()
         bookmark = test_stream.get_min_bookmark(stream_name, stream_to_sync,
@@ -121,15 +121,13 @@ class TestWriteBookmark(unittest.TestCase):
 
     state = {
         "bookmarks": {
-            "org/test-repo": {
-                "projects": {"since": "2021-03-29T00:00:00Z"},
-                "project_columns": {"since": "2021-03-01T00:00:00Z"},
-                "project_cards": {"since": "2021-03-14T00:00:00Z"},
-                "pull_requests": {"since": "2021-04-01T00:00:00Z"},
-                "review_comments": {"since": "2021-03-01T00:00:00Z"},
-                "pr_commits": {"since": "2021-02-01T00:00:00Z"},
-                "reviews": {"since": "2021-05-01T00:00:00Z"}
-            }
+            "projects": {"org/test-repo" : {"since": "2021-03-29T00:00:00Z"}},
+            "project_columns": {"org/test-repo" : {"since": "2021-03-01T00:00:00Z"}},
+            "project_cards": {"org/test-repo" : {"since": "2021-03-14T00:00:00Z"}},
+            "pull_requests": {"org/test-repo" : {"since": "2021-04-01T00:00:00Z"}},
+            "review_comments": {"org/test-repo" : {"since": "2021-03-01T00:00:00Z"}},
+            "pr_commits": {"org/test-repo" : {"since": "2021-02-01T00:00:00Z"}},
+            "reviews": {"org/test-repo" : {"since": "2021-05-01T00:00:00Z"}}
         }
     }
 
@@ -142,12 +140,12 @@ class TestWriteBookmark(unittest.TestCase):
                                      "2022-04-01T00:00:00Z", "org/test-repo", self.state)
 
         expected_calls = [
-            mock.call(mock.ANY, mock.ANY, "pull_requests", {"since": "2022-04-01T00:00:00Z"}),
-            mock.call(mock.ANY, mock.ANY, "pr_commits", {"since": "2022-04-01T00:00:00Z"}),
-            mock.call(mock.ANY, mock.ANY, "review_comments", {"since": "2022-04-01T00:00:00Z"}),
+            mock.call(mock.ANY, "pull_requests", mock.ANY, {"since": "2022-04-01T00:00:00Z"}),
+            mock.call(mock.ANY, "pr_commits", mock.ANY, {"since": "2022-04-01T00:00:00Z"}),
+            mock.call(mock.ANY, "review_comments", mock.ANY, {"since": "2022-04-01T00:00:00Z"}),
         ]
 
-        # Verify `write_bookmark` is called for all selected streams 
+        # Verify `write_bookmark` is called for all selected streams
         self.assertEqual(mock_write_bookmark.call_count, 3)
 
         self.assertIn(mock_write_bookmark.mock_calls[0], expected_calls)
@@ -162,10 +160,10 @@ class TestWriteBookmark(unittest.TestCase):
         test_stream.write_bookmarks("projects", ["project_cards"],
                                      "2022-04-01T00:00:00Z", "org/test-repo", self.state)
 
-        # Verify `write_bookmark` is called for all selected streams 
+        # Verify `write_bookmark` is called for all selected streams
         self.assertEqual(mock_write_bookmark.call_count, 1)
-        mock_write_bookmark.assert_called_with(mock.ANY, mock.ANY, 
-                                               "project_cards", {"since": "2022-04-01T00:00:00Z"})
+        mock_write_bookmark.assert_called_with(mock.ANY, "project_cards",
+                                               mock.ANY, {"since": "2022-04-01T00:00:00Z"})
 
 
 class TestGetChildUrl(unittest.TestCase):
