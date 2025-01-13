@@ -64,6 +64,31 @@ class TestTranslateState(unittest.TestCase):
         final_state = translate_state(older_format_state, self.catalog, ["org/test-repo", "org/test-repo2"])
         self.assertEqual(expected_state, dict(final_state))
 
+    def test_older_format_state_without_repo_name_multiple_streams(self):
+        """Verify that `translate_state` migrate each stream's bookmark into the repo name"""
+        older_format_state = {
+            "bookmarks": {
+                "org/test-repo" : {
+                    "comments": {"since": "2019-01-01T00:00:00Z"},
+                    "issue_events": {"updated_at": "2019-01-01T00:00:00Z"}
+                },
+                "org/test-repo2" : {
+                    "comments": {"since": "2019-01-01T00:00:00Z"},
+                    "issue_events": {"updated_at": "2019-01-01T00:00:00Z"}
+                }
+            }
+        }
+        expected_state =  {
+            "bookmarks": {
+                "comments": {"org/test-repo" : {"since": "2019-01-01T00:00:00Z"},
+                             "org/test-repo2" : {"since": "2019-01-01T00:00:00Z"}},
+                "issue_events": {"org/test-repo": {"updated_at": "2019-01-01T00:00:00Z"},
+                                 "org/test-repo2": {"updated_at": "2019-01-01T00:00:00Z"}}
+            }
+        }
+        final_state = translate_state(older_format_state, self.catalog, ["org/test-repo", "org/test-repo2"])
+        self.assertEqual(expected_state, final_state)
+
     def test_with_empty_state(self):
         """Verify for empty state"""
 
@@ -83,6 +108,23 @@ class TestTranslateState(unittest.TestCase):
         }
         final_state = translate_state(newer_format_state, self.catalog, ["org/test-repo3", "org/test-repo4"])
         self.assertEqual(newer_format_state, dict(final_state))
+
+    def test_state_with_no_previous_repo_name_newer_format_bookmark_multiple_streams(self):
+        """Verify that `translate_state` return the existing state if all existing repo unselected in the current sync."""
+        newer_format_state = {
+            "bookmarks": {
+                "comments" : {
+                    "org/test-repo": {"since": "2019-01-01T00:00:00Z"},
+                    "org/test-repo2": {"since": "2019-01-01T00:00:00Z"}
+                },
+                "issue_events" : {
+                    "org/test-repo": {"updated_at": "2019-01-01T00:00:00Z"},
+                    "org/test-repo2": {"updated_at": "2019-01-01T00:00:00Z"}
+                },
+            }
+        }
+        final_state = translate_state(newer_format_state, self.catalog, ["org/test-repo3", "org/test-repo4"])
+        self.assertEqual(newer_format_state, final_state)
 
     def test_state_with_no_previous_repo_name_old_format_bookmark(self):
         """Verify that `translate_state` migrate each stream's bookmark into the repo name"""
