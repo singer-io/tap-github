@@ -222,7 +222,7 @@ class GithubClient:
                 resp._content = b'{}'  # pylint: disable=protected-access
             return resp
 
-    def authed_get_all_pages(self, source, url, headers={}, stream="", should_skip_404 = True, skip_pagination=True):
+    def authed_get_all_pages(self, source, url, headers={}, stream="", should_skip_404 = True, skip_pagination=False):
         """
         Fetch all pages of records and return them.
         """

@@ -70,7 +70,7 @@ class Stream:
     use_repository = False
     headers = {'Accept': '*/*'}
     parent = None
-    skip_pagination = True
+    skip_pagination = False
 
     def build_url(self, base_url, repo_path, bookmark):
         """
@@ -782,7 +782,7 @@ class Repos(FullTableStream):
     path = "orgs/{}/repos?per_page=100"
     has_children = True
     children= ["repo_forked_parents"]
-    pk_child_fields = ['_sdc_repository']
+    pk_child_fields = ['id']
 
     def get_child_records(self,
                           client,
@@ -811,20 +811,20 @@ class RepoForkedParents(FullTableStream):
     '''
     tap_stream_id = "repo_forked_parents"
     replication_method = "FULL_TABLE"
-    key_properties = ["_sdc_repository"]
+    key_properties = ["id"]
     use_organization = True
     path = "repos/{}/{}"
     parent = 'repos'
     id_keys = ['name', 'default_branch']
     has_children = True
     children = ["repo_forked_compares"]
-    pk_child_fields = ['_sdc_repository']
+    pk_child_fields = ['id']
 
     def add_fields_at_1st_level(self, record, parent_record = None):
         """
         Add fields in the record explicitly at the 1st level of JSON.
         """
-        record['fork_name'] = record['parent']['owner']['login']
+        record['fork_name'] = record['parent']['name']
         record['fork_owner_login'] = record['parent']['owner']['login']
         record['fork_default_branch'] = record['parent']['default_branch']
 
@@ -860,12 +860,12 @@ class RepoForkedCompares(FullTableStream):
     '''
     tap_stream_id = "repo_forked_compares"
     replication_method = "FULL_TABLE"
-    key_properties = ["_sdc_repository"]
+    key_properties = ["full_name"]
     use_organization = True
     path = "repos/{}/{}/compare/{}...{}:{}"
     parent = 'repo_forked_parents'
     id_keys = ['fork_owner_login', 'fork_default_branch']
-    skip_pagination = False  # No pagination required for this stream.
+    skip_pagination = True  # No pagination required for this stream.
 
     def add_fields_at_1st_level(self, record, parent_record = None):
         """
