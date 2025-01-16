@@ -200,7 +200,7 @@ class Stream:
 
                             singer.write_record(child_object.tap_stream_id, rec, time_extracted=extraction_time)
 
-                    # Loop thru each child and nested child in the parent and fetch all the child records.
+                    # Loop through each child and nested child in the parent and fetch all the child records.
                     for nested_child in child_object.children:
                         if nested_child in stream_to_sync:
                             # Collect id of child record to pass in the API of its sub-child.
