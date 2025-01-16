@@ -73,7 +73,7 @@ class TestTimeoutValue(unittest.TestCase):
         # get the timeout value for assertion
         timeout = test_client.get_request_timeout()
         # function call
-        test_client.authed_get("test_source", "")
+        test_client.authed_get_single_page("test_source", "")
 
         # verify that we got expected timeout value
         self.assertEqual(expected_value, timeout)
@@ -107,7 +107,7 @@ class TestTimeoutAndConnnectionErrorBackoff(unittest.TestCase):
         test_client = GithubClient(mock_config)
 
         with self.assertRaises(error_class):
-            test_client.authed_get("test_source", "")
+            test_client.authed_get_single_page("test_source", "")
 
         # verify that we backoff 5 times
         self.assertEqual(5, mocked_request.call_count)

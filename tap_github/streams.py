@@ -70,7 +70,7 @@ class Stream:
     use_repository = False
     headers = {'Accept': '*/*'}
     parent = None
-    skip_pagination = False
+    single_page = False
 
     def build_url(self, base_url, repo_path, bookmark):
         """
@@ -156,11 +156,11 @@ class Stream:
         stream_catalog = get_schema(catalog, child_object.tap_stream_id)
 
         with metrics.record_counter(child_object.tap_stream_id) as counter:
-            for response in client.authed_get_all_pages(
+            for response in client.authed_get(
                 child_object.tap_stream_id,
                 child_full_url,
                 stream = child_object.tap_stream_id,
-                skip_pagination = child_object.skip_pagination
+                single_page = child_object.single_page
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -238,12 +238,12 @@ class FullTableStream(Stream):
         stream_catalog = get_schema(catalog, self.tap_stream_id)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
-            for response in client.authed_get_all_pages(
+            for response in client.authed_get(
                     self.tap_stream_id,
                     full_url,
                     self.headers,
                     stream = self.tap_stream_id,
-                    skip_pagination = self.skip_pagination
+                    single_page = self.single_page
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -310,12 +310,12 @@ class IncrementalStream(Stream):
         stream_catalog = get_schema(catalog, self.tap_stream_id)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
-            for response in client.authed_get_all_pages(
+            for response in client.authed_get(
                     self.tap_stream_id,
                     full_url,
                     self.headers,
                     stream = self.tap_stream_id,
-                    skip_pagination = self.skip_pagination
+                    single_page = self.single_page
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -398,11 +398,11 @@ class IncrementalOrderedStream(Stream):
         parent_bookmark_value = bookmark_value
         record_counter = 0
         with metrics.record_counter(self.tap_stream_id) as counter:
-            for response in client.authed_get_all_pages(
+            for response in client.authed_get(
                     self.tap_stream_id,
                     full_url,
                     stream = self.tap_stream_id,
-                    skip_pagination = self.skip_pagination
+                    single_page = self.single_page
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -865,7 +865,7 @@ class RepoForkedCompares(FullTableStream):
     path = "repos/{}/{}/compare/{}...{}:{}"
     parent = 'repo_forked_parents'
     id_keys = ['fork_owner_login', 'fork_default_branch']
-    skip_pagination = True  # No pagination required for this stream.
+    single_page = True  # No pagination required for this stream.
 
     def add_fields_at_1st_level(self, record, parent_record = None):
         """

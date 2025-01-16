@@ -206,7 +206,7 @@ class GithubClient:
     @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError, TooManyRequests),
                           max_tries=5, factor=2)
     @backoff.on_exception(backoff.expo, (BadCredentialsException, ), max_tries=3, factor=2)
-    def authed_get(self, source, url, headers={}, stream="", should_skip_404 = True):
+    def authed_get_single_page(self, source, url, headers={}, stream="", should_skip_404 = True):
         """
         Call rest API and return the response in case of status code 200.
         """
@@ -222,18 +222,22 @@ class GithubClient:
                 resp._content = b'{}'  # pylint: disable=protected-access
             return resp
 
-    def authed_get_all_pages(self, source, url, headers={}, stream="", should_skip_404 = True, skip_pagination=False):
+    def authed_get_all_pages(self, source, url, headers={}, stream="", should_skip_404 = True):
         """
         Fetch all pages of records and return them.
         """
         next_url = self.prepare_url(url)
         while next_url:
-            response = self.authed_get(source, next_url, headers, stream, should_skip_404)
+            response = self.authed_get_single_page(source, next_url, headers, stream, should_skip_404)
             yield response
 
-            if skip_pagination:
-                break
             next_url = response.links.get('next', {}).get('url', None)
+
+    def authed_get(self, source, url, headers={}, stream="", should_skip_404=True, single_page=False):
+        if single_page:
+            yield self.authed_get_single_page(source, url, headers, stream, should_skip_404)
+        else:
+            yield from self.authed_get_all_pages(source, url, headers, stream, should_skip_404)
 
     def prepare_url(self, url):
         """
@@ -249,7 +253,7 @@ class GithubClient:
         Call rest API to verify that the user has sufficient permissions to access this repository.
         """
         try:
-            self.authed_get("verifying repository access", url_for_repo, should_skip_404=False)
+            self.authed_get_single_page("verifying repository access", url_for_repo, should_skip_404=False)
         except NotFoundException:
             # Throwing user-friendly error message as it checks token access
             message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
