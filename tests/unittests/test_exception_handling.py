@@ -83,7 +83,7 @@ class TestExceptionHandling(unittest.TestCase):
         expected_error_message = "HTTP-error-code: {}, Error: {}".format(erro_code, error_msg)
         
         with self.assertRaises(error_class) as e:
-            test_client.authed_get("", "")
+            test_client.authed_get_single_page("", "")
 
         # Verifying the message formed for the custom exception
         self.assertEqual(str(e.exception), expected_error_message)
@@ -101,7 +101,7 @@ class TestExceptionHandling(unittest.TestCase):
         expected_message = "HTTP-error-code: 404, Error: The resource you have specified cannot be found. Alternatively the access_token is not valid for the resource. Please refer '{}' for more details.".format(json.get("documentation_url"))
         test_client = GithubClient(self.config)
 
-        test_client.authed_get("", "")
+        test_client.authed_get_single_page("", "")
 
         # Verifying the message formed for the custom exception
         self.assertEqual(mock_logger.mock_calls[0], mock.call(expected_message))

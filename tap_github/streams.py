@@ -2,6 +2,8 @@ from datetime import datetime
 import singer
 from singer import (metrics, bookmarks, metadata)
 
+from tap_github.client import UnprocessableError
+
 LOGGER = singer.get_logger()
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
@@ -68,6 +70,7 @@ class Stream:
     use_repository = False
     headers = {'Accept': '*/*'}
     parent = None
+    single_page = False
 
     def build_url(self, base_url, repo_path, bookmark):
         """
@@ -153,10 +156,11 @@ class Stream:
         stream_catalog = get_schema(catalog, child_object.tap_stream_id)
 
         with metrics.record_counter(child_object.tap_stream_id) as counter:
-            for response in client.authed_get_all_pages(
+            for response in client.authed_get(
                 child_object.tap_stream_id,
                 child_full_url,
-                stream = child_object.tap_stream_id
+                stream = child_object.tap_stream_id,
+                single_page = child_object.single_page
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -196,6 +200,17 @@ class Stream:
 
                             singer.write_record(child_object.tap_stream_id, rec, time_extracted=extraction_time)
 
+                    # Loop through each child and nested child in the parent and fetch all the child records.
+                    for nested_child in child_object.children:
+                        if nested_child in stream_to_sync:
+                            # Collect id of child record to pass in the API of its sub-child.
+                            child_id = tuple(records.get(key) for key in STREAMS[nested_child]().id_keys)
+                            # Here, grand_parent_id is the id of 1st level parent(main parent) which is required to
+                            # pass in the API of the current child's sub-child.
+                            child_object.get_child_records(client, catalog, nested_child, child_id, repo_path, state, start_date,
+                                                           bookmark_dttm, stream_to_sync, selected_stream_ids, grand_parent_id,
+                                                           records)
+
     # pylint: disable=unnecessary-pass
     def add_fields_at_1st_level(self, record, parent_record = None):
         """
@@ -223,11 +238,12 @@ class FullTableStream(Stream):
         stream_catalog = get_schema(catalog, self.tap_stream_id)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
-            for response in client.authed_get_all_pages(
+            for response in client.authed_get(
                     self.tap_stream_id,
                     full_url,
                     self.headers,
-                    stream = self.tap_stream_id
+                    stream = self.tap_stream_id,
+                    single_page = self.single_page
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -294,11 +310,12 @@ class IncrementalStream(Stream):
         stream_catalog = get_schema(catalog, self.tap_stream_id)
 
         with metrics.record_counter(self.tap_stream_id) as counter:
-            for response in client.authed_get_all_pages(
+            for response in client.authed_get(
                     self.tap_stream_id,
                     full_url,
                     self.headers,
-                    stream = self.tap_stream_id
+                    stream = self.tap_stream_id,
+                    single_page = self.single_page
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -381,10 +398,11 @@ class IncrementalOrderedStream(Stream):
         parent_bookmark_value = bookmark_value
         record_counter = 0
         with metrics.record_counter(self.tap_stream_id) as counter:
-            for response in client.authed_get_all_pages(
+            for response in client.authed_get(
                     self.tap_stream_id,
                     full_url,
-                    stream = self.tap_stream_id
+                    stream = self.tap_stream_id,
+                    single_page = self.single_page
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
@@ -753,6 +771,126 @@ class StarGazers(FullTableStream):
         record['user_id'] = record['user']['id']
 
 
+class Repos(FullTableStream):
+    '''
+    https://docs.github.com/en/rest/repos/repos#list-organization-repositories
+    '''
+    tap_stream_id = "repos"
+    replication_method = "FULL_TABLE"
+    key_properties = ["id"]
+    use_organization = True
+    path = "orgs/{}/repos?per_page=100"
+    has_children = True
+    children= ["repo_forked_parents"]
+    pk_child_fields = ['id']
+
+    def get_child_records(self,
+                          client,
+                          catalog,
+                          child_stream,
+                          grand_parent_id,
+                          repo_path,
+                          state,
+                          start_date,
+                          bookmark_dttm,
+                          stream_to_sync,
+                          selected_stream_ids,
+                          parent_id=None,
+                          parent_record=None):
+        if child_stream == 'repo_forked_parents' and parent_record and not parent_record.get('fork'):
+            # Skip fetching child records for non-forked repositories.
+            return
+        super().get_child_records(client, catalog, child_stream, grand_parent_id, repo_path, state, start_date,
+                                  bookmark_dttm, stream_to_sync, selected_stream_ids, parent_id, parent_record)
+
+
+class RepoForkedParents(FullTableStream):
+    '''
+    Get parent repositories of a forked repository.
+    https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository
+    '''
+    tap_stream_id = "repo_forked_parents"
+    replication_method = "FULL_TABLE"
+    key_properties = ["id"]
+    use_organization = True
+    path = "repos/{}/{}"
+    parent = 'repos'
+    id_keys = ['name', 'default_branch']
+    has_children = True
+    children = ["repo_forked_compares"]
+    pk_child_fields = ['id']
+
+    def add_fields_at_1st_level(self, record, parent_record = None):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
+        record['fork_name'] = record['parent']['name']
+        record['fork_owner_login'] = record['parent']['owner']['login']
+        record['fork_default_branch'] = record['parent']['default_branch']
+
+    def get_child_records(self,
+                          client,
+                          catalog,
+                          child_stream,
+                          grand_parent_id,
+                          repo_path,
+                          state,
+                          start_date,
+                          bookmark_dttm,
+                          stream_to_sync,
+                          selected_stream_ids,
+                          parent_id=None,
+                          parent_record=None):
+        try:
+            super().get_child_records(client, catalog, child_stream, grand_parent_id, repo_path, state, start_date,
+                                      bookmark_dttm, stream_to_sync, selected_stream_ids, parent_id, parent_record)
+        except UnprocessableError as e:
+            error_message = str(e)
+            if "HTTP-error-code: 422" in error_message and "Sorry, this diff is taking too long to generate" in error_message:
+                child_object = STREAMS[child_stream]()
+                record = {'_sdc_repository': repo_path, 'error_message': error_message}
+                child_object.add_fields_at_1st_level(record=record, parent_record=parent_record)
+                with singer.Transformer() as transformer:
+                    if child_object.tap_stream_id in selected_stream_ids:
+                        singer.write_record(child_object.tap_stream_id, record, time_extracted=singer.utils.now())
+
+                LOGGER.warning(f'Can\'t compare the forked repository ({selected_stream_ids}) with the parent repository. Error: {error_message}')
+            else:
+                raise e
+
+
+
+class RepoForkedCompares(FullTableStream):
+    '''
+    Compare the repo with the default branch of the parent repository.
+    https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#compare-two-commits
+    '''
+    tap_stream_id = "repo_forked_compares"
+    replication_method = "FULL_TABLE"
+    key_properties = ["full_name"]
+    use_organization = True
+    path = "repos/{}/{}/compare/{}...{}:{}"
+    parent = 'repo_forked_parents'
+    id_keys = ['fork_owner_login', 'fork_default_branch']
+    single_page = True  # No pagination required for this stream.
+
+    def add_fields_at_1st_level(self, record, parent_record = None):
+        """
+        Add fields in the record explicitly at the 1st level of JSON.
+        """
+        record['name'] = parent_record['name']
+        record['owner_login'] = parent_record['owner']['login']
+        record['full_name'] = parent_record['full_name']
+        record['default_branch'] = parent_record['default_branch']
+        record['fork_owner_login'] = parent_record['fork_owner_login']
+        record['fork_name'] = parent_record['fork_name']
+        record['fork_default_branch'] = parent_record['fork_default_branch']
+        if 'status' not in record and 'error_message' not in record:
+            record['error_message'] = ('Cannot retrieve ahead/behind information for this branch. '
+                                       'It may happen if the parent repository has been deleted or '
+                                       'no common ancestor between the default branches.')
+
+
 # Dictionary of the stream classes
 STREAMS = {
     "commits": Commits,
@@ -777,5 +915,8 @@ STREAMS = {
     "team_members": TeamMembers,
     "team_memberships": TeamMemberships,
     "collaborators": Collaborators,
-    "stargazers": StarGazers
+    "stargazers": StarGazers,
+    "repos": Repos,
+    "repo_forked_parents": RepoForkedParents,
+    "repo_forked_compares": RepoForkedCompares
 }

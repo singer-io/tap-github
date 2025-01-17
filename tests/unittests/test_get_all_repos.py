@@ -90,39 +90,39 @@ class TestGetAllRepos(unittest.TestCase):
         self.assertListEqual(expected_repositories, side_effect)
 
 @mock.patch('tap_github.client.GithubClient.verify_repo_access')
-@mock.patch('tap_github.client.GithubClient.authed_get')
+@mock.patch('tap_github.client.GithubClient.authed_get_single_page')
 class TestAuthedGetAllPages(unittest.TestCase):
     """
     Test `authed_get_all_pages` method from client.
     """
     config = {"access_token": "", "repository": "test-org/repo1", "max_per_page": 100}
     
-    def test_for_one_page(self, mock_auth_get, mock_verify_access):
+    def test_for_one_page(self, mock_auth_get_single_page, mock_verify_access):
 
         """Verify `authed_get` is called only once if one page is available."""
 
         test_client = GithubClient(self.config)
-        mock_auth_get.return_value = MockResponse({})
+        mock_auth_get_single_page.return_value = MockResponse({})
         
         list(test_client.authed_get_all_pages("", "http://mock_url", {}))
         
         # Verify `auth_get` call count
-        self.assertEqual(mock_auth_get.call_count, 1)
+        self.assertEqual(mock_auth_get_single_page.call_count, 1)
 
-    def test_for_multiple_pages(self, mock_auth_get, mock_verify_access):
+    def test_for_multiple_pages(self, mock_auth_get_single_page, mock_verify_access):
 
         """Verify `authed_get` is called equal number times as pages available."""
 
         test_client = GithubClient(self.config)
-        mock_auth_get.side_effect = [MockResponse({"next": {"url": "http://mock_url_2/?per_page=100"}}),
+        mock_auth_get_single_page.side_effect = [MockResponse({"next": {"url": "http://mock_url_2/?per_page=100"}}),
                                      MockResponse({"next": {"url": "http://mock_url_3/?per_page=100"}}),MockResponse({})]
         
         list(test_client.authed_get_all_pages("", "http://mock_url_1", {}))
         
         # Verify `auth_get` call count
-        self.assertEqual(mock_auth_get.call_count, 3)
+        self.assertEqual(mock_auth_get_single_page.call_count, 3)
         
         # Verify `auth_get` calls with expected url
-        self.assertEqual(mock_auth_get.mock_calls[0], mock.call("", "http://mock_url_1/?per_page=100", {}, '', True))
-        self.assertEqual(mock_auth_get.mock_calls[1], mock.call("", "http://mock_url_2/?per_page=100", {}, '', True))
-        self.assertEqual(mock_auth_get.mock_calls[2], mock.call("", "http://mock_url_3/?per_page=100", {}, '', True))
+        self.assertEqual(mock_auth_get_single_page.mock_calls[0], mock.call("", "http://mock_url_1/?per_page=100", {}, '', True))
+        self.assertEqual(mock_auth_get_single_page.mock_calls[1], mock.call("", "http://mock_url_2/?per_page=100", {}, '', True))
+        self.assertEqual(mock_auth_get_single_page.mock_calls[2], mock.call("", "http://mock_url_3/?per_page=100", {}, '', True))
