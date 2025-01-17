@@ -847,6 +847,13 @@ class RepoForkedParents(FullTableStream):
         except UnprocessableError as e:
             error_message = str(e)
             if "HTTP-error-code: 422" in error_message and "Sorry, this diff is taking too long to generate" in error_message:
+                child_object = STREAMS[child_stream]()
+                record = {'_sdc_repository': repo_path, 'error_message': error_message}
+                child_object.add_fields_at_1st_level(record=record, parent_record=parent_record)
+                with singer.Transformer() as transformer:
+                    if child_object.tap_stream_id in selected_stream_ids:
+                        singer.write_record(child_object.tap_stream_id, record, time_extracted=singer.utils.now())
+
                 LOGGER.warning(f'Can\'t compare the forked repository ({selected_stream_ids}) with the parent repository. Error: {error_message}')
             else:
                 raise e
@@ -878,6 +885,10 @@ class RepoForkedCompares(FullTableStream):
         record['fork_owner_login'] = parent_record['fork_owner_login']
         record['fork_name'] = parent_record['fork_name']
         record['fork_default_branch'] = parent_record['fork_default_branch']
+        if 'status' not in record and 'error_message' not in record:
+            record['error_message'] = ('Cannot retrieve ahead/behind information for this branch. '
+                                       'It may happen if the parent repository has been deleted or '
+                                       'no common ancestor between the default branches.')
 
 
 # Dictionary of the stream classes
