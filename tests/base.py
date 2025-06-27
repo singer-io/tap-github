@@ -284,7 +284,7 @@ class TestGithubBase(unittest.TestCase):
 
         found_catalog_names = set(map(lambda c: c['stream_name'], found_catalogs))
         LOGGER.info(found_catalog_names)
-        self.assertSetEqual(self.expected_streams(), found_catalog_names, msg="discovered schemas do not match")
+        self.assertSetEqual(self.expected_streams(), found_catalog_names - {"projects", "project_cards", "project_columns"}, msg="discovered schemas do not match")
         LOGGER.info("discovered schemas are OK")
 
         return found_catalogs

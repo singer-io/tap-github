@@ -31,6 +31,7 @@ class GithubStartDateTest(TestGithubBase):
         if response.status_code == 201:
             issue_number = response.json()['number']
         else:
+            issue_number = None
             print(f"Failed to create issue: {response.status_code}, {response.text}")
 
         delete_url = f'https://api.github.com/repos/singer-io/test-repo/issues/{issue_number}'
