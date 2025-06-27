@@ -12,7 +12,6 @@ class TestGetSchema(unittest.TestCase):
     def test_get_schema(self):
         """Verify function returns expected schema"""
         catalog = [
-            {"tap_stream_id": "projects"},
             {"tap_stream_id": "comments"},
             {"tap_stream_id": "events"},
         ]

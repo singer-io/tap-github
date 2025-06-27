@@ -13,12 +13,12 @@ KNOWN_MISSING_FIELDS = {
         'distinct_size',
         'size'
     },
-    'project_cards': {
-        'name',
-        'cards_url',
-        'column_name',
-        'project_id'
-    },
+    # 'project_cards': {
+    #     'name',
+    #     'cards_url',
+    #     'column_name',
+    #     'project_id'
+    # },
     'commits': {
         'pr_id',
         'id',
@@ -78,10 +78,10 @@ KNOWN_MISSING_FIELDS = {
     'teams': {
         'permissions'
     },
-    'projects': {
-        'organization_permission',
-        'private'
-    },
+    # 'projects': {
+    #     'organization_permission',
+    #     'private'
+    # },
     'assignees': {
         'email',
         'starred_at',
