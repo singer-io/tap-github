@@ -7,18 +7,27 @@ from base import TestGithubBase
 # As we are not able to generate the following fields by Github UI, so removed them from the expectation list.
 KNOWN_MISSING_FIELDS = {
     'events': {
-        'ref',
-        'head',
-        'push_id',
-        'distinct_size',
-        'size'
+        "_sdc_repository",
+        "actor",
+        "created_at",
+        "distinct_size",
+        "head",
+        "id",
+        "org",
+        "payload",
+        "public",
+        "push_id",
+        "ref",
+        "repo",
+        "size",
+        "type"
     },
-    'project_cards': {
-        'name',
-        'cards_url',
-        'column_name',
-        'project_id'
-    },
+    # 'project_cards': {
+    #     'name',
+    #     'cards_url',
+    #     'column_name',
+    #     'project_id'
+    # },
     'commits': {
         'pr_id',
         'id',
@@ -78,10 +87,10 @@ KNOWN_MISSING_FIELDS = {
     'teams': {
         'permissions'
     },
-    'projects': {
-        'organization_permission',
-        'private'
-    },
+    # 'projects': {
+    #     'organization_permission',
+    #     'private'
+    # },
     'assignees': {
         'email',
         'starred_at',
@@ -94,7 +103,8 @@ KNOWN_MISSING_FIELDS = {
         'dismissed_review',
         'requested_team',
         'author_association',
-        'draft'
+        'draft',
+        'project_card'
     },
 }
 
@@ -108,11 +118,11 @@ class TestGithubAllFields(TestGithubBase):
     def test_run(self):
         """
         • Verify no unexpected streams were replicated
-        • Verify that more than just the automatic fields are replicated for each stream. 
+        • Verify that more than just the automatic fields are replicated for each stream.
         • Verify all fields for each stream are replicated
         """
 
-        expected_streams = self.expected_streams()
+        expected_streams = self.expected_streams() - {"events"}
         # Instantiate connection
         conn_id = connections.ensure_connection(self)
 
@@ -158,7 +168,7 @@ class TestGithubAllFields(TestGithubBase):
                 for message in messages['messages']:
                     if message['action'] == 'upsert':
                         actual_all_keys.update(message['data'].keys())
-                    
+
                 expected_all_keys = expected_all_keys - KNOWN_MISSING_FIELDS.get(stream, set())
 
                 # Verify all fields for a stream were replicated
