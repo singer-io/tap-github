@@ -103,7 +103,8 @@ KNOWN_MISSING_FIELDS = {
         'dismissed_review',
         'requested_team',
         'author_association',
-        'draft'
+        'draft',
+        'project_card'
     },
 }
 
