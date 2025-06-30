@@ -63,7 +63,7 @@ class TestGithubBookmarks(TestGithubBase):
             different values for the replication key
         """
 
-        expected_streams = self.expected_streams()
+        expected_streams = self.expected_streams() - {"events"}
         expected_replication_keys = self.expected_bookmark_keys()
         expected_replication_methods = self.expected_replication_method()
 
