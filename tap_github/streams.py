@@ -517,46 +517,6 @@ class PullRequests(IncrementalOrderedStream):
     children = ['reviews', 'review_comments', 'pr_commits']
     pk_child_fields = ["number"]
 
-class ProjectCards(IncrementalStream):
-    '''
-    https://docs.github.com/en/rest/reference/projects#list-project-cards
-    '''
-    tap_stream_id = "project_cards"
-    replication_method = "INCREMENTAL"
-    replication_keys = "updated_at"
-    key_properties = ["id"]
-    path = "projects/columns/{}/cards"
-    tap_stream_id = "project_cards"
-    parent = 'project_columns'
-    id_keys = ['id']
-
-class ProjectColumns(IncrementalStream):
-    '''
-    https://docs.github.com/en/rest/reference/projects#list-project-columns
-    '''
-    tap_stream_id = "project_columns"
-    replication_method = "INCREMENTAL"
-    replication_keys = "updated_at"
-    key_properties = ["id"]
-    path = "projects/{}/columns"
-    children = ["project_cards"]
-    parent = "projects"
-    id_keys = ['id']
-    has_children = True
-
-class Projects(IncrementalStream):
-    '''
-    https://docs.github.com/en/rest/reference/projects#list-repository-projects
-    '''
-    tap_stream_id = "projects"
-    replication_method = "INCREMENTAL"
-    replication_keys = "updated_at"
-    key_properties = ["id"]
-    path = "projects?state=all"
-    tap_stream_id = "projects"
-    children = ["project_columns"]
-    child_objects = [ProjectColumns()]
-
 class TeamMemberships(FullTableStream):
     '''
     https://docs.github.com/en/rest/reference/teams#get-team-membership-for-a-user
@@ -753,9 +713,6 @@ STREAMS = {
     "events": Events,
     "commit_comments": CommitComments,
     "issue_milestones": IssueMilestones,
-    "projects": Projects,
-    "project_columns": ProjectColumns,
-    "project_cards": ProjectCards,
     "pull_requests": PullRequests,
     "reviews": Reviews,
     "review_comments": ReviewComments,

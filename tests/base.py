@@ -130,24 +130,6 @@ class TestGithubBase(unittest.TestCase):
                 self.BOOKMARK: {"updated_at"},
                 self.OBEYS_START_DATE: True
             },
-            # "project_cards": {
-            #     self.PRIMARY_KEYS: {"id"},
-            #     self.REPLICATION_METHOD: self.INCREMENTAL,
-            #     self.BOOKMARK: {"updated_at"},
-            #     self.OBEYS_START_DATE: True
-            # },
-            # "project_columns": {
-            #     self.PRIMARY_KEYS: {"id"},
-            #     self.REPLICATION_METHOD: self.INCREMENTAL,
-            #     self.BOOKMARK: {"updated_at"},
-            #     self.OBEYS_START_DATE: True
-            # },
-            # "projects": {
-            #     self.PRIMARY_KEYS: {"id"},
-            #     self.REPLICATION_METHOD: self.INCREMENTAL,
-            #     self.BOOKMARK: {"updated_at"},
-            #     self.OBEYS_START_DATE: True
-            # },
             "pull_requests": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
@@ -284,7 +266,7 @@ class TestGithubBase(unittest.TestCase):
 
         found_catalog_names = set(map(lambda c: c['stream_name'], found_catalogs))
         LOGGER.info(found_catalog_names)
-        self.assertSetEqual(self.expected_streams(), found_catalog_names - {"projects", "project_cards", "project_columns"}, msg="discovered schemas do not match")
+        self.assertSetEqual(self.expected_streams(), found_catalog_names, msg="discovered schemas do not match")
         LOGGER.info("discovered schemas are OK")
 
         return found_catalogs

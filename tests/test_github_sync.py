@@ -26,8 +26,7 @@ class TestGithubSync(TestGithubBase):
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         catalogs = [catalog
-                    for catalog in found_catalogs
-                    if catalog['stream_name'] not in {'project_cards', 'projects', 'project_columns'}]
+                    for catalog in found_catalogs]
         self.perform_and_verify_table_and_field_selection(conn_id, catalogs)
 
         record_count_by_stream = self.run_and_verify_sync(conn_id)
