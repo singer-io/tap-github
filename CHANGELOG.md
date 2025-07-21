@@ -1,5 +1,9 @@
 # Changelog
 
+# 3.2.0
+  * Removes the `Projects`, `ProjectCards`, and `ProjectColumns`
+    streams as they've been sunset by Github [#218](https://github.com/singer-io/tap-github/pull/218)
+
 # 3.1.0
   * Transform state to allow stream level resets [#212](https://github.com/singer-io/tap-github/pull/212)
 
@@ -38,7 +42,7 @@
   * Implement currently syncing for repos and streams [#171](https://github.com/singer-io/tap-github/pull/171) [#174](https://github.com/singer-io/tap-github/pull/174)
   * Implement custom exception handling and backoff for 5xx error [#166](https://github.com/singer-io/tap-github/pull/166)
   * Support of custom domain [#172](https://github.com/singer-io/tap-github/pull/172)
-  * Sync teams at organization level [#173](https://github.com/singer-io/tap-github/pull/173) 
+  * Sync teams at organization level [#173](https://github.com/singer-io/tap-github/pull/173)
   * Update integration test suite [#167](https://github.com/singer-io/tap-github/pull/167)
 
 # 1.10.4
