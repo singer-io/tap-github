@@ -145,18 +145,19 @@ class TestWriteBookmark(unittest.TestCase):
         self.assertIn(mock_write_bookmark.mock_calls[1], expected_calls)
         self.assertIn(mock_write_bookmark.mock_calls[2], expected_calls)
 
-    def test_nested_child(self, mock_write_bookmark):
-        """
-        Test for the stream if the nested child is selected
-        """
-        test_stream = Projects()
-        test_stream.write_bookmarks("projects", ["project_cards"],
-                                     "2022-04-01T00:00:00Z", "org/test-repo", self.state)
+    # Projects parent and child streams were deprecated by Github. Test commented out 07/21/25
+    # def test_nested_child(self, mock_write_bookmark):
+    #     """
+    #     Test for the stream if the nested child is selected
+    #     """
+    #     test_stream = Projects()
+    #     test_stream.write_bookmarks("projects", ["project_cards"],
+    #                                  "2022-04-01T00:00:00Z", "org/test-repo", self.state)
 
-        # Verify `write_bookmark` is called for all selected streams
-        self.assertEqual(mock_write_bookmark.call_count, 1)
-        mock_write_bookmark.assert_called_with(mock.ANY, "project_cards",
-                                               mock.ANY, {"since": "2022-04-01T00:00:00Z"})
+    #     # Verify `write_bookmark` is called for all selected streams
+    #     self.assertEqual(mock_write_bookmark.call_count, 1)
+    #     mock_write_bookmark.assert_called_with(mock.ANY, "project_cards",
+    #                                            mock.ANY, {"since": "2022-04-01T00:00:00Z"})
 
 
 class TestGetChildUrl(unittest.TestCase):
