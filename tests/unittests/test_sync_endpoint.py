@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 from tap_github.client import GithubClient
-from tap_github.streams import Commits, Events, Projects, PullRequests, StarGazers, Teams
+from tap_github.streams import Commits, Events, PullRequests, StarGazers, Teams
 
 class MockResponse():
     """Mock response object class."""
@@ -171,51 +171,52 @@ class TestIncrementalStream(unittest.TestCase):
         # Verify that the get_child_records() is not called as Commits does not contain any child stream.
         self.assertFalse(mock_get_child_records.called)
 
-    @mock.patch("tap_github.streams.Stream.get_child_records")
-    def test_with_child_streams(self,  mock_get_child_records, mock_authed_get_all_pages, mock_verify_access, mock_get_schema):
-        """Verify that get_child_records() is called for streams with child streams"""
-        test_client = GithubClient(self.config)
-        test_stream = Projects()
-        mock_get_schema.return_value = self.catalog
+    # Projects parent and child streams were deprecated by Github. Test commented out 07/21/25
+    # @mock.patch("tap_github.streams.Stream.get_child_records")
+    # def test_with_child_streams(self,  mock_get_child_records, mock_authed_get_all_pages, mock_verify_access, mock_get_schema):
+    #     """Verify that get_child_records() is called for streams with child streams"""
+    #     test_client = GithubClient(self.config)
+    #     test_stream = Projects()
+    #     mock_get_schema.return_value = self.catalog
 
-        mock_authed_get_all_pages.return_value = [MockResponse([{"id": 1, "updated_at": "2022-07-05T09:42:14.000000Z"}, {"id": 1, "updated_at": "2022-07-06T09:42:14.000000Z"}]),
-                                            MockResponse([{"id": 1, "updated_at": "2022-07-07T09:42:14.000000Z"}, {"id": 1, "updated_at": "2022-07-08T09:42:14.000000Z"}])]
+    #     mock_authed_get_all_pages.return_value = [MockResponse([{"id": 1, "updated_at": "2022-07-05T09:42:14.000000Z"}, {"id": 1, "updated_at": "2022-07-06T09:42:14.000000Z"}]),
+    #                                         MockResponse([{"id": 1, "updated_at": "2022-07-07T09:42:14.000000Z"}, {"id": 1, "updated_at": "2022-07-08T09:42:14.000000Z"}])]
 
-        test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["projects", "project_columns"], ["projects","project_columns"])
+    #     test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["projects", "project_columns"], ["projects","project_columns"])
 
-        # Verify that the authed_get_all_pages() is called with the expected url
-        mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/projects?state=all", mock.ANY, stream='projects')
-        
-        # Verify that the get_child_records() is called as thw Projects stream has a child stream
-        self.assertTrue(mock_get_child_records.called)
+    #     # Verify that the authed_get_all_pages() is called with the expected url
+    #     mock_authed_get_all_pages.assert_called_with(mock.ANY, "https://api.github.com/repos/tap-github/projects?state=all", mock.ANY, stream='projects')
 
-    def test_with_nested_child_streams(self, mock_authed_get_all_pages, mock_verify_access, mock_get_schema):
-        """Verify that get_child_records() is called for streams with child streams and calls authed_get_all_pages() is called as expected"""
-        test_client = GithubClient(self.config)
-        test_stream = Projects()
-        mock_get_schema.return_value = self.catalog
+    #     # Verify that the get_child_records() is called as thw Projects stream has a child stream
+    #     self.assertTrue(mock_get_child_records.called)
 
-        mock_authed_get_all_pages.side_effect = [
-                [MockResponse([{"id": 1, "updated_at": "2022-07-05T09:42:14.000000Z"}])],
-                [MockResponse([{"id": 1}, {"id": 2}])],
-                [MockResponse({"id": 1})],
-                [MockResponse({"id": 2})],
-                [], []
-            ]
+    # def test_with_nested_child_streams(self, mock_authed_get_all_pages, mock_verify_access, mock_get_schema):
+    #     """Verify that get_child_records() is called for streams with child streams and calls authed_get_all_pages() is called as expected"""
+    #     test_client = GithubClient(self.config)
+    #     test_stream = Projects()
+    #     mock_get_schema.return_value = self.catalog
 
-        test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["projects", "project_columns", "project_cards"], ["projects","project_columns", "project_cards"])
+    #     mock_authed_get_all_pages.side_effect = [
+    #             [MockResponse([{"id": 1, "updated_at": "2022-07-05T09:42:14.000000Z"}])],
+    #             [MockResponse([{"id": 1}, {"id": 2}])],
+    #             [MockResponse({"id": 1})],
+    #             [MockResponse({"id": 2})],
+    #             [], []
+    #         ]
 
-        # Verify that the authed_get_all_pages() is called expected number of times
-        self.assertEqual(mock_authed_get_all_pages.call_count, 4)
-        
-        exp_call_1 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/projects?state=all", mock.ANY, stream='projects')
-        exp_call_2 = mock.call(mock.ANY, "https://api.github.com/projects/1/columns", stream='project_columns')
-        exp_call_3 = mock.call(mock.ANY, "https://api.github.com/projects/columns/1/cards", stream='project_cards')
+    #     test_stream.sync_endpoint(test_client, {}, self.catalog, "tap-github", "", ["projects", "project_columns", "project_cards"], ["projects","project_columns", "project_cards"])
 
-        # Verify that the API calls are done as expected with the correct url
-        self.assertEqual(mock_authed_get_all_pages.mock_calls[0], exp_call_1)
-        self.assertEqual(mock_authed_get_all_pages.mock_calls[1], exp_call_2)
-        self.assertEqual(mock_authed_get_all_pages.mock_calls[2], exp_call_3)
+    #     # Verify that the authed_get_all_pages() is called expected number of times
+    #     self.assertEqual(mock_authed_get_all_pages.call_count, 4)
+
+    #     exp_call_1 = mock.call(mock.ANY, "https://api.github.com/repos/tap-github/projects?state=all", mock.ANY, stream='projects')
+    #     exp_call_2 = mock.call(mock.ANY, "https://api.github.com/projects/1/columns", stream='project_columns')
+    #     exp_call_3 = mock.call(mock.ANY, "https://api.github.com/projects/columns/1/cards", stream='project_cards')
+
+    #     # Verify that the API calls are done as expected with the correct url
+    #     self.assertEqual(mock_authed_get_all_pages.mock_calls[0], exp_call_1)
+    #     self.assertEqual(mock_authed_get_all_pages.mock_calls[1], exp_call_2)
+    #     self.assertEqual(mock_authed_get_all_pages.mock_calls[2], exp_call_3)
 
 @mock.patch("tap_github.streams.get_schema")
 @mock.patch("tap_github.client.GithubClient.verify_access_for_repo", return_value = None)

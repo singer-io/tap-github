@@ -153,9 +153,6 @@ class TestGetStreamsToSync(unittest.TestCase):
     def get_catalog(self, parent=False, mid_child = False, child = False):
         return {
             "streams": [
-                get_stream_catalog("projects", selected_in_metadata=parent),
-                get_stream_catalog("project_columns", selected_in_metadata=mid_child),
-                get_stream_catalog("project_cards", selected_in_metadata=child),
                 get_stream_catalog("teams", selected_in_metadata=parent),
                 get_stream_catalog("team_members", selected_in_metadata=mid_child),
                 get_stream_catalog("team_memberships", selected_in_metadata=child),
@@ -164,9 +161,9 @@ class TestGetStreamsToSync(unittest.TestCase):
         }
 
     @parameterized.expand([
-        ['test_parent_selected', ["assignees", "projects", "teams"], True, False, False],
-        ['test_mid_child_selected', ["projects", "project_columns", "teams", "team_members"], False, True, False],
-        ['test_lowest_child_selected', ["projects", "project_columns", "project_cards", "teams", "team_members", "team_memberships"], False, False, True]
+        ['test_parent_selected', ["assignees", "teams"], True, False, False],
+        ['test_mid_child_selected', ["teams", "team_members"], False, True, False],
+        ['test_lowest_child_selected', ["teams", "team_members", "team_memberships"], False, False, True]
     ])
     def test_stream_selection(self, name, expected_streams, is_parent, is_mid_child, is_child):
         """Test that if an only child or mid-child is selected in the catalog, then `get_stream_to_sync` returns the parent stream also"""
