@@ -5,16 +5,16 @@ orbs:
 jobs:
   build:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester-uv
     steps:
       - checkout
       - run:
           name: 'Setup virtual env'
           command: |
-            python3 -mvenv /usr/local/share/virtualenvs/tap-github
+            uv venv --python 3.9 /usr/local/share/virtualenvs/tap-github
             source /usr/local/share/virtualenvs/tap-github/bin/activate
-            pip install -U 'pip<19.2' 'setuptools<51.0.0'
-            pip install .[dev]
+            uv pip install -U pip setuptools
+            uv pip install .[dev]
       - run:
           name: 'JSON Validator'
           command: |
@@ -29,8 +29,8 @@ jobs:
           name: 'Unit Tests'
           command: |
             source /usr/local/share/virtualenvs/tap-github/bin/activate
-            pip install nose coverage parameterized
-            nosetests --with-coverage --cover-erase --cover-package=tap_github --cover-html-dir=htmlcov tests/unittests
+            uv pip install pytest coverage parameterized
+            coverage run -m pytest tests/unittests
             coverage html
           when: always
       - store_test_results:
@@ -40,9 +40,10 @@ jobs:
       - run:
           name: 'Integration Tests'
           command: |
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            uv pip install --upgrade awscli
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-github tests
           when: always
       - slack/notify-on-failure:
