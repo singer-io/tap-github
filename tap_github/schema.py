@@ -51,6 +51,9 @@ def get_schemas():
                 replication_method = (hasattr(stream_metadata, 'replication_method') or None) and stream_metadata.replication_method
             )
         mdata = metadata.to_map(mdata)
+        if stream_metadata.parent is not None:
+            mdata = metadata.write(mdata, (), 'parent-tap-stream-id', stream_metadata.parent)
+
 
         # Loop through all keys and make replication keys and primary keys of child stream which are not automatic in parent stream of automatic inclusion
         for field_name in schema['properties'].keys():
