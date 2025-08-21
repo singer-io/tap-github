@@ -1,5 +1,8 @@
 # Changelog
 
+# 3.3.0
+  * Adds `forced_replication_method` and `parent_tap_stream_id` as discoverable metadata [#220](https://github.com/singer-io/tap-github/pull/220)
+
 # 3.2.0
   * Removes the `Projects`, `ProjectCards`, and `ProjectColumns`
     streams as they've been sunset by Github [#218](https://github.com/singer-io/tap-github/pull/218)
