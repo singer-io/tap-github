@@ -277,7 +277,7 @@ class GithubClient:
 
         unique_repos = set()
         # Insert the duplicate repos found in the config repo_paths into duplicates
-        duplicate_repos = [x for x in repo_paths if x in unique_repos or (unique_repos.add(x) or False)]
+        duplicate_repos = [x for x in repo_paths if x in unique_repos or (unique_repos.add(x))]
         if duplicate_repos:
             LOGGER.warning("Duplicate repositories found: %s and will be synced only once.", duplicate_repos)
 

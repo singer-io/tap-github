@@ -1,5 +1,8 @@
 # Changelog
 
+# 3.3.1
+  * Fix new pylint issues [#221](https://github.com/singer-io/tap-github/pull/221)
+
 # 3.3.0
   * Adds `forced_replication_method` and `parent_tap_stream_id` as discoverable metadata [#220](https://github.com/singer-io/tap-github/pull/220)
 
