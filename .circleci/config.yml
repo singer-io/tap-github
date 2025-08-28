@@ -11,7 +11,7 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            uv venv --python 3.9 /usr/local/share/virtualenvs/tap-github
+            uv venv --python 3.12 /usr/local/share/virtualenvs/tap-github
             source /usr/local/share/virtualenvs/tap-github/bin/activate
             uv pip install -U pip setuptools
             uv pip install .[dev]
