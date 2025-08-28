@@ -89,7 +89,7 @@ class TestExceptionHandling(unittest.TestCase):
         self.assertEqual(str(e.exception), expected_error_message)
 
         # Verify the call count for each error.
-        self.assertEquals(call_count, mocked_request.call_count)
+        self.assertEqual(call_count, mocked_request.call_count)
 
     @mock.patch("tap_github.client.LOGGER.warning")
     def test_skip_404_error(self, mock_logger,  mocked_parse_args, mocked_request, mock_verify_access, mock_sleep):
