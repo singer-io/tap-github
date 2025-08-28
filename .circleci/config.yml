@@ -13,7 +13,7 @@ jobs:
           command: |
             uv venv --python 3.12 /usr/local/share/virtualenvs/tap-github
             source /usr/local/share/virtualenvs/tap-github/bin/activate
-            uv pip install -U pip setuptools
+            uv pip install -U setuptools
             uv pip install .[dev]
       - run:
           name: 'JSON Validator'
