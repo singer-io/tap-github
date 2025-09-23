@@ -204,6 +204,10 @@ class GithubClient:
         with metrics.http_request_timer(source) as timer:
             self.session.headers.update(headers)
             resp = self.session.request(method='get', url=url, timeout=self.get_request_timeout())
+            # Check for bad creds before checking rate throttling because a bad
+            # creds response does not include rate limit headers
+            if resp.status_code == 401:
+                raise_for_error(resp, source, stream, self, should_skip_404)
             if rate_throttling(resp):
                 # If the API rate limit is reached, the function will be recursively
                 self.authed_get(source, url, headers, stream, should_skip_404)
