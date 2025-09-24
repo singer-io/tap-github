@@ -1,5 +1,8 @@
 # Changelog
 
+# 3.3.2
+  * Fix check for bad credentials [#222](https://github.com/singer-io/tap-github/pull/222)
+
 # 3.3.1
   * Fix new pylint issues [#221](https://github.com/singer-io/tap-github/pull/221)
 
