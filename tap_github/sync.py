@@ -119,16 +119,17 @@ def translate_state(state, catalog, repositories):
 
     for key in previous_state_keys:
         # Loop through each key of `bookmarks` available in the previous state.
-        for inner_key in state['bookmarks'][key].keys():
-            if inner_key not in stream_names and inner_key not in repositories:
-                # Return the existing state if all repos from the previous state are deselected(not found) in the current sync.
-                return state
+        for inner_key, inner_value in state['bookmarks'][key].items():
+            if inner_key in stream_names:
+                new_state['bookmarks'][inner_key][key] = inner_value
+            else:
+                new_state['bookmarks'][key][inner_key] = inner_value
 
     for stream in catalog['streams']:
         stream_name = stream['tap_stream_id']
         for repo in repositories:
             if bookmarks.get_bookmark(state, stream_name, repo):
-                return state
+                new_state['bookmarks'][stream_name][repo] = bookmarks.get_bookmark(state, stream_name, repo)
             if bookmarks.get_bookmark(state, repo, stream_name):
                 new_state['bookmarks'][stream_name][repo] = bookmarks.get_bookmark(state, repo, stream_name)
 

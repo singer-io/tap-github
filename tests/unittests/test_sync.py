@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from tap_github.sync import sync, write_schemas
+from tap_github.sync import sync, write_schemas, translate_state
 
 
 
@@ -152,3 +152,144 @@ class TestSyncFunctions(unittest.TestCase):
 #     def test_nested_child_selected(self, mock_write_schema):
 #         write_schemas("project_cards", self.mock_catalog, ["project_cards"])
 #         mock_write_schema.assert_called_with("project_cards", mock.ANY, mock.ANY)
+
+
+class TestTranslateState(unittest.TestCase):
+    """Tests for `translate_state`
+
+    There are many combinations of test cases due to:
+    - 2 versions of the state structure
+      - "Old style" repo-stream
+      - "New style" stream-repo
+    - 4 possibilities of a stream being in/not-in state and catalog
+      - Yes in state, Yes in catalog
+      - Yes in state, Not in catalog
+      - Not in state, Yes in catalog
+      - Not in state, Not in catalog
+    - 2 possibilities of a repo being in/not-in state
+      - repo in state
+      - repo not in state
+    """
+
+    def test_repo_stream_state_is_translated(self):
+        state = {
+            "bookmarks": {
+                "singer-io/tap-adwords": {
+                    "commits": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                        }
+                    },
+                "singer-io/tap-salesforce": {
+                    "commits": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "commits"}]}
+        repos = ["singer-io/tap-adwords"]
+
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "commits": {
+                    "singer-io/tap-adwords": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    },
+                    "singer-io/tap-salesforce": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+
+        assert actual == expected
+
+    def test_stream_repo_state_is_not_translated(self):
+        state = {
+            "bookmarks": {
+                "commits": {
+                    "singer-io/tap-adwords": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    },
+                    "singer-io/tap-salesforce": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+        catalog = {"streams": [{"tap_stream_id": "commits"}]}
+        repos = ["singer-io/tap-adwords"]
+
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "commits": {
+                    "singer-io/tap-adwords": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    },
+                    "singer-io/tap-salesforce": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+
+        assert actual == expected
+
+    def test_stream_repo_state_and_not_selected_is_not_translated(self):
+        state = {
+            "bookmarks": {
+                "commits": {
+                    "singer-io/tap-adwords": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    },
+                    "singer-io/tap-salesforce": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+        catalog = {"streams": [{"tap_stream_id": "issues"}]}
+        repos = ["singer-io/tap-adwords"]
+
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "commits": {
+                    "singer-io/tap-adwords": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    },
+                    "singer-io/tap-salesforce": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
+
+    def test_real_sceanario(self):
+        state = {
+            "bookmarks": {
+                "issue_events": {
+                    "singer-io/tap-github": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "commits"}]}
+        repos = ["singer-io/tap-github"]
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "issue_events": {
+                    "singer-io/tap-github": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
