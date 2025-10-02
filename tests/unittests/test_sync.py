@@ -323,3 +323,34 @@ class TestTranslateState(unittest.TestCase):
             }
         }
         assert actual == expected
+
+    def test__old_style__stream_in_catalog__repo_not_in_state(self):
+        """
+        We have a bookmark and know that the stream is in the wrong
+        layer. We have to assume the unknown layer is a repo. This
+        means we should translate the shape
+        """
+
+        state = {
+            "bookmarks": {
+                "singer-io/tap-fake-repo-a": {
+                    "fake_stream": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "fake_stream"}]}
+        repos = ["singer-io/tap-fake-repo-b"]
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "fake_stream": {
+                    "singer-io/tap-fake-repo-a": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
