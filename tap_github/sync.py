@@ -120,7 +120,7 @@ def translate_state(state, catalog, repositories):
     for key in previous_state_keys:
         # Loop through each key of `bookmarks` available in the previous state.
         for inner_key, inner_value in state['bookmarks'][key].items():
-            if inner_key in stream_names:
+            if inner_key in stream_names or key in repositories:
                 new_state['bookmarks'][inner_key][key] = inner_value
             else:
                 new_state['bookmarks'][key][inner_key] = inner_value
