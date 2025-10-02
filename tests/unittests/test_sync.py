@@ -161,11 +161,9 @@ class TestTranslateState(unittest.TestCase):
     - 2 versions of the state structure
       - "Old style" repo-stream
       - "New style" stream-repo
-    - 4 possibilities of a stream being in/not-in state and catalog
-      - Yes in state, Yes in catalog
-      - Yes in state, Not in catalog
-      - Not in state, Yes in catalog
-      - Not in state, Not in catalog
+    - 2 possibilities of a stream being in/not-in catalog
+      - stream in catalog
+      - stream not in catalog
     - 2 possibilities of a repo being in/not-in state
       - repo in state
       - repo not in state
