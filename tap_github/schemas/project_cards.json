@@ -20,7 +20,7 @@
         "type": ["null", "string"]
       },
       "id": {
-        "type": ["null", "number"]
+        "type": ["null", "integer"]
       },
       "node_id": {
         "type": ["null", "string"]
@@ -41,7 +41,7 @@
             "type": ["null", "string"]
           },
           "id": {
-            "type": ["null", "number"]
+            "type": ["null", "integer"]
           },
           "node_id": {
             "type": ["null", "string"]

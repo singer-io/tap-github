@@ -14,13 +14,13 @@
       "type": ["null", "string"]
     },
     "id": {
-      "type": ["null", "number"]
+      "type": ["null", "integer"]
     },
     "node_id": {
       "type": ["null", "string"]
     },
     "number": {
-      "type": ["null", "number"]
+      "type": ["null", "integer"]
     },
     "state": {
       "type": ["null", "string"]
@@ -44,7 +44,7 @@
             "type": ["null", "string"]
           },
           "id": {
-            "type": ["null", "number"]
+            "type": ["null", "integer"]
           },
           "node_id": {
             "type": ["null", "string"]
@@ -100,10 +100,10 @@
         }
     },
     "open_issues": {
-      "type": ["null", "number"]
+      "type": ["null", "integer"]
     },
     "closed_issues": {
-      "type": ["null", "number"]
+      "type": ["null", "integer"]
     },
     "created_at": {
       "type": ["null", "string"],
