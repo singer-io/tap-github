@@ -55,12 +55,15 @@ class MovedPermanentlyError(GithubException):
 class ConflictError(GithubException):
     pass
 
+# Thrown when we receive 403 Rate Limit Exceeded from Github API
 class RateLimitExceeded(GithubException):
     pass
 
+# Thrown when we're expected to sleep for longer than the max_sleep_seconds limit
 class RateLimitSleepExceeded(GithubException):
     pass
 
+# Thrown when 429 is received from Github API
 class TooManyRequests(GithubException):
     pass
 
