@@ -16,7 +16,11 @@ DEFAULT_DOMAIN = "https://api.github.com"
 # Set default timeout of 300 seconds
 REQUEST_TIMEOUT = 300
 
+# How many total seconds to retry when getting rate limit error from API
+RATE_LIMIT_RETRY_MAX_TIME = 600
+
 PAGINATION_EXCEED_MSG = 'In order to keep the API fast for everyone, pagination is limited for this resource.'
+RATE_LIMIT_EXCEED_MSG = 'API rate limit exceeded'
 
 class GithubException(Exception):
     pass
@@ -52,6 +56,9 @@ class ConflictError(GithubException):
     pass
 
 class RateLimitExceeded(GithubException):
+    pass
+
+class RateLimitSleepExceeded(GithubException):
     pass
 
 class TooManyRequests(GithubException):
@@ -111,6 +118,11 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
     except JSONDecodeError:
         response_json = {}
 
+    if error_code == 403 and RATE_LIMIT_EXCEED_MSG in response_json.get('message', ''):
+        message = f"HTTP-error-code: 403, Error: {response_json.get('message', '')}. "
+        LOGGER.warning(message)
+        raise RateLimitExceeded() from None
+
     if error_code == 404 and should_skip_404:
         # Add not accessible stream into list.
         client.not_accessible_repos.add(stream)
@@ -150,13 +162,18 @@ def rate_throttling(response, max_sleep_seconds, min_remain_rate_limit):
     """
     For rate limit errors, get the remaining time before retrying and calculate the time to sleep before making a new request.
     """
+    if "Retry-After" in response.headers:
+        # handles the secondary rate limit
+        seconds_to_sleep = int(response.headers['Retry-After'])
+        LOGGER.info("Retry-After header found in response. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
+        time.sleep(seconds_to_sleep)
     if 'X-RateLimit-Remaining' in response.headers:
         if int(response.headers['X-RateLimit-Remaining']) <= min_remain_rate_limit:
-            seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']))
+            seconds_to_sleep = calculate_seconds(int(response.headers['X-RateLimit-Reset']) + 15)
 
             if seconds_to_sleep > max_sleep_seconds:
                 message = "API rate limit exceeded, please try after {} seconds.".format(seconds_to_sleep)
-                raise RateLimitExceeded(message) from None
+                raise RateLimitSleepExceeded(message) from None
 
             LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
             time.sleep(seconds_to_sleep)
@@ -206,6 +223,7 @@ class GithubClient:
     @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError, TooManyRequests),
                           max_tries=5, factor=2)
     @backoff.on_exception(backoff.expo, (BadCredentialsException, ), max_tries=3, factor=2)
+    @backoff.on_exception(backoff.constant, (RateLimitExceeded, ), jitter=None, interval=60, max_time=RATE_LIMIT_RETRY_MAX_TIME)
     def authed_get_single_page(self, source, url, headers={}, stream="", should_skip_404 = True):
         """
         Call rest API and return the response in case of status code 200.
