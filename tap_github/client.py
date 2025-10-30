@@ -16,8 +16,8 @@ DEFAULT_DOMAIN = "https://api.github.com"
 # Set default timeout of 300 seconds
 REQUEST_TIMEOUT = 300
 
-# How many total seconds to retry when getting rate limit error from API
-RATE_LIMIT_RETRY_MAX_TIME = 600
+# How many total seconds to retry when getting rate limit error from API. The limit resets every hour.
+RATE_LIMIT_RETRY_MAX_TIME = 3600
 
 PAGINATION_EXCEED_MSG = 'In order to keep the API fast for everyone, pagination is limited for this resource.'
 RATE_LIMIT_EXCEED_MSG = 'API rate limit exceeded'
