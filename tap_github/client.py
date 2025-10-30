@@ -118,8 +118,10 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
     except JSONDecodeError:
         response_json = {}
 
-    if error_code == 403 and RATE_LIMIT_EXCEED_MSG in response_json.get('message', ''):
-        message = f"HTTP-error-code: 403, Error: {response_json.get('message', '')}. "
+    response_message = response_json.get('message', '')
+
+    if error_code == 403 and RATE_LIMIT_EXCEED_MSG in response_message:
+        message = f"HTTP-error-code: 403, Error: {response_message}"
         LOGGER.warning(message)
         raise RateLimitExceeded() from None
 
@@ -134,8 +136,8 @@ def raise_for_error(resp, source, stream, client, should_skip_404):
         # Don't raise a NotFoundException
         return None
 
-    if error_code == 422 and PAGINATION_EXCEED_MSG in response_json.get('message', ''):
-        message = f"HTTP-error-code: 422, Error: {response_json.get('message', '')}. " \
+    if error_code == 422 and PAGINATION_EXCEED_MSG in response_message:
+        message = f"HTTP-error-code: 422, Error: {response_message}. " \
                   f"Please refer '{response_json.get('documentation_url')}' for more details." \
                   "This is a known issue when the results exceed 40k and the last page is not full" \
                   " (it will trim the results to get only the available by the API)."
@@ -223,7 +225,7 @@ class GithubClient:
     @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError, TooManyRequests),
                           max_tries=5, factor=2)
     @backoff.on_exception(backoff.expo, (BadCredentialsException, ), max_tries=3, factor=2)
-    @backoff.on_exception(backoff.constant, (RateLimitExceeded, ), jitter=None, interval=60, max_time=RATE_LIMIT_RETRY_MAX_TIME)
+    @backoff.on_exception(backoff.constant, (RateLimitExceeded, ), interval=60, jitter=None, max_time=RATE_LIMIT_RETRY_MAX_TIME)
     def authed_get_single_page(self, source, url, headers={}, stream="", should_skip_404 = True):
         """
         Call rest API and return the response in case of status code 200.
