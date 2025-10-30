@@ -133,6 +133,11 @@ def translate_state(state, catalog, repositories):
             if bookmarks.get_bookmark(state, repo, stream_name):
                 new_state['bookmarks'][stream_name][repo] = bookmarks.get_bookmark(state, repo, stream_name)
 
+    # Preserve other key-value pairs in state
+    for key, value in state.items():
+        if key != "bookmarks":
+            new_state[key] = value
+
     return new_state
 
 def get_stream_to_sync(catalog):
