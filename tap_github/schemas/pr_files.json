@@ -1,0 +1,21 @@
+{
+  "type": ["null", "object"],
+  "properties": {
+    "_sdc_repository": {"type": ["string"]},
+    "sha": {"type": ["null", "string"]},
+    "filename": {"type": ["null", "string"]},
+    "status": {"type": ["null", "string"]},
+    "additions": {"type": ["null", "integer"]},
+    "deletions": {"type": ["null", "integer"]},
+    "changes": {"type": ["null", "integer"]},
+    "blob_url": {"type": ["null", "string"]},
+    "raw_url": {"type": ["null", "string"]},
+    "contents_url": {"type": ["null", "string"]},
+    "patch": {"type": ["null", "string"]},
+    "previous_filename": {"type": ["null", "string"]},
+    "id": {"type": ["null", "string"]},
+    "updated_at": {"type": ["null", "string"], "format": "date-time"},
+    "pr_number": {"type": ["null", "integer"]},
+    "pr_id": {"type": ["null", "integer"]}
+  }
+}
