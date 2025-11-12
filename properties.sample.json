@@ -1,0 +1,56 @@
+{
+  "streams": [
+    {
+      "stream": "pull_requests",
+      "tap_stream_id": "pull_requests",
+      "key_properties": ["id"],
+      "schema": {
+        "properties": {
+          "id": {"type": ["null", "integer"]},
+          "number": {"type": ["null", "integer"]},
+          "updated_at": {"type": ["null", "string"], "format": "date-time"}
+        }
+      },
+      "metadata": [
+        {
+          "breadcrumb": [],
+          "metadata": {
+            "selected": true,
+            "tap-stream-id": "pull_requests",
+            "table-key-properties": ["id"],
+            "valid-replication-keys": ["updated_at"],
+            "replication-method": "INCREMENTAL"
+          }
+        },
+        {"breadcrumb": ["properties", "id"], "metadata": {"inclusion": "automatic"}},
+        {"breadcrumb": ["properties", "number"], "metadata": {"inclusion": "automatic"}},
+        {"breadcrumb": ["properties", "updated_at"], "metadata": {"inclusion": "automatic"}}
+      ]
+    },
+    {
+      "stream": "pr_files",
+      "tap_stream_id": "pr_files",
+      "key_properties": ["id"],
+      "schema": {
+        "properties": {
+          "id": {"type": ["null", "string"]},
+          "updated_at": {"type": ["null", "string"], "format": "date-time"},
+          "filename": {"type": ["null", "string"]}
+        }
+      },
+      "metadata": [
+        {
+          "breadcrumb": [],
+          "metadata": {
+            "selected": true,
+            "tap-stream-id": "pr_files",
+            "table-key-properties": ["id"],
+            "valid-replication-keys": ["updated_at"],
+            "replication-method": "INCREMENTAL",
+            "parent-tap-stream-id": "pull_requests"
+          }
+        }
+      ]
+    }
+  ]
+}
