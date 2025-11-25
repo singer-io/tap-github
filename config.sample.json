@@ -3,5 +3,6 @@
     "repository": "singer-io/target-stitch",
     "start_date": "2021-01-01T00:00:00Z",
     "request_timeout": 300,
-    "base_url": "https://api.github.com"
+    "base_url": "https://api.github.com",
+    "extract_archived": "false"
 }

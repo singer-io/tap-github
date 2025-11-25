@@ -67,6 +67,10 @@ class RateLimitSleepExceeded(GithubException):
 class TooManyRequests(GithubException):
     pass
 
+# Thrown when repository is archived and extract_archived is not enabled
+class ArchivedRepositoryError(GithubException):
+    pass
+
 
 ERROR_CODE_EXCEPTION_MAPPING = {
     301: {
@@ -200,6 +204,9 @@ class GithubClient:
         self.set_auth_in_session()
         self.not_accessible_repos = set()
         self.max_per_page = self.config.get('max_per_page', DEFAULT_MAX_PER_PAGE)
+        # Convert string 'true'/'false' to boolean, default to False
+        extract_archived_value = str(self.config.get('extract_archived', 'false')).lower()
+        self.extract_archived = extract_archived_value == 'true'
 
     def get_request_timeout(self):
         """
@@ -282,9 +289,31 @@ class GithubClient:
             message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
             raise NotFoundException(message) from None
 
+    def check_repo_archived(self, repo):
+        """
+        Check if a repository is archived and raise an error if extract_archived is not enabled.
+
+        Args:
+            repo: Repository in 'org/repo' format
+
+        Raises:
+            ArchivedRepositoryError: If repo is archived and extract_archived config is not true
+        """
+        url = "{}/repos/{}".format(self.base_url, repo)
+        response = self.authed_get_single_page("checking repository archived status", url, should_skip_404=False)
+        repo_info = response.json()
+
+        if repo_info.get('archived', False):
+            if not self.extract_archived:
+                message = "Repository '{}' is archived. To extract data from archived repositories, " \
+                          "set 'extract_archived' to 'true' in the config.".format(repo)
+                raise ArchivedRepositoryError(message)
+            LOGGER.warning("Repository '%s' is archived. Proceeding with extraction as 'extract_archived' is enabled.", repo)
+
     def verify_access_for_repo(self):
         """
         For all the repositories mentioned in the config, check the access for each repos.
+        Also checks if repositories are archived and fails if extract_archived is not enabled.
         """
         repositories, org = self.extract_repos_from_config() # pylint: disable=unused-variable
 
@@ -295,6 +324,9 @@ class GithubClient:
 
             # Verifying for Repo access
             self.verify_repo_access(url_for_repo, repo)
+
+            # Check if repository is archived
+            self.check_repo_archived(repo)
 
     def extract_orgs_from_config(self):
         """
@@ -382,6 +414,14 @@ class GithubClient:
                             '{}/repos/{}/commits'.format(self.base_url,repo_full_name),
                             repo
                         )
+
+                        # Check if repository is archived (info already available in response)
+                        if repo.get('archived', False):
+                            if not self.extract_archived:
+                                message = "Repository '{}' is archived. To extract data from archived repositories, " \
+                                          "set 'extract_archived' to 'true' in the config.".format(repo_full_name)
+                                raise ArchivedRepositoryError(message)
+                            LOGGER.warning("Repository '%s' is archived. Proceeding with extraction as 'extract_archived' is enabled.", repo_full_name)
 
                         repos.append(repo_full_name)
             except NotFoundException:
