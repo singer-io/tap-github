@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from tap_github.sync import sync, write_schemas
+from tap_github.sync import sync, write_schemas, translate_state
 
 
 
@@ -152,3 +152,387 @@ class TestSyncFunctions(unittest.TestCase):
 #     def test_nested_child_selected(self, mock_write_schema):
 #         write_schemas("project_cards", self.mock_catalog, ["project_cards"])
 #         mock_write_schema.assert_called_with("project_cards", mock.ANY, mock.ANY)
+
+
+class TestTranslateState(unittest.TestCase):
+    """Tests for `translate_state`
+
+    There are many combinations of test cases due to:
+    - 2 versions of the state structure
+      - "Old style" repo-stream
+      - "New style" stream-repo
+    - 2 possibilities of a stream being in/not-in catalog
+      - stream in catalog
+      - stream not in catalog
+    - 2 possibilities of a repo being in/not-in state
+      - repo in state
+      - repo not in state
+    """
+
+    def test_repo_stream_state_is_translated(self):
+        state = {
+            "bookmarks": {
+                "singer-io/tap-adwords": {
+                    "commits": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                        }
+                    },
+                "singer-io/tap-salesforce": {
+                    "commits": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "commits"}]}
+        repos = ["singer-io/tap-adwords"]
+
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "commits": {
+                    "singer-io/tap-adwords": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    },
+                    "singer-io/tap-salesforce": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+
+        assert actual == expected
+
+    def test_stream_repo_state_is_not_translated(self):
+        state = {
+            "bookmarks": {
+                "commits": {
+                    "singer-io/tap-adwords": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    },
+                    "singer-io/tap-salesforce": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+        catalog = {"streams": [{"tap_stream_id": "commits"}]}
+        repos = ["singer-io/tap-adwords"]
+
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "commits": {
+                    "singer-io/tap-adwords": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    },
+                    "singer-io/tap-salesforce": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+
+        assert actual == expected
+
+    def test_stream_repo_state_and_not_selected_is_not_translated(self):
+        state = {
+            "bookmarks": {
+                "commits": {
+                    "singer-io/tap-adwords": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    },
+                    "singer-io/tap-salesforce": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+        catalog = {"streams": [{"tap_stream_id": "issues"}]}
+        repos = ["singer-io/tap-adwords"]
+
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "commits": {
+                    "singer-io/tap-adwords": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    },
+                    "singer-io/tap-salesforce": {
+                        "since": "2018-11-14T13:21:20.700360Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
+
+    def test_real_sceanario(self):
+        state = {
+            "bookmarks": {
+                "issue_events": {
+                    "singer-io/tap-github": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "commits"}]}
+        repos = ["singer-io/tap-github"]
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "issue_events": {
+                    "singer-io/tap-github": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
+
+    def test__old_style__stream_in_catalog__repo_in_state(self):
+        """
+        We have a bookmark and know that the repo is in the wrong layer
+        and the stream is in the wrong layer. This means we should
+        translate the shape
+        """
+        state = {
+            "bookmarks": {
+                "singer-io/tap-fake-repo": {
+                    "fake_stream": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "fake_stream"}]}
+        repos = ["singer-io/tap-fake-repo"]
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "fake_stream": {
+                    "singer-io/tap-fake-repo": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
+
+    def test__old_style__stream_in_catalog__repo_not_in_state(self):
+        """
+        We have a bookmark and know that the stream is in the wrong
+        layer. We have to assume the unknown layer is a repo. This
+        means we should translate the shape
+        """
+
+        state = {
+            "bookmarks": {
+                "singer-io/tap-fake-repo-a": {
+                    "fake_stream": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "fake_stream"}]}
+        repos = ["singer-io/tap-fake-repo-b"]
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "fake_stream": {
+                    "singer-io/tap-fake-repo-a": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
+
+    def test__old_style__stream_not_in_catalog__repo_in_state(self):
+        """
+        We have a bookmark and know that the repo is in the wrong
+        layer. We have to assume the unknown layer is a stream.  This
+        means we should translate the shape
+        """
+
+        state = {
+            "bookmarks": {
+                "singer-io/tap-fake-repo": {
+                    "fake_stream_a": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "fake_stream_b"}]}
+        repos = ["singer-io/tap-fake-repo"]
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "fake_stream_a": {
+                    "singer-io/tap-fake-repo": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
+
+    def test__old_style__stream_not_in_catalog__repo_not_in_state(self):
+        """
+        We have a bookmark and don't know anything about the two
+        layers. This means we should not translate the shape
+        """
+
+        state = {
+            "bookmarks": {
+                "singer-io/tap-fake-repo-a": {
+                    "fake_stream_a": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "fake_stream_b"}]}
+        repos = ["singer-io/tap-fake-repo-b"]
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "singer-io/tap-fake-repo-a": {
+                    "fake_stream_a": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
+
+    def test__new_style__stream_in_catalog__repo_in_state(self):
+        """
+        We have a bookmark and know that the repo is in the right
+        layer and the stream is in the right layer. This means we
+        should not translate the shape
+        """
+
+        state = {
+            "bookmarks": {
+                "fake_stream": {
+                    "singer-io/tap-fake-repo": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "fake_stream"}]}
+        repos = ["singer-io/tap-fake-repo"]
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "fake_stream": {
+                    "singer-io/tap-fake-repo": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
+
+    def test__new_style___stream_in_catalog__repo_not_state(self):
+        """
+        We have a bookmark and know that the stream is in the right
+        layer. We assume the unknown layer is a repo. This means we
+        should not translate the shape
+        """
+
+        state = {
+            "bookmarks": {
+                "fake_stream": {
+                    "singer-io/tap-fake-repo-a": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "fake_stream"}]}
+        repos = ["singer-io/tap-fake-repo-b"]
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "fake_stream": {
+                    "singer-io/tap-fake-repo-a": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
+
+    def test__new_style__stream_not_in_catalog__repo_in_state(self):
+        """
+        We have a bookmark and know that the repo is in the right
+        layer. We assume the unknown layer is a stream. This means we
+        should not translate the shape
+        """
+
+        state = {
+            "bookmarks": {
+                "fake_stream_a": {
+                    "singer-io/tap-fake-repo": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "fake_stream_b"}]}
+        repos = ["singer-io/tap-fake-repo"]
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "fake_stream_a": {
+                    "singer-io/tap-fake-repo": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
+
+    def test__new_style__stream_not_in_catalog__repo_not_in_state(self):
+        """
+        We have a bookmark and don't know anything about the two
+        layers. This means we should not translate the shape
+        """
+
+        state = {
+            "bookmarks": {
+                "fake_stream_a": {
+                    "singer-io/tap-fake-repo-a": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+
+        catalog = {"streams": [{"tap_stream_id": "fake_stream_b"}]}
+        repos = ["singer-io/tap-fake-repo-b"]
+        actual = translate_state(state, catalog, repos)
+        expected = {
+            "bookmarks": {
+                "fake_stream_a": {
+                    "singer-io/tap-fake-repo-a": {
+                        "since": "2025-09-24T13:50:18Z"
+                    }
+                }
+            }
+        }
+        assert actual == expected
