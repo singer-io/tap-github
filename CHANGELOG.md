@@ -1,5 +1,9 @@
 # Changelog
 
+# 3.3.3
+  * Fix `translate_state` to not delete state [#224](https://github.com/singer-io/tap-github/pull/224)
+    * Add unit tests to prove there's a bug and prevent future regression
+
 # 3.3.2
   * Fix check for bad credentials [#222](https://github.com/singer-io/tap-github/pull/222)
 
