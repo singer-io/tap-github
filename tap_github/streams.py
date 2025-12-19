@@ -743,7 +743,7 @@ class IssueMilestones(IncrementalOrderedStream):
     replication_method = "INCREMENTAL"
     replication_keys = "updated_at"
     key_properties = ["id"]
-    path = "milestones?direction=desc&sort=updated_at"
+    path = "milestones?state=all&direction=desc&sort=updated_at"
 
 class Collaborators(FullTableStream):
     '''
