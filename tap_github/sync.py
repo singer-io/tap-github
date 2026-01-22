@@ -229,6 +229,8 @@ def do_sync(catalog, streams_to_sync, selected_stream_ids, client, start_date, s
     for stream_id in get_ordered_stream_list(currently_syncing, streams_to_sync):
         stream_obj = STREAMS[stream_id]()
 
+        if stream_id == "commits":
+            raise RuntimeError("commits is broken!")
         # If it is a "sub_stream", it will be synced as part of the parent stream
         if stream_id in streams_to_sync and not stream_obj.parent:
             write_schemas(stream_id, catalog, selected_stream_ids)
