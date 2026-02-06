@@ -266,6 +266,77 @@
       "updated_at": {
         "type": ["null", "string"],
         "format": "date-time"
+      },
+      "stats": {
+        "type": ["null", "object"],
+        "additionalProperties": false,
+        "properties": {
+          "additions": {
+            "type": ["null", "integer"],
+            "description": "Number of additions in the commit"
+          },
+          "deletions": {
+            "type": ["null", "integer"],
+            "description": "Number of deletions in the commit"
+          },
+          "total": {
+            "type": ["null", "integer"],
+            "description": "Total number of changes in the commit"
+          }
+        }
+      },
+      "files": {
+        "type": ["null", "array"],
+        "items": {
+          "type": ["null", "object"],
+          "additionalProperties": false,
+          "properties": {
+            "sha": {
+              "type": ["null", "string"],
+              "description": "The file blob SHA"
+            },
+            "filename": {
+              "type": ["null", "string"],
+              "description": "The name of the file"
+            },
+            "status": {
+              "type": ["null", "string"],
+              "description": "The status of the file (added, removed, modified, renamed)"
+            },
+            "additions": {
+              "type": ["null", "integer"],
+              "description": "Number of additions in the file"
+            },
+            "deletions": {
+              "type": ["null", "integer"],
+              "description": "Number of deletions in the file"
+            },
+            "changes": {
+              "type": ["null", "integer"],
+              "description": "Total number of changes in the file"
+            },
+            "blob_url": {
+              "type": ["null", "string"],
+              "description": "The URL to view the blob for this file"
+            },
+            "raw_url": {
+              "type": ["null", "string"],
+              "description": "The URL to download the raw content of the file"
+            },
+            "contents_url": {
+              "type": ["null", "string"],
+              "description": "The URL to the file contents API endpoint"
+            },
+            "patch": {
+              "type": ["null", "string"],
+              "description": "The patch/diff of the changes to the file"
+            },
+            "previous_filename": {
+              "type": ["null", "string"],
+              "description": "The previous filename (for renamed files)"
+            }
+          }
+        }
       }
   }
 }
