@@ -263,6 +263,19 @@ class GithubClient:
             # Verifying for Repo access
             self.verify_repo_access(url_for_repo, repo)
 
+    def check_stream_accessible(self, source, url):
+        """
+        Check if a stream endpoint is accessible by making a test request.
+        Returns True if accessible (HTTP 200), False if permission is denied (403)
+        or the resource is not found (404).
+        """
+        try:
+            self.authed_get(source, url, should_skip_404=False)
+            return True
+        except (AuthException, NotFoundException) as e:
+            LOGGER.warning("Stream '%s' is not accessible: %s", source, str(e))
+            return False
+
     def extract_orgs_from_config(self):
         """
         Extracts all organizations from the config
