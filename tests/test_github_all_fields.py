@@ -74,6 +74,10 @@ KNOWN_MISSING_FIELDS = {
         'body_text',
         'body_html'
     },
+    'collaborators': {
+        'email',
+        'name'
+    },
     'teams': {
         'permissions'
     },

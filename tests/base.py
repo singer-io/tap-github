@@ -72,6 +72,11 @@ class TestGithubBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.FULL,
                 self.OBEYS_START_DATE: False
             },
+            "collaborators": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.FULL,
+                self.OBEYS_START_DATE: False
+            },
             "comments": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
