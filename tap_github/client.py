@@ -249,11 +249,13 @@ class GithubClient:
             message = "HTTP-error-code: 404, Error: Please check the repository name \'{}\' or you do not have sufficient permissions to access this repository.".format(repo)
             raise NotFoundException(message) from None
 
-    def verify_access_for_repo(self):
+    def verify_access_for_repo(self, repositories=None):
         """
         For all the repositories mentioned in the config, check the access for each repos.
+        Accepts an optional precomputed list of repositories to avoid redundant API calls.
         """
-        repositories, org = self.extract_repos_from_config() # pylint: disable=unused-variable
+        if repositories is None:
+            repositories, _ = self.extract_repos_from_config()
 
         for repo in repositories:
 
@@ -272,7 +274,7 @@ class GithubClient:
         try:
             self.authed_get(source, url, should_skip_404=False)
             return True
-        except (AuthException, NotFoundException) as e:
+        except GithubException as e:
             LOGGER.warning("Stream '%s' is not accessible: %s", source, str(e))
             return False
 

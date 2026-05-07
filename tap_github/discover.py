@@ -39,13 +39,15 @@ def discover(client):
     Run the discovery mode, prepare the catalog file and return catalog.
     Streams whose API endpoints are not accessible (403/404) are excluded.
     """
-    # Check credential in the discover mode.
-    client.verify_access_for_repo()
+    # Extract repos/orgs once and reuse to avoid double API calls.
+    repositories, _ = client.extract_repos_from_config()
+    # Sort for deterministic probe behavior across runs.
+    repositories = sorted(repositories)
+    client.verify_access_for_repo(repositories)
 
-    repositories, organizations = client.extract_repos_from_config()
-    # Use the first repo and org to probe each stream's endpoint.
+    # Derive org from the first repo to ensure consistency.
     repo_path = repositories[0] if repositories else None
-    org = next(iter(organizations)) if organizations else None
+    org = repo_path.split('/')[0] if repo_path else None
 
     # Identify top-level streams (no parent) that are not accessible.
     inaccessible_streams = set()

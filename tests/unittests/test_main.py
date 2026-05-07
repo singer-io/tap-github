@@ -99,7 +99,7 @@ class TestDiscover(unittest.TestCase):
         """Test discover function if exception arises."""
         mock_client.extract_repos_from_config.return_value = (['org/repo'], {'org'})
         mock_client.check_stream_accessible.return_value = True
-        mock_schema.from_dict.side_effect = [Exception]
+        mock_schema.from_dict.side_effect = Exception
         with self.assertRaises(Exception):
             discover(mock_client)
 
