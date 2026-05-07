@@ -72,11 +72,6 @@ class TestGithubBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.FULL,
                 self.OBEYS_START_DATE: False
             },
-            "collaborators": {
-                self.PRIMARY_KEYS: {"id"},
-                self.REPLICATION_METHOD: self.FULL,
-                self.OBEYS_START_DATE: False
-            },
             "comments": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
@@ -180,7 +175,7 @@ class TestGithubBase(unittest.TestCase):
 
     def expected_replication_method(self):
         """
-        Return a dictionary with key of table name 
+        Return a dictionary with key of table name
         and value of replication method
         """
         return {table: properties.get(self.REPLICATION_METHOD, None)

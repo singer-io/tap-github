@@ -70,10 +70,6 @@ KNOWN_MISSING_FIELDS = {
         'mentions_count',
         'reactions'
     },
-    'collaborators': {
-        'email',
-        'name'
-    },
     'reviews': {
         'body_text',
         'body_html'

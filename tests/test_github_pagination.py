@@ -32,7 +32,6 @@ class GitHubPaginationTest(TestGithubBase):
             'team_memberships',
             'teams',
             'team_members',
-            'collaborators',
             'assignees',
             'events',
             'releases'
