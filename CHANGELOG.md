@@ -1,5 +1,8 @@
 # Changelog
 
+# 3.3.4
+  * Fix malformed URL causing 'since' filter to be dropped for Issues and Comments streams [#230](https://github.com/singer-io/tap-github/pull/230)
+
 # 3.3.3
   * Fix `translate_state` to not delete state [#224](https://github.com/singer-io/tap-github/pull/224)
     * Add unit tests to prove there's a bug and prevent future regression
