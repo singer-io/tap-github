@@ -74,8 +74,9 @@ class Stream:
         Build the full url with parameters and attributes.
         """
         if self.filter_param:
-            # Add the since parameter for incremental streams
-            query_string = '?since={}'.format(bookmark)
+            # Use '&' if the path already contains a query string, otherwise '?'
+            separator = '&' if '?' in self.path else '?'
+            query_string = '{}since={}'.format(separator, bookmark)
         else:
             query_string = ''
 

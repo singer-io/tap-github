@@ -62,7 +62,7 @@ class TestBuildUrl(unittest.TestCase):
     """
 
     @parameterized.expand([
-        ["test_stream_with_filter_params", "org/test-repo", "https://api.github.com/repos/org/test-repo/issues/comments?sort=updated&direction=desc?since=2022-01-01T00:00:00Z", Comments],
+        ["test_stream_with_filter_params", "org/test-repo", "https://api.github.com/repos/org/test-repo/issues/comments?sort=updated&direction=desc&since=2022-01-01T00:00:00Z", Comments],
         ["test_stream_with_organization", "org", "https://api.github.com/orgs/org/teams", Teams]
     ])
     def test_build_url(self, name, param, expected_url, stream_class):
