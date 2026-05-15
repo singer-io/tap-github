@@ -15,9 +15,9 @@ def _build_stream_probe_url(base_url, stream_obj, repo_path, org):
     # Strip any existing query parameters so we control the query string.
     base_path = stream_obj.path.split('?')[0]
     if stream_obj.use_organization:
-        url = '{}/{}'.format(base_url, base_path).format(org)
+        url = f"{base_url}/{base_path.format(org)}"
     else:
-        url = '{}/repos/{}/{}'.format(base_url, repo_path, base_path)
+        url = f"{base_url}/repos/{repo_path}/{base_path}"
     return url + '?per_page=1'
 
 
@@ -28,7 +28,7 @@ def _is_stream_and_ancestors_accessible(stream_name, inaccessible_streams):
     """
     if stream_name in inaccessible_streams:
         return False
-    parent = STREAMS[stream_name]().parent
+    parent = STREAMS[stream_name].parent
     if parent:
         return _is_stream_and_ancestors_accessible(parent, inaccessible_streams)
     return True
@@ -50,9 +50,8 @@ def _identify_inaccessible_streams(client, repositories):
     inaccessible_streams = set()
     if repo_path:
         for stream_name, stream_class in STREAMS.items():
-            stream_obj = stream_class()
-            if stream_obj.parent is None:
-                test_url = _build_stream_probe_url(client.base_url, stream_obj, repo_path, org)
+            if stream_class.parent is None:
+                test_url = _build_stream_probe_url(client.base_url, stream_class, repo_path, org)
                 if not client.check_stream_accessible(stream_name, test_url):
                     inaccessible_streams.add(stream_name)
                     LOGGER.warning(

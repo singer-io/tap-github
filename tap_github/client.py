@@ -276,7 +276,7 @@ class GithubClient:
             return True
         except GithubException as e:
             LOGGER.warning("Stream '%s' is not accessible: %s", source, str(e))
-            return False
+        return False
 
     def extract_orgs_from_config(self):
         """
