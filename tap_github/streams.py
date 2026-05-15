@@ -74,8 +74,9 @@ class Stream:
         Build the full url with parameters and attributes.
         """
         if self.filter_param:
-            # Add the since parameter for incremental streams
-            query_string = '?since={}'.format(bookmark)
+            # Use '&' if the path already contains a query string, otherwise '?'
+            separator = '&' if '?' in (self.path or '') else '?'
+            query_string = '{}since={}'.format(separator, bookmark)
         else:
             query_string = ''
 
@@ -387,6 +388,7 @@ class IncrementalOrderedStream(Stream):
             ):
                 records = response.json()
                 extraction_time = singer.utils.now()
+
                 for record in records:
                     record['_sdc_repository'] = repo_path
                     self.add_fields_at_1st_level(record = record, parent_record = None)
