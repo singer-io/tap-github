@@ -1,9 +1,7 @@
-## 3.3.4
-  * Bump requests to 2.33.0 (CVE-2026-25645)
-
 # Changelog
 
 # 3.3.4
+  * Bump requests to 2.33.0 (CVE-2026-25645)
   * Fix malformed URL causing 'since' filter to be dropped for Issues and Comments streams [#230](https://github.com/singer-io/tap-github/pull/230)
 
 # 3.3.3
