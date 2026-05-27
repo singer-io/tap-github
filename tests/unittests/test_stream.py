@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from tap_github.streams import Comments, Reviews, TeamMemberships, Teams, PullRequests, get_schema, get_child_full_url, get_bookmark
+from tap_github.streams import Comments, Reviews, TeamMemberships, Teams, PullRequests, Commits, Issues, get_schema, get_child_full_url, get_bookmark
 from parameterized import parameterized
 
 
@@ -62,8 +62,21 @@ class TestBuildUrl(unittest.TestCase):
     """
 
     @parameterized.expand([
-        ["test_stream_with_filter_params", "org/test-repo", "https://api.github.com/repos/org/test-repo/issues/comments?sort=updated&direction=desc?since=2022-01-01T00:00:00Z", Comments],
-        ["test_stream_with_organization", "org", "https://api.github.com/orgs/org/teams", Teams]
+        # Path already has '?' — since must be appended with '&'
+        ["comments_appends_ampersand_since", "org/test-repo",
+         "https://api.github.com/repos/org/test-repo/issues/comments?sort=updated&direction=desc&since=2022-01-01T00:00:00Z",
+         Comments],
+        ["issues_appends_ampersand_since", "org/test-repo",
+         "https://api.github.com/repos/org/test-repo/issues?state=all&sort=updated&direction=desc&since=2022-01-01T00:00:00Z",
+         Issues],
+        # Path has no '?' — since must be appended with '?'
+        ["commits_appends_question_mark_since", "org/test-repo",
+         "https://api.github.com/repos/org/test-repo/commits?since=2022-01-01T00:00:00Z",
+         Commits],
+        # Org-level stream with no filter_param — no since appended
+        ["teams_org_url_no_since", "org",
+         "https://api.github.com/orgs/org/teams",
+         Teams],
     ])
     def test_build_url(self, name, param, expected_url, stream_class):
         """
