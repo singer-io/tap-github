@@ -1,3 +1,6 @@
+## 3.3.4
+  * Bump requests to 2.33.0 (CVE-2026-25645)
+
 # Changelog
 
 # 3.3.4
