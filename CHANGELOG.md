@@ -1,5 +1,8 @@
 # Changelog
 
+# 3.3.5
+  * Bump version for singer-python, requests, backoff to latest [#229](https://github.com/singer-io/tap-github/pull/229)
+
 # 3.3.4
   * Fix malformed URL causing 'since' filter to be dropped for Issues and Comments streams [#230](https://github.com/singer-io/tap-github/pull/230)
 
