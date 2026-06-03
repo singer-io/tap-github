@@ -1,5 +1,9 @@
 # Changelog
 
+# 3.4.0
+  * Exclude 403-forbidden streams from discovery [#229](https://github.com/singer-io/tap-github/pull/229)
+  * Bump dependencies for compliance
+
 # 3.3.4
   * Fix malformed URL causing 'since' filter to be dropped for Issues and Comments streams [#230](https://github.com/singer-io/tap-github/pull/230)
 

@@ -3,16 +3,16 @@
 from setuptools import setup, find_packages
 
 setup(name='tap-github',
-      version='3.3.4',
+      version='3.4.0',
       description='Singer.io tap for extracting data from the GitHub API',
       author='Stitch',
       url='http://singer.io',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_github'],
       install_requires=[
-          'singer-python==5.12.1',
-          'requests==2.33.0',
-          'backoff==1.8.0'
+          'singer-python==6.8.0',
+          'requests==2.34.2',
+          'backoff==2.2.1'
       ],
       extras_require={
           'dev': [

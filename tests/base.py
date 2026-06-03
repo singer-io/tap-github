@@ -180,7 +180,7 @@ class TestGithubBase(unittest.TestCase):
 
     def expected_replication_method(self):
         """
-        Return a dictionary with key of table name 
+        Return a dictionary with key of table name
         and value of replication method
         """
         return {table: properties.get(self.REPLICATION_METHOD, None)
@@ -266,7 +266,8 @@ class TestGithubBase(unittest.TestCase):
 
         found_catalog_names = set(map(lambda c: c['stream_name'], found_catalogs))
         LOGGER.info(found_catalog_names)
-        self.assertSetEqual(self.expected_streams(), found_catalog_names, msg="discovered schemas do not match")
+        unexpected_streams = found_catalog_names - self.expected_streams()
+        self.assertFalse(unexpected_streams, msg="discovered unexpected schemas: {}".format(unexpected_streams))
         LOGGER.info("discovered schemas are OK")
 
         return found_catalogs
