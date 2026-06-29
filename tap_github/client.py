@@ -167,7 +167,7 @@ def calculate_seconds(epoch):
     current = time.time()
     return max(0, int(ceil(epoch - current)))
 
-def rate_throttling(response, max_sleep_seconds, min_remain_rate_limit):
+def rate_throttling(response, max_sleep_seconds, min_remain_rate_limit, base_url=DEFAULT_DOMAIN):
     """
     For rate limit errors, get the remaining time before retrying and calculate the time to sleep before making a new request.
     """
@@ -186,9 +186,10 @@ def rate_throttling(response, max_sleep_seconds, min_remain_rate_limit):
 
             LOGGER.info("API rate limit exceeded. Tap will retry the data collection after %s seconds.", seconds_to_sleep)
             time.sleep(seconds_to_sleep)
-    else:
-        # Raise an exception if `X-RateLimit-Remaining` is not found in the header.
-        # API does include this key header if provided base URL is not a valid github custom domain.
+    elif base_url == DEFAULT_DOMAIN:
+        # On github.com a missing `X-RateLimit-Remaining` header means the base URL is not a
+        # valid GitHub domain. GitHub Enterprise (a custom base_url) can omit the header even on
+        # a successful response, so its absence there is not an error -- just skip throttling.
         raise GithubException("The API call using the specified base url was unsuccessful. Please double-check the provided base URL.")
 
 class GithubClient:
@@ -246,7 +247,7 @@ class GithubClient:
             if resp.status_code != 200:
                 raise_for_error(resp, source, stream, self, should_skip_404)
             timer.tags[metrics.Tag.http_status_code] = resp.status_code
-            rate_throttling(resp, self.max_sleep_seconds, self.min_remain_rate_limit)
+            rate_throttling(resp, self.max_sleep_seconds, self.min_remain_rate_limit, self.base_url)
             if resp.status_code == 404 or resp.status_code == 422:
                 # Return an empty response body since we're not raising a NotFoundException
                 resp._content = b'{}'  # pylint: disable=protected-access

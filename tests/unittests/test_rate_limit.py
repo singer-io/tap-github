@@ -96,3 +96,15 @@ class TestRateLimit(unittest.TestCase):
         
         # Verifying the message formed for the invalid base URL
         self.assertEqual(str(e.exception), "The API call using the specified base url was unsuccessful. Please double-check the provided base URL.")
+
+    def test_rate_limit_header_not_found_custom_base_url(self, mocked_sleep):
+        """
+        Test that `rate_throttling` does not raise when `X-RateLimit-Remaining` is missing for a
+        custom base URL: GitHub Enterprise can omit the header even on a successful response.
+        """
+        resp = api_call()
+        resp.headers = {}
+
+        # Should neither raise nor sleep -- throttling is simply skipped.
+        rate_throttling(resp, DEFAULT_SLEEP_SECONDS, DEFAULT_MIN_REMAIN_RATE_LIMIT, base_url="https://github.example.com/api/v3")
+        self.assertFalse(mocked_sleep.called)
