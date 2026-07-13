@@ -258,7 +258,7 @@
         "type": ["null", "string"]
       },
       "id": {
-        "type": ["null", "integer"]
+        "type": ["null", "string"]
       },
       "author": {
         "$ref": "shared/user.json#/"
