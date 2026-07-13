@@ -172,7 +172,7 @@ class Stream:
                             try:
                                 rec = transformer.transform(record, stream_catalog['schema'], metadata=metadata.to_map(stream_catalog['metadata']))
                             except Exception as e:
-                                print(f'CHILD STREAM WITH ISSUES: {child_object.tap_stream_id}')
+                                LOGGER.warning(f'CHILD STREAM WITH ISSUES: {child_object.tap_stream_id}')
                                 raise e
 
                             if child_object.tap_stream_id in selected_stream_ids and record.get(child_object.replication_keys, start_date) >= child_bookmark_value:
@@ -198,7 +198,7 @@ class Stream:
                         try:
                             rec = transformer.transform(records, stream_catalog['schema'], metadata=metadata.to_map(stream_catalog['metadata']))
                         except Exception as e:
-                            print(f'CHILD STREAM WITH ISSUES: {child_object.tap_stream_id}')
+                            LOGGER.warning(f'CHILD STREAM WITH ISSUES: {child_object.tap_stream_id}')
                             raise e
                         if child_object.tap_stream_id in selected_stream_ids and records.get(child_object.replication_keys, start_date) >= child_bookmark_value :
 
