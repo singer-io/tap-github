@@ -6,7 +6,7 @@
       "type": ["string"]
     },
     "id": {
-      "type": ["null", "integer"]
+      "type": ["null", "string"]
     },
     "node_id": {
       "type": ["null", "string"]
