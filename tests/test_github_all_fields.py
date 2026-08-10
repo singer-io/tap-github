@@ -94,6 +94,11 @@ KNOWN_MISSING_FIELDS = {
         'requested_team',
         'author_association',
         'draft',
+    },
+}
+
+OPTIONAL_FIELDS = {
+    'issue_events': {
         'project_card'
     },
 }
@@ -159,6 +164,11 @@ class TestGithubAllFields(TestGithubBase):
                     if message['action'] == 'upsert':
                         actual_all_keys.update(message['data'].keys())
 
+                # check for optional fields and remove them from the expected_all_keys if they are not present in the actual_all_keys
+                optional_fields = OPTIONAL_FIELDS.get(stream, set())
+                for optional_field in optional_fields:
+                    if optional_field not in actual_all_keys:
+                        expected_all_keys.discard(optional_field)
                 expected_all_keys = expected_all_keys - KNOWN_MISSING_FIELDS.get(stream, set())
 
                 # Verify all fields for a stream were replicated
