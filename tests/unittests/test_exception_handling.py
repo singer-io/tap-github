@@ -63,7 +63,7 @@ class TestExceptionHandling(unittest.TestCase):
 
     @parameterized.expand([
         [400, "The request is missing or has a bad parameter.", BadRequestException, '', {}, 1],
-        [401, "Invalid authorization credentials.", BadCredentialsException, '', {}, 1],
+        [401, "Invalid authorization credentials.", BadCredentialsException, '', {}, 5],
         [403, "User doesn't have permission to access the resource.", AuthException, '', {}, 1],
         [500, "An error has occurred at Github's end.", InternalServerError, '', {}, 5],
         [301, "The resource you are looking for is moved to another URL.", tap_github.client.MovedPermanentlyError, '', {}, 1],
@@ -76,7 +76,8 @@ class TestExceptionHandling(unittest.TestCase):
     def test_error_message_and_call_count(self, mocked_parse_args, mocked_request, mock_verify_access, mock_sleep, erro_code, error_msg, error_class, content, json_msg, call_count):
         """
         - Verify that `authed_get` raises an error with the proper message for different error codes.
-        - Verify that tap retries 5 times for Server5xxError and RateLimitExceeded error.
+        - Verify that tap retries 5 times for Server5xxError, TooManyRequests, 
+        and transient 401 BadCredentialsException.
         """
         mocked_request.return_value = get_response(erro_code, json = json_msg, raise_error = True, content = content)
         test_client = GithubClient(self.config)
