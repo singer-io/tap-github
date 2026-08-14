@@ -76,8 +76,8 @@ class TestExceptionHandling(unittest.TestCase):
     def test_error_message_and_call_count(self, mocked_parse_args, mocked_request, mock_verify_access, mock_sleep, erro_code, error_msg, error_class, content, json_msg, call_count):
         """
         - Verify that `authed_get` raises an error with the proper message for different error codes.
-                - Verify that tap retries 5 times for Server5xxError, TooManyRequests,
-                    and transient 401 BadCredentialsException.
+        - Verify that tap retries 5 times for Server5xxError, TooManyRequests, 
+        and transient 401 BadCredentialsException.
         """
         mocked_request.return_value = get_response(erro_code, json = json_msg, raise_error = True, content = content)
         test_client = GithubClient(self.config)
