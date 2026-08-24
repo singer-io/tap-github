@@ -1,5 +1,8 @@
 # Changelog
 
+# 4.0.0
+  * Updates to schemas changing many id fields from "number" to "integer" [#232](https://github.com/singer-io/tap-github/pull/232)
+
 # 3.4.0
   * Exclude 403-forbidden streams from discovery [#229](https://github.com/singer-io/tap-github/pull/229)
   * Bump dependencies for compliance
