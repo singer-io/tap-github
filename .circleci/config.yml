@@ -4,6 +4,9 @@ orbs:
 
 jobs:
   build:
+    environment:
+      CIRCLE_TRIGGER_SOURCE: << pipeline.trigger_source >>
+      CIRCLE_WORKFLOW_ID: ${CIRCLE_WORKFLOW_ID}
     docker:
       - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester-uv
     steps:
