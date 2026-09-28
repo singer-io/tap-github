@@ -2,6 +2,9 @@
 
 # 4.0.0
   * Updates to schemas changing many id fields from "number" to "integer" [#232](https://github.com/singer-io/tap-github/pull/232)
+# 3.4.1
+  * Retry transient 401 responses in `authed_get` by including `BadCredentialsException` in backoff retries. [#234](https://github.com/singer-io/tap-github/pull/234)
+  * Rationale: GitHub has documented intermittent API-side auth/routing incidents where valid requests can return temporary 401 and succeed on retry.
 
 # 3.4.0
   * Exclude 403-forbidden streams from discovery [#229](https://github.com/singer-io/tap-github/pull/229)

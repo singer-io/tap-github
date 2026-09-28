@@ -196,7 +196,11 @@ class GithubClient:
     # pylint: disable=dangerous-default-value
     # During 'Timeout' error there is also possibility of 'ConnectionError',
     # hence added backoff for 'ConnectionError' too.
-    @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError, TooManyRequests), max_tries=5, factor=2)
+    # GitHub has documented intermittent transient 401 responses where retrying
+    # eventually succeeds during API-side routing incidents. Retrying
+    # BadCredentialsException helps discovery/sync survive these short-lived
+    # faults while still failing after max_tries for persistent invalid tokens.
+    @backoff.on_exception(backoff.expo, (requests.Timeout, requests.ConnectionError, Server5xxError, TooManyRequests, BadCredentialsException), max_tries=5, factor=2)
     def authed_get(self, source, url, headers={}, stream="", should_skip_404 = True):
         """
         Call rest API and return the response in case of status code 200.
