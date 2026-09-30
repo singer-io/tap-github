@@ -233,6 +233,7 @@ def do_sync(catalog, streams_to_sync, selected_stream_ids, client, start_date, s
         if stream_id in streams_to_sync and not stream_obj.parent:
             write_schemas(stream_id, catalog, selected_stream_ids)
             update_currently_syncing(state, stream_id)
+            LOGGER.info("Starting sync of stream: %s", stream_id)
 
             state = stream_obj.sync_endpoint(client = client,
                                               state = state,

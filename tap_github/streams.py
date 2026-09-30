@@ -192,6 +192,7 @@ class Stream:
                     with singer.Transformer() as transformer:
 
                         rec = transformer.transform(records, stream_catalog['schema'], metadata=metadata.to_map(stream_catalog['metadata']))
+
                         if child_object.tap_stream_id in selected_stream_ids and records.get(child_object.replication_keys, start_date) >= child_bookmark_value :
 
                             singer.write_record(child_object.tap_stream_id, rec, time_extracted=extraction_time)

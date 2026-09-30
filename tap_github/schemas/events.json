@@ -17,7 +17,7 @@
           "type": ["null", "string"]
         },
         "id": {
-          "type": ["null", "number"]
+          "type": ["null", "integer"]
         },
         "login": {
           "type": ["null", "string"]
@@ -31,7 +31,7 @@
       "type": ["null", "string"]
     },
     "id": {
-      "type": ["null", "number"]
+      "type": ["null", "integer"]
     },
     "org": {
       "type": ["null", "object"],
@@ -43,7 +43,7 @@
           "type": ["null", "string"]
         },
         "id": {
-          "type": ["null", "number"]
+          "type": ["null", "integer"]
         },
         "login": {
           "type": ["null", "string"]
@@ -1036,7 +1036,7 @@
       "type": ["null", "object"],
       "properties": {
         "id": {
-          "type": ["null", "number"]
+          "type": ["null", "integer"]
         },
         "name": {
           "type": ["null", "string"]
