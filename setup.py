@@ -10,7 +10,7 @@ setup(name='tap-github',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_github'],
       install_requires=[
-          'singer-python==6.8.0',
+          'singer-python==6.9.0',
           'requests==2.34.2',
           'backoff==2.2.1'
       ],
